@@ -1,6 +1,5 @@
 # 🤖 AI-Powered QA & Testing Arsenal
 
-![Intelligent Testing Toolkit Banner](./banner.png)
 
 ![AI in QA](https://img.shields.io/badge/AI_Testing-Next_Gen-6366F1?style=flat-square)
 ![Claude AI](https://img.shields.io/badge/Claude_AI-D97757?style=flat-square&logo=anthropic&logoColor=white)
