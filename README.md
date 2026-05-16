@@ -44,4 +44,23 @@ Reducing debugging time from hours to seconds.
 * **AI Tooling:** Cursor IDE, Anthropic (Claude 3.5 Sonnet) API
 * **Workflow:** Prompt Engineering, Retrieval-Augmented Generation (RAG) for documentation.
 
+---
+
+## 🤝 Contributing: Let's Build the Future of QA Together!
+
+The QA landscape is shifting fast, and AI is at the forefront. While I built this as a personal lab, I want it to be a **community-driven hub** for testing professionals who want to push the boundaries of what's possible.
+
+Your knowledge is valuable! Here is how you can contribute:
+* **📝 Share Prompts:** Got a killer system prompt for Claude/ChatGPT that generates perfect POMs or API tests? Add it to the `/claude-projects` folder!
+* **⚙️ Cursor Rules:** Found the ultimate `.cursorrules` configuration for Playwright or Cypress? Share it with the community.
+* **🚀 New AI Scripts:** Built a PoC for visual regression using Vision models? Or an agent that explores websites? Open a PR!
+* **🐛 Improvements:** See a way to make the self-healing scripts faster, cheaper, or more accurate? Let's optimize it.
+
+### How to contribute:
+1. **Fork** the repository.
+2. **Create a new branch** (`git checkout -b feature/amazing-ai-qa-tool`).
+3. **Commit your changes** (`git commit -m 'Add awesome Claude prompt for API testing'`).
+4. **Push to the branch** (`git push origin feature/amazing-ai-qa-tool`).
+5. **Open a Pull Request** and let's discuss it!
+
 > *"Automate the routine, use AI for the unpredictable."*
