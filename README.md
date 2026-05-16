@@ -1,12 +1,13 @@
 # 🤖 AI-Powered QA & Testing Arsenal
 
+![Intelligent Testing Toolkit Banner](./banner.png)
+
 ![AI in QA](https://img.shields.io/badge/AI_Testing-Next_Gen-6366F1?style=flat-square)
 ![Claude AI](https://img.shields.io/badge/Claude_AI-D97757?style=flat-square&logo=anthropic&logoColor=white)
 ![Cursor](https://img.shields.io/badge/Cursor_IDE-000000?style=flat-square&logo=github&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=flat-square&logo=Playwright&logoColor=white)
 
 Traditional automation follows strict rules; modern automation adapts. This repository is my personal lab and toolkit for integrating **Artificial Intelligence (Claude 3.5 Sonnet, Cursor IDE, Agents)** directly into Quality Assurance and Web Automation workflows.
-
 ---
 
 ## 🎯 Purpose of this Repository
