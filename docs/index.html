@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intelligent Testing Toolkit | Home</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -13,48 +13,52 @@
     <div class="nav-inner">
       <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
       <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="agents.html">Agents</a>
-        <a href="skills.html">Skills</a>
-        <a href="prompts.html">Prompts</a>
+        <a href="index.html"   data-i18n="nav_home">Home</a>
+        <a href="agents.html"  data-i18n="nav_agents">Agents</a>
+        <a href="skills.html"  data-i18n="nav_skills">Skills</a>
+        <a href="prompts.html" data-i18n="nav_prompts">Prompts</a>
+      </div>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn" data-lang="en" onclick="applyLanguage('en')">EN</button>
+        <button class="lang-btn" data-lang="he" onclick="applyLanguage('he')">עב</button>
       </div>
     </div>
   </nav>
 
   <section class="hero">
-    <h1>AI-Powered QA Arsenal</h1>
-    <p class="subtitle">
+    <h1 data-i18n="hero_title">AI-Powered QA Arsenal</h1>
+    <p class="subtitle" data-i18n="hero_subtitle">
       Production-oriented Playwright + Claude toolkit for self-healing tests, edge-case data generation,
       and automated bug triage. Clone, run in MOCK mode, ship faster.
     </p>
     <div class="hero-cta">
-      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit" class="btn-primary">View on GitHub</a>
-      <a href="agents.html" class="btn-outline">Browse Agents</a>
+      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit" class="btn-primary" data-i18n="hero_cta_github">View on GitHub</a>
+      <a href="agents.html" class="btn-outline" data-i18n="hero_cta_browse">Browse Agents</a>
     </div>
   </section>
 
   <div class="info-banner" id="infoBanner" style="margin-top:0;">
     <div>
-      💡 First time here? Run <code>npm install && npm test</code> — no API key required.
-      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#getting-started">Getting Started</a>
+      <span data-i18n="banner_text">💡 First time here? Run <code>npm install && npm test</code> — no API key required.</span>
+      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#getting-started" data-i18n="banner_link">Getting Started</a>
     </div>
     <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'" aria-label="Dismiss">×</button>
   </div>
 
   <section class="section" id="getting-started">
-    <h2>🚀 Getting Started (&lt; 5 minutes)</h2>
-    <p>All demos run in <strong>MOCK mode</strong> by default — no <code>ANTHROPIC_API_KEY</code> needed.</p>
+    <h2 data-i18n="section_started">🚀 Getting Started (&lt; 5 minutes)</h2>
+    <p data-i18n="section_started_desc">All demos run in <strong>MOCK mode</strong> by default — no <code>ANTHROPIC_API_KEY</code> needed.</p>
     <pre class="code-block">git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
 cd intelligent-testing-toolkit
 npm install
 npx playwright install chromium
 npm test
 npm run verify:demos</pre>
-    <p>Optional: set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to use Claude 3.5 Sonnet live.</p>
+    <p data-i18n="section_started_optional">Optional: set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to use Claude 3.5 Sonnet live.</p>
   </section>
 
   <section class="section" id="overview">
-    <h2>📂 Repository Overview</h2>
+    <h2 data-i18n="section_overview">📂 Repository Overview</h2>
     <pre class="tree">intelligent-testing-toolkit/
 ├── docs/                 # UI Marketplace (this site)
 ├── src/
@@ -67,30 +71,30 @@ npm run verify:demos</pre>
 
     <div class="feature-grid">
       <article class="feature-card">
-        <h3>🤖 Autonomous Agents</h3>
-        <p>Self-healing locators and automated triage scripts that reason over DOM and stack traces.</p>
-        <a href="agents.html">Explore Agents →</a>
+        <h3 data-i18n="feature_agents_title">🤖 Autonomous Agents</h3>
+        <p data-i18n="feature_agents_desc">Self-healing locators and automated triage scripts that reason over DOM and stack traces.</p>
+        <a href="agents.html" data-i18n="feature_agents_link">Explore Agents →</a>
       </article>
       <article class="feature-card">
-        <h3>🛠️ Testing Skills</h3>
-        <p>Edge-case generators and utilities that plug into your existing Playwright suites.</p>
-        <a href="skills.html">Explore Skills →</a>
+        <h3 data-i18n="feature_skills_title">🛠️ Testing Skills</h3>
+        <p data-i18n="feature_skills_desc">Edge-case generators and utilities that plug into your existing Playwright suites.</p>
+        <a href="skills.html" data-i18n="feature_skills_link">Explore Skills →</a>
       </article>
       <article class="feature-card">
-        <h3>🧠 System Prompts</h3>
-        <p>Copy-paste personas for Claude, Cursor, and ChatGPT — test plans, data gen, IDE rules.</p>
-        <a href="prompts.html">Explore Prompts →</a>
+        <h3 data-i18n="feature_prompts_title">🧠 System Prompts</h3>
+        <p data-i18n="feature_prompts_desc">Copy-paste personas for Claude, Cursor, and ChatGPT — test plans, data gen, IDE rules.</p>
+        <a href="prompts.html" data-i18n="feature_prompts_link">Explore Prompts →</a>
       </article>
     </div>
   </section>
 
   <section class="section">
-    <h2>🛒 Live Marketplace</h2>
-    <p>Browse the full catalog across dedicated pages — search, filter, and copy run commands instantly.</p>
+    <h2 data-i18n="section_marketplace">🛒 Live Marketplace</h2>
+    <p data-i18n="section_marketplace_desc">Browse the full catalog across dedicated pages — search, filter, and copy run commands instantly.</p>
     <div class="hero-cta" style="justify-content:flex-start;margin-top:16px;">
-      <a href="agents.html" class="btn-outline">Agents (6)</a>
-      <a href="skills.html" class="btn-outline">Skills (5)</a>
-      <a href="prompts.html" class="btn-outline">Prompts (6)</a>
+      <a href="agents.html"  class="btn-outline" data-i18n="marketplace_agents">Agents (6)</a>
+      <a href="skills.html"  class="btn-outline" data-i18n="marketplace_skills">Skills (5)</a>
+      <a href="prompts.html" class="btn-outline" data-i18n="marketplace_prompts">Prompts (6)</a>
     </div>
   </section>
 
