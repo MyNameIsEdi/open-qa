@@ -10,15 +10,15 @@
 <body>
 
   <nav class="top-nav">
-    <motion class="nav-inner">
+    <div class="nav-inner">
       <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
-      <motion class="nav-links">
+      <div class="nav-links">
         <a href="index.html">Home</a>
         <a href="agents.html">Agents</a>
         <a href="skills.html">Skills</a>
         <a href="prompts.html">Prompts</a>
-      </motion>
-    </motion>
+      </div>
+    </div>
   </nav>
 
   <section class="hero">
@@ -30,39 +30,39 @@
     <div class="hero-cta">
       <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit" class="btn-primary">View on GitHub</a>
       <a href="agents.html" class="btn-outline">Browse Agents</a>
-    </motion>
+    </div>
   </section>
 
   <div class="info-banner" id="infoBanner" style="margin-top:0;">
-    <motion>
+    <div>
       💡 First time here? Run <code>npm install && npm test</code> — no API key required.
-      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#-getting-started--5-minutes">Getting Started</a>
-    </motion>
+      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#getting-started">Getting Started</a>
+    </div>
     <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'" aria-label="Dismiss">×</button>
   </div>
 
   <section class="section" id="getting-started">
     <h2>🚀 Getting Started (&lt; 5 minutes)</h2>
     <p>All demos run in <strong>MOCK mode</strong> by default — no <code>ANTHROPIC_API_KEY</code> needed.</p>
-    <motion class="code-block">git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
+    <pre class="code-block">git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
 cd intelligent-testing-toolkit
 npm install
 npx playwright install chromium
 npm test
-npm run verify:demos</motion>
+npm run verify:demos</pre>
     <p>Optional: set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to use Claude 3.5 Sonnet live.</p>
   </section>
 
   <section class="section" id="overview">
     <h2>📂 Repository Overview</h2>
-    <motion class="tree">intelligent-testing-toolkit/
+    <pre class="tree">intelligent-testing-toolkit/
 ├── 01-Self-Healing-Tests/     # DOM-aware locator recovery
 ├── 02-Smart-Data-Gen/         # Malicious & boundary JSON payloads
 ├── 03-Automated-Bug-Report/   # CI log → Jira Markdown
 ├── tests/                     # Playwright specs
 ├── index.html                 # Marketplace home (this site)
 ├── agents.html | skills.html | prompts.html
-└── README.md                  # Master documentation</motion>
+└── README.md                  # Master documentation</pre>
 
     <div class="feature-grid">
       <article class="feature-card">
