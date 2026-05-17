@@ -28,6 +28,76 @@ Welcome to the AI Testing Marketplace! Browse our collection of **Agents**, **Sk
 
 ---
 
+## 🤖 1-Click "Add to Claude" — Direct MCP Integration
+
+The Intelligent Testing Toolkit Marketplace features a first-class **"🤖 Add to Claude"** button on every agent, skill, and prompt card. One click exports the tool's complete configuration — system prompt, tool schema, and run command — to your clipboard in Claude-ready JSON format, ready to paste into Claude Desktop or the Anthropic API.
+
+### How it works
+
+1. **Browse** the marketplace at [MyNameIsEdi.github.io/intelligent-testing-toolkit](https://mynameisedi.github.io/intelligent-testing-toolkit/)
+2. **Click "🤖 Add to Claude"** on any card (or inside the slide-over detail panel)
+3. **Paste** the exported JSON into [Claude Desktop](https://claude.ai/download) → Settings → Tools, or into a Claude API `tools` array
+
+### What gets exported
+
+Each export is a self-contained payload structured for Claude's tool-use API:
+
+```json
+{
+  "name": "Smart Data Gen",
+  "description": "Generates extreme, complex, and malicious JSON payloads for API fuzzing.",
+  "system_prompt": "You are The Hacker QA. For the given API field...",
+  "tool_schema": {
+    "name": "smart_data_gen",
+    "description": "Generates extreme payloads for API fuzzing — SQLi, XSS, nulls, RTL, boundary numbers.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The API field, schema, or URL to generate payloads for"
+        },
+        "count": {
+          "type": "integer",
+          "description": "Number of payloads to generate",
+          "default": 20
+        }
+      },
+      "required": ["target"]
+    }
+  },
+  "run_command": "npx tsx src/skills/generate-test-data.ts"
+}
+```
+
+### Roadmap — Native MCP Server
+
+We are actively building a native **Model Context Protocol (MCP) server** that will register every toolkit skill as a first-class Claude tool — enabling one-command setup:
+
+```bash
+# Coming soon
+npx itk mcp-server --port 3001
+```
+
+Then add to Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "intelligent-testing-toolkit": {
+      "command": "npx",
+      "args": ["itk", "mcp-server"]
+    }
+  }
+}
+```
+
+Once connected, all agents, skills, and prompts appear natively inside Claude — no copy-paste needed.
+
+> 💡 **i18n note:** The "Add to Claude" button and its success toast are fully translated — English and Hebrew (with full RTL layout support) out of the box.
+
+---
+
 ## 🚀 Getting Started (< 5 minutes)
 
 ### 1. Clone & Install

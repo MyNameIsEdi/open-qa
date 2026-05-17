@@ -95,6 +95,8 @@ Rules:
           <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catches TimeoutErrors and suggests getByRole locators.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx src/agents/self-healing.ts')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 12</span><span>⬇ 5,360</span><span>⭐ 5.0</span></div>
             <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">🧠 Claude</span></div>
@@ -131,6 +133,8 @@ Output as clean Markdown. No filler text — just the structured report.">
           <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx src/skills/log-analyzer.ts')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 8</span><span>⬇ 1,475</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">⚙️ CI/CD</span></div>
@@ -166,6 +170,8 @@ Output: complete TypeScript file ready to import in Playwright tests.">
           <p class="card-desc">Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 6</span><span>⬇ 892</span><span>⭐ 4.6</span></div>
             <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">📐 POM</span></div>
@@ -203,6 +209,8 @@ Output ready-to-import TypeScript with no external dependencies beyond Playwrigh
           <p class="card-desc">Records browser network traffic during a test run and auto-generates Playwright page.route() mock handlers with typed fixtures.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 11</span><span>⬇ 1,204</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">🌐 Network</span><span class="tool-tag">🎭 Playwright</span></div>
@@ -242,6 +250,8 @@ Format the full report as Markdown.">
           <p class="card-desc">Analyzes DOM + screenshots for WCAG violations and returns exact CSS/HTML remediation snippets mapped to failing nodes.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 17</span><span>⬇ 2,310</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">♿ A11y</span><span class="tool-tag">🧠 Claude</span></div>
@@ -280,6 +290,8 @@ Seed the random number generator with --seed for reproducible chaos runs.">
           <p class="card-desc">Stress-tests frontend resilience by clicking random elements, injecting latency, and blocking arbitrary network routes during Playwright runs.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_command"
             onclick="copyAction(this, 'npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42')">💬 Copy Run Command</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 9</span><span>⬇ 1,088</span><span>⭐ 4.5</span></div>
             <div class="tool-tags"><span class="tool-tag">🐒 Chaos</span><span class="tool-tag">🎭 Playwright</span></div>
@@ -312,6 +324,10 @@ Seed the random number generator with --seed for reproducible chaos runs.">
       <div id="panelCodeSection">
         <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
         <pre class="panel-code" id="panelCode"></pre>
+      </div>
+      <div>
+        <button class="btn-add-claude-panel" data-i18n="add_to_claude"
+          onclick="addToClaudeFromPanel()">🤖 Add to Claude</button>
       </div>
     </div>
   </aside>

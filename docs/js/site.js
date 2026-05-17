@@ -6,6 +6,11 @@
 /* ── i18n Dictionary ────────────────────────────────────────────── */
 const TRANSLATIONS = {
   en: {
+    /* Add to Claude */
+    add_to_claude:  '🤖 Add to Claude',
+    toast_title:    'Added to Claude!',
+    toast_success:  "Ready to paste into Claude's Tool Library.",
+
     /* Nav */
     nav_home:    'Home',
     nav_agents:  'Agents',
@@ -91,6 +96,11 @@ const TRANSLATIONS = {
   },
 
   he: {
+    /* Add to Claude */
+    add_to_claude:  '🤖 הוסף ל-Claude',
+    toast_title:    '!נוסף ל-Claude',
+    toast_success:  '.מוכן להדבקה בספריית הכלים של Claude',
+
     /* Nav */
     nav_home:    'בית',
     nav_agents:  'סוכנים',
@@ -326,9 +336,113 @@ function initCardFilter(
   filterCards();
 }
 
+/* ── "Add to Claude" ────────────────────────────────────────────── */
+
+/**
+ * Derives a snake_case tool name from a human title.
+ * e.g. "Smart Data Gen" → "smart_data_gen"
+ */
+function toToolName(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .substring(0, 64);
+}
+
+/**
+ * Exports a card's full configuration as Claude-ready JSON and
+ * copies it to the clipboard, then shows a toast.
+ * @param {HTMLElement} cardEl - the .card element (or any descendant)
+ */
+function addToClaude(cardEl) {
+  const card = cardEl.closest ? cardEl.closest('[data-title]') || cardEl : cardEl;
+  const title       = card.dataset.title       || '';
+  const description = card.dataset.description || '';
+  const command     = card.dataset.command     || '';
+  const prompt      = card.dataset.prompt      || '';
+
+  const payload = {
+    name: title,
+    description: description,
+    system_prompt: prompt || null,
+    tool_schema: {
+      name: toToolName(title),
+      description: description,
+      input_schema: {
+        type: 'object',
+        properties: {
+          target: {
+            type: 'string',
+            description: 'The API field, schema, URL, or content to process',
+          },
+          count: {
+            type: 'integer',
+            description: 'Number of outputs to generate',
+            default: 10,
+          },
+        },
+        required: ['target'],
+      },
+    },
+    run_command: command || null,
+  };
+
+  navigator.clipboard
+    .writeText(JSON.stringify(payload, null, 2))
+    .then(() => showToast(t('toast_title'), t('toast_success')));
+}
+
+/** Calls addToClaude using the card currently open in the slide panel. */
+function addToClaudeFromPanel() {
+  if (_panelCard) addToClaude(_panelCard);
+}
+
+/**
+ * Shows a floating toast notification.
+ * @param {string} title - bold heading
+ * @param {string} message - supporting text
+ */
+function showToast(title, message) {
+  const existing = document.getElementById('claudeToast');
+  if (existing) {
+    existing.classList.remove('toast-visible');
+    setTimeout(() => existing.remove(), 300);
+  }
+
+  const toast = document.createElement('div');
+  toast.id = 'claudeToast';
+  toast.className = 'claude-toast';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.innerHTML = `
+    <span class="toast-icon" aria-hidden="true">🤖</span>
+    <div class="toast-content">
+      <span class="toast-title">${title}</span>
+      <span class="toast-msg">${message}</span>
+    </div>
+    <button class="toast-close" onclick="document.getElementById('claudeToast').remove()" aria-label="Dismiss">×</button>
+  `;
+  document.body.appendChild(toast);
+
+  /* Double rAF ensures the element is painted before transitioning */
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('toast-visible')));
+
+  setTimeout(() => {
+    toast.classList.remove('toast-visible');
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 400);
+  }, 4500);
+}
+
 /* ── Slide-Over Panel ───────────────────────────────────────────── */
+
+/** Tracks which card is currently shown in the slide panel. */
+let _panelCard = null;
+
 function openSkillPanel(triggerEl) {
   const card = triggerEl.closest('[data-title]') || triggerEl;
+  _panelCard = card;
 
   document.getElementById('panelTitle').textContent = card.dataset.title       || '';
   document.getElementById('panelDesc').textContent  = card.dataset.description || '';
