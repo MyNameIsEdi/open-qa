@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Changed
+- Refactored `index.html` into multi-page UI: `index.html`, `agents.html`, `skills.html`, `prompts.html` with shared nav and `css/site.css` + `js/site.js`.
+- Consolidated documentation into master `README.md` with collapsible `<details>` sections for prompts and contributing guidelines.
+- Removed redundant `CONTRIBUTING.md`, `MARKETPLACE.md`, `claude-projects/Test-Plan-Generator.md`, `claude-projects/PRD-Analyzer.md`, and `02-Smart-Data-Gen/claude-data-gen.md`.
+
 ## [1.0.0] - 2026-05-17
 ### Added
 - Added professional README and usage/docs guidance.
