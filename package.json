@@ -2,14 +2,19 @@
   "name": "intelligent-testing-toolkit",
   "version": "1.0.0",
   "description": "AI-Powered QA & Web Automation Arsenal",
+  "type": "module",
   "scripts": {
-    "run:healing": "cd 01-Self-Healing-Tests && npx tsx src/self-healing.ts",
-    "run:datagen": "cd 02-Smart-Data-Gen && npx tsx generate-test-data.ts",
-    "run:bugreport": "cd 03-Automated-Bug-Report && npx tsx src/log-analyzer.ts",
+    "test:healing": "npx playwright test tests/healing.spec.ts",
+    "test": "npx playwright test",
+    "test:ci": "npx playwright test",
+    "run:healing": "npx tsx 01-Self-Healing-Tests/src/auto-locator.ts",
+    "run:datagen": "npx tsx 02-Smart-Data-Gen/src/generate-test-data.ts",
+    "run:bugreport": "npx tsx 03-Automated-Bug-Report/src/log-analyzer.ts",
     "verify:demos": "node ./scripts/verify-demos.js",
-    "test": "npx tsx ./tests/test-helpers.ts",
     "typecheck": "tsc --noEmit",
-    "test:ci": "npm test"
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"**/*.{ts,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md,yml}\""
   },
   "keywords": [
     "qa",
@@ -20,5 +25,21 @@
     "testing"
   ],
   "author": "Edi Mazor",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "@playwright/test": "^1.60.0",
+    "dotenv": "^16.4.7",
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
 }

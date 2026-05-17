@@ -1,0 +1,47 @@
+[
+  {
+    "scenario_description": "Mock edge case #1: SQLi/XSS/boundary mix",
+    "first_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; DROP TABLE users;--",
+    "last_name": "O'Connor<script>alert('xss-0')</script>",
+    "email": "qa+edge0@example.com",
+    "address": null,
+    "cart_total": -0.01,
+    "items_count": 1000000
+  },
+  {
+    "scenario_description": "Mock edge case #2: SQLi/XSS/boundary mix",
+    "first_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; DROP TABLE users;--",
+    "last_name": "O'Connor<script>alert('xss-1')</script>",
+    "email": "qa+edge1@example.com",
+    "address": "רחוב הרצל 12 — RTL & emoji 🛒",
+    "cart_total": 9999999.99,
+    "items_count": 1000000
+  },
+  {
+    "scenario_description": "Mock edge case #3: SQLi/XSS/boundary mix",
+    "first_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; DROP TABLE users;--",
+    "last_name": "O'Connor<script>alert('xss-2')</script>",
+    "email": "qa+edge2@example.com",
+    "address": null,
+    "cart_total": 9999999.99,
+    "items_count": 1000000
+  },
+  {
+    "scenario_description": "Mock edge case #4: SQLi/XSS/boundary mix",
+    "first_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; DROP TABLE users;--",
+    "last_name": "O'Connor<script>alert('xss-3')</script>",
+    "email": "qa+edge3@example.com",
+    "address": "רחוב הרצל 12 — RTL & emoji 🛒",
+    "cart_total": -0.01,
+    "items_count": 1000000
+  },
+  {
+    "scenario_description": "Mock edge case #5: SQLi/XSS/boundary mix",
+    "first_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; DROP TABLE users;--",
+    "last_name": "O'Connor<script>alert('xss-4')</script>",
+    "email": "qa+edge4@example.com",
+    "address": null,
+    "cart_total": 9999999.99,
+    "items_count": 0
+  }
+]

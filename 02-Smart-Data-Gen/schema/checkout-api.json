@@ -1,0 +1,12 @@
+{
+  "endpoint": "POST /api/v1/checkout",
+  "description": "E-commerce checkout — creates an order from cart + shipping",
+  "requestBody": {
+    "first_name": "string (required, max 100)",
+    "last_name": "string (required, max 100)",
+    "email": "string (email format)",
+    "address": "string | null",
+    "cart_total": "number (USD, >= 0)",
+    "items_count": "integer (>= 1)"
+  }
+}

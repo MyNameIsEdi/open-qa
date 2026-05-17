@@ -1,0 +1,15 @@
+Error: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('button[data-testid="submit-payment"]')
+  -   locator resolved to visible <button disabled class="btn-primary">Pay $49.99</button>
+  - attempting click action
+  -   waiting for element to be visible, enabled and stable
+  -   element is disabled - waiting...
+  - element was detached from the DOM, retrying
+
+    at CheckoutPage.submitPayment (/tests/pages/CheckoutPage.ts:45:32)
+    at /tests/e2e/checkout-flow.spec.ts:112:15
+
+API Network Log Context:
+POST https://api.ecommerce.com/v1/payments - 500 Internal Server Error
+Response: {"error": "Payment Gateway Timeout", "code": 5004}

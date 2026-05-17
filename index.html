@@ -3,622 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Intelligent Testing Toolkit | Skills & Agents</title>
+  <title>Intelligent Testing Toolkit | Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    /* Reset & Base Variables */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    :root {
-      --bg-body: #f4f3ed;
-      --bg-card: #ffffff;
-      --text-main: #1f2937;
-      --text-muted: #6b7280;
-      --border-light: #e5e7eb;
-      
-      --btn-bg: #eff6ff;
-      --btn-text: #2563eb;
-      --btn-hover: #dbeafe;
-      
-      --badge-green-bg: #dcfce7;
-      --badge-green-text: #166534;
-      --badge-orange-bg: #ffedd5;
-      --badge-orange-text: #9a3412;
-      
-      --banner-bg: #e0e7ff;
-      --banner-text: #3730a3;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg-body);
-      color: var(--text-main);
-      line-height: 1.5;
-      padding-bottom: 60px;
-    }
-
-    /* Top Banner */
-    .info-banner {
-      background: var(--banner-bg);
-      color: var(--banner-text);
-      padding: 12px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.9rem;
-      font-weight: 500;
-      border-radius: 8px;
-      max-width: 1300px;
-      margin: 24px auto 0;
-      border: 1px solid #c7d2fe;
-    }
-    
-    .info-banner a {
-      color: var(--banner-text);
-      text-decoration: underline;
-      font-weight: 600;
-      margin-left: 4px;
-    }
-
-    /* Header */
-    header {
-      padding: 32px 24px 16px;
-      max-width: 1300px;
-      margin: 0 auto;
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #111827;
-    }
-
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-      max-width: 800px;
-    }
-
-    /* Main Layout */
-    .container {
-      max-width: 1300px;
-      margin: 0 auto;
-      padding: 0 24px;
-      display: flex;
-      gap: 32px;
-      align-items: flex-start;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      flex: 0 0 280px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
-      border-radius: 12px;
-      padding: 24px;
-      position: sticky;
-      top: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-
-    .search-wrapper {
-      position: relative;
-      margin-bottom: 24px;
-    }
-
-    .search-box {
-      width: 100%;
-      padding: 10px 12px 10px 36px;
-      border: 1px solid var(--border-light);
-      border-radius: 8px;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-      font-family: inherit;
-    }
-
-    .search-box:focus { border-color: var(--btn-text); }
-    
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 1rem;
-    }
-
-    .filter-group { margin-bottom: 24px; }
-    
-    .filter-group:last-child { margin-bottom: 0; }
-
-    .filter-group h3 {
-      font-size: 0.95rem;
-      margin-bottom: 12px;
-      color: #374151;
-      font-weight: 600;
-    }
-
-    .filter-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 0.9rem;
-      color: #4b5563;
-      cursor: pointer;
-    }
-
-    .filter-option-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .filter-option input {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-      accent-color: var(--btn-text);
-    }
-    
-    .filter-count {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-
-    /* Main Content Area */
-    .content { flex: 1; }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      padding-top: 8px;
-    }
-
-    /* Grid & Cards */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-      gap: 24px;
-    }
-
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      transition: box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .card:hover {
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
-    }
-
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .badges {
-      display: flex;
-      gap: 6px;
-    }
-
-    .badge {
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .badge-green { background: var(--badge-green-bg); color: var(--badge-green-text); }
-    .badge-orange { background: var(--badge-orange-bg); color: var(--badge-orange-text); }
-
-    .creator {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .card-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #111827;
-      text-decoration: none;
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .card-title:hover { color: var(--btn-text); }
-
-    .card-desc {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 20px;
-      flex-grow: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    /* Action Button */
-    .btn-action {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 10px;
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-bottom: 20px;
-      transition: background 0.2s;
-      font-family: inherit;
-      text-decoration: none;
-    }
-
-    .btn-action:hover { background: var(--btn-hover); }
-
-    /* Card Footer */
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 16px;
-    }
-
-    .stats {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .stats span {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .tool-tags {
-      display: flex;
-      gap: 6px;
-    }
-
-    .tool-tag {
-      background: #f3f4f6;
-      color: #374151;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      border: 1px solid #e5e7eb;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-weight: 500;
-    }
-
-    @media (max-width: 900px) {
-      .container { flex-direction: column; }
-      .sidebar { width: 100%; position: static; }
-      .info-banner { margin: 16px 24px 0; }
-    }
-  </style>
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-  <div class="info-banner" id="infoBanner">
-    <div>
-      💡 First time here? <a href="#">Start here</a>
+  <nav class="top-nav">
+    <motion class="nav-inner">
+      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <motion class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="skills.html">Skills</a>
+        <a href="prompts.html">Prompts</a>
+      </motion>
+    </motion>
+  </nav>
+
+  <section class="hero">
+    <h1>AI-Powered QA Arsenal</h1>
+    <p class="subtitle">
+      Production-oriented Playwright + Claude toolkit for self-healing tests, edge-case data generation,
+      and automated bug triage. Clone, run in MOCK mode, ship faster.
+    </p>
+    <div class="hero-cta">
+      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit" class="btn-primary">View on GitHub</a>
+      <a href="agents.html" class="btn-outline">Browse Agents</a>
+    </motion>
+  </section>
+
+  <div class="info-banner" id="infoBanner" style="margin-top:0;">
+    <motion>
+      💡 First time here? Run <code>npm install && npm test</code> — no API key required.
+      <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#-getting-started--5-minutes">Getting Started</a>
+    </motion>
+    <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'" aria-label="Dismiss">×</button>
+  </div>
+
+  <section class="section" id="getting-started">
+    <h2>🚀 Getting Started (&lt; 5 minutes)</h2>
+    <p>All demos run in <strong>MOCK mode</strong> by default — no <code>ANTHROPIC_API_KEY</code> needed.</p>
+    <motion class="code-block">git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
+cd intelligent-testing-toolkit
+npm install
+npx playwright install chromium
+npm test
+npm run verify:demos</motion>
+    <p>Optional: set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to use Claude 3.5 Sonnet live.</p>
+  </section>
+
+  <section class="section" id="overview">
+    <h2>📂 Repository Overview</h2>
+    <motion class="tree">intelligent-testing-toolkit/
+├── 01-Self-Healing-Tests/     # DOM-aware locator recovery
+├── 02-Smart-Data-Gen/         # Malicious & boundary JSON payloads
+├── 03-Automated-Bug-Report/   # CI log → Jira Markdown
+├── tests/                     # Playwright specs
+├── index.html                 # Marketplace home (this site)
+├── agents.html | skills.html | prompts.html
+└── README.md                  # Master documentation</motion>
+
+    <div class="feature-grid">
+      <article class="feature-card">
+        <h3>🤖 Autonomous Agents</h3>
+        <p>Self-healing locators and automated triage scripts that reason over DOM and stack traces.</p>
+        <a href="agents.html">Explore Agents →</a>
+      </article>
+      <article class="feature-card">
+        <h3>🛠️ Testing Skills</h3>
+        <p>Edge-case generators and utilities that plug into your existing Playwright suites.</p>
+        <a href="skills.html">Explore Skills →</a>
+      </article>
+      <article class="feature-card">
+        <h3>🧠 System Prompts</h3>
+        <p>Copy-paste personas for Claude, Cursor, and ChatGPT — test plans, data gen, IDE rules.</p>
+        <a href="prompts.html">Explore Prompts →</a>
+      </article>
     </div>
-    <button style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'">×</button>
-  </div>
+  </section>
 
-  <header>
-    <h1>All Skills</h1>
-    <p class="subtitle">Discover and install automated skills for Playwright and QA testing. Powered by Claude, Cursor, and AI agents.</p>
-  </header>
+  <section class="section">
+    <h2>🛒 Live Marketplace</h2>
+    <p>Browse the full catalog across dedicated pages — search, filter, and copy run commands instantly.</p>
+    <div class="hero-cta" style="justify-content:flex-start;margin-top:16px;">
+      <a href="agents.html" class="btn-outline">Agents (2)</a>
+      <a href="skills.html" class="btn-outline">Skills (1)</a>
+      <a href="prompts.html" class="btn-outline">Prompts (3)</a>
+    </div>
+  </section>
 
-  <div class="container">
-    
-    <aside class="sidebar">
-      <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-box" placeholder="Search...">
-      </div>
-      
-      <div class="filter-group">
-        <h3>Filter by Category</h3>
-        
-        <label class="filter-option">
-          <div class="filter-option-left">
-            <input type="checkbox" value="agent" class="category-filter">
-            🤖 Agents
-          </div>
-          <span class="filter-count">(2)</span>
-        </label>
-        
-        <label class="filter-option">
-          <div class="filter-option-left">
-            <input type="checkbox" value="skill" class="category-filter">
-            🛠️ Data Gen
-          </div>
-          <span class="filter-count">(1)</span>
-        </label>
-        
-        <label class="filter-option">
-          <div class="filter-option-left">
-            <input type="checkbox" value="prompt" class="category-filter">
-            🧠 Prompts
-          </div>
-          <span class="filter-count">(3)</span>
-        </label>
-      </div>
-
-      <div class="filter-group" style="margin-top: 32px;">
-        <h3>Trust Level</h3>
-        <label class="filter-option">
-          <div class="filter-option-left">
-            <input type="checkbox" checked disabled>
-            <span style="color:var(--badge-green-text)">●</span> Verified
-          </div>
-        </label>
-      </div>
-    </aside>
-
-    <main class="content">
-      <div class="top-bar">
-        <span id="resultCount">6 skills found</span>
-      </div>
-
-      <div class="grid" id="skillsGrid">
-        
-        <div class="card" data-category="agent" data-search="self healing locator playwright ai">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-              <span class="badge badge-orange">🔥 Popular</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./01-Self-Healing-Tests" class="card-title">Self-Healing Locator</a>
-          <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catch TimeoutErrors and fix them instantly.</p>
-          
-          <button class="btn-action" onclick="copyAction(this, 'npm run test -- 01-Self-Healing-Tests/src/auto-locator.ts')">
-            💬 Copy Run Command
-          </button>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 12</span>
-              <span>⬇ 5,360</span>
-              <span>⭐ 5.0</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">🎭 Playwright</span>
-              <span class="tool-tag">🧠 Claude</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" data-category="agent" data-search="automated triage log analyzer jira ci">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./03-Automated-Bug-Report" class="card-title">Automated Triage</a>
-          <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
-          
-          <button class="btn-action" onclick="copyAction(this, 'npx tsx 03-Automated-Bug-Report/src/log-analyzer.ts')">
-            💬 Copy Run Command
-          </button>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 8</span>
-              <span>⬇ 1,475</span>
-              <span>⭐ 4.8</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">⚙️ CI/CD</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" data-category="skill" data-search="smart data gen api fuzzing payload">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-              <span class="badge badge-orange">🔥 Popular</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./02-Smart-Data-Gen" class="card-title">Smart Data Gen</a>
-          <p class="card-desc">Generates extreme, complex, and malicious JSON payloads for API fuzzing and boundary testing.</p>
-          
-          <button class="btn-action" onclick="copyAction(this, 'npx tsx 02-Smart-Data-Gen/src/generate-test-data.ts')">
-            💬 Copy Run Command
-          </button>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 24</span>
-              <span>⬇ 3,045</span>
-              <span>⭐ 4.9</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">🔌 API</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" data-category="prompt" data-search="cursorrules prompt ide">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./.cursorrules" class="card-title">God-Mode .cursorrules</a>
-          <p class="card-desc">Forces your Cursor IDE to act as an Elite SDET, writing unbreakable, flaky-free Playwright test code.</p>
-          
-          <a href="./.cursorrules" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
-            📄 View Source File
-          </a>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 45</span>
-              <span>⬇ 8,122</span>
-              <span>⭐ 5.0</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">💻 Cursor</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" data-category="prompt" data-search="test plan generator prd matrix prompt">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./claude-projects/Test-Plan-Generator.md" class="card-title">PRD to Test Matrix</a>
-          <p class="card-desc">System prompt that converts Product Requirements Documents (PRDs) into edge-case heavy test matrices.</p>
-          
-          <a href="./claude-projects/Test-Plan-Generator.md" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
-            📄 View Source File
-          </a>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 19</span>
-              <span>⬇ 1,866</span>
-              <span>⭐ 4.7</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">🧠 Claude</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" data-category="prompt" data-search="hacker qa data gen prompt malicious">
-          <div class="card-top">
-            <div class="badges">
-              <span class="badge badge-green">✔ Verified</span>
-            </div>
-            <div class="creator">Creator: toolkit-ai</div>
-          </div>
-          
-          <a href="./02-Smart-Data-Gen/prompts/claude-data-gen.md" class="card-title">The "Hacker" QA</a>
-          <p class="card-desc">System prompt designed to force the LLM to generate boundary-pushing and malicious JSON test data.</p>
-          
-          <a href="./02-Smart-Data-Gen/prompts/claude-data-gen.md" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
-            📄 View Source File
-          </a>
-          
-          <div class="card-footer">
-            <div class="stats">
-              <span>♡ 31</span>
-              <span>⬇ 4,532</span>
-              <span>⭐ 4.9</span>
-            </div>
-            <div class="tool-tags">
-              <span class="tool-tag">🛡️ Security</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </main>
-  </div>
-
-  <script>
-    // Filtering Logic
-    const searchInput = document.getElementById('searchInput');
-    const categoryFilters = document.querySelectorAll('.category-filter');
-    const cards = document.querySelectorAll('.card');
-    const resultCount = document.getElementById('resultCount');
-
-    function filterCards() {
-      const searchTerm = searchInput.value.toLowerCase();
-      
-      // Get checked categories
-      const activeCategories = Array.from(categoryFilters)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-
-      let visibleCount = 0;
-
-      cards.forEach(card => {
-        const textToSearch = card.getAttribute('data-search').toLowerCase();
-        const category = card.getAttribute('data-category');
-        
-        const matchesSearch = textToSearch.includes(searchTerm);
-        const matchesCategory = activeCategories.length === 0 || activeCategories.includes(category);
-
-        if (matchesSearch && matchesCategory) {
-          card.style.display = 'flex';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
-
-      resultCount.textContent = `${visibleCount} skills found`;
-    }
-
-    searchInput.addEventListener('input', filterCards);
-    categoryFilters.forEach(cb => cb.addEventListener('change', filterCards));
-
-    // Copy to Clipboard Logic
-    function copyAction(buttonElement, textToCopy) {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        const originalText = buttonElement.innerHTML;
-        buttonElement.innerHTML = '✅ Copied!';
-        buttonElement.style.background = '#dcfce7';
-        buttonElement.style.color = '#166534';
-        
-        setTimeout(() => {
-          buttonElement.innerHTML = originalText;
-          buttonElement.style.background = '';
-          buttonElement.style.color = '';
-        }, 2000);
-      });
-    }
-  </script>
+  <script src="js/site.js"></script>
 </body>
 </html>
