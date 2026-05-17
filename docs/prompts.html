@@ -85,6 +85,8 @@ STYLE:
           <p class="card-desc">Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators.</p>
           <button type="button" class="btn-action" data-i18n="btn_view_prompt"
             onclick="openSkillPanel(this.closest('.card'))">📄 View Full Prompt</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 45</span><span>⬇ 8,122</span><span>⭐ 5.0</span></div>
             <div class="tool-tags"><span class="tool-tag">💻 Cursor</span></div>
@@ -127,6 +129,8 @@ After the table, provide:
           <p class="card-desc">Converts PRDs into exhaustive test plans with functional, negative, edge-case tables and Playwright automation strategy.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_ref"
             onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">💬 Copy Reference</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 19</span><span>⬇ 1,866</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">🧠 Claude</span></div>
@@ -175,6 +179,8 @@ Output: raw JSON array only. No explanations. No markdown. Just the payload arra
           <p class="card-desc">Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_ref"
             onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">💬 Copy Reference</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 31</span><span>⬇ 4,532</span><span>⭐ 4.9</span></div>
             <div class="tool-tags"><span class="tool-tag">🛡️ Security</span></div>
@@ -231,6 +237,8 @@ Example structure:
           <p class="card-desc">Transforms raw PRDs into production-ready Gherkin scenarios covering happy path, negative flows, and edge cases with @smoke/@regression tags.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_ref"
             onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">💬 Copy Reference</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 22</span><span>⬇ 2,640</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">🥒 Cucumber</span><span class="tool-tag">📝 BDD</span></div>
@@ -279,6 +287,8 @@ Output a structured review:
           <p class="card-desc">Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_ref"
             onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">💬 Copy Reference</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 28</span><span>⬇ 3,110</span><span>⭐ 4.9</span></div>
             <div class="tool-tags"><span class="tool-tag">🔍 PR Review</span><span class="tool-tag">🎭 Playwright</span></div>
@@ -330,6 +340,8 @@ Output:
           <p class="card-desc">Analyzes OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage.</p>
           <button type="button" class="btn-action" data-i18n="btn_copy_ref"
             onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">💬 Copy Reference</button>
+          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
+            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 16</span><span>⬇ 1,990</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">📜 OpenAPI</span><span class="tool-tag">🔌 API</span></div>
@@ -362,6 +374,10 @@ Output:
       <div id="panelCodeSection">
         <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
         <pre class="panel-code" id="panelCode"></pre>
+      </div>
+      <div>
+        <button class="btn-add-claude-panel" data-i18n="add_to_claude"
+          onclick="addToClaudeFromPanel()">🤖 Add to Claude</button>
       </div>
     </div>
   </aside>
