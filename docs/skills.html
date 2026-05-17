@@ -41,7 +41,25 @@
 
       <div class="grid" id="skillsGrid">
 
-        <div class="card" data-category="skill" data-search="smart data gen api fuzzing payload sql xss boundary active">
+        <div class="card"
+          data-category="skill"
+          data-search="smart data gen api fuzzing payload sql xss boundary active"
+          data-title="Smart Data Gen"
+          data-description="Generates extreme, complex, and malicious JSON payloads for API fuzzing — SQLi, XSS, nulls, RTL text, and boundary numbers. Plug directly into your Playwright or Supertest suites."
+          data-command="npx tsx src/skills/generate-test-data.ts"
+          data-prompt="You are The Hacker QA. For the given API field or schema, generate 20 extreme test payloads.
+
+Categories to cover:
+  SQL Injection  — classic (OR 1=1), time-based (SLEEP), UNION SELECT
+  XSS            — &lt;script&gt;, img onerror, SVG onload, javascript: href
+  Null / empty   — null, undefined, empty string, whitespace-only, zero
+  Boundaries     — 0, -1, 2147483647, 2147483648, -2147483649, 1e308
+  Unicode        — RTL override (U+202E), zero-width joiners, emoji, homoglyphs
+  Format attacks — ISO-8601 dates, scientific notation, leading zeros (007)
+  Encoding       — URL-encoded, double-encoded, HTML entities, base64 wrapped
+
+Output: a raw JSON array of strings / numbers — no explanations, no comments.
+The array must be valid JSON and directly usable as a test fixture.">
           <div class="card-top">
             <div class="badges">
               <span class="badge badge-green">🟢 Active</span>
@@ -49,7 +67,7 @@
             </div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#testing-skills-catalog" class="card-title">Smart Data Gen</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Smart Data Gen</button>
           <p class="card-desc">Generates extreme, complex, and malicious JSON payloads for API fuzzing — SQLi, XSS, nulls, RTL text, and boundary numbers.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/skills/generate-test-data.ts')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -58,12 +76,28 @@
           </div>
         </div>
 
-        <div class="card" data-category="skill" data-search="graphql fuzzer nested malicious query depth limit planned">
+        <div class="card"
+          data-category="skill"
+          data-search="graphql fuzzer nested malicious query depth limit planned"
+          data-title="GraphQL Fuzzer"
+          data-description="Generates deeply nested and malicious GraphQL queries to probe backend depth limits, alias explosions, and rate limiting — turning schema introspection into a security test suite."
+          data-command="npx tsx scripts/graphql-fuzzer.ts --schema ./api/schema.graphql --depth 20"
+          data-prompt="You are a GraphQL security tester. Given a GraphQL schema, generate attack queries organised by category:
+
+1. Depth Bomb       — recursively nested query exceeding 20 levels
+2. Alias Explosion  — 500+ aliases on a single field to multiply resolver cost
+3. Field Duplication — same field requested 100x to probe de-duplication
+4. Introspection    — full __schema and __type dumps for schema discovery
+5. Batch Attack     — array of 50 identical mutations to test rate-limit logic
+6. Fragment Cycles  — circular fragment references to crash naive parsers
+
+Output: one .graphql file per category under the --out directory.
+Each file starts with a comment: # Attack: &lt;name&gt; | Expected: &lt;HTTP status or error&gt;">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#testing-skills-catalog" class="card-title">GraphQL Fuzzer</a>
+          <button class="card-title" onclick="openSkillPanel(this)">GraphQL Fuzzer</button>
           <p class="card-desc">Generates deeply nested and malicious GraphQL queries to probe backend depth limits, alias explosions, and rate limiting.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/graphql-fuzzer.ts --schema ./api/schema.graphql --depth 20')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -72,12 +106,35 @@
           </div>
         </div>
 
-        <div class="card" data-category="skill" data-search="k6 load profile playwright journey performance planned">
+        <div class="card"
+          data-category="skill"
+          data-search="k6 load profile playwright journey performance planned"
+          data-title="K6 Load Profile Gen"
+          data-description="Converts a Playwright user-journey script into a K6 load test with realistic think-time, VU ramp stages, and threshold assertions — bridging functional and performance testing in one step."
+          data-command="npx tsx scripts/k6-profile-gen.ts --input ./tests/checkout.spec.ts --out ./load/checkout.k6.js"
+          data-prompt="You are a performance engineer. Convert the provided Playwright spec into a complete K6 load test script.
+
+Transformation rules:
+  - page.goto(url)       → http.get(url) with check for status 200
+  - page.fill / click    → group() with think-time sleep(randomBetween(1, 3))
+  - expect().toBeVisible → check(res, { 'element visible': ... })
+
+VU ramp stages (configurable via env vars):
+  Warm-up  : 0 → 10 VUs over 30 s
+  Peak     : 10 → 50 VUs over 2 min
+  Sustain  : 50 VUs for 5 min
+  Cool-down: 50 → 0 VUs over 30 s
+
+Thresholds:
+  http_req_duration: p(95) &lt; 500
+  http_req_failed:   rate &lt; 0.01
+
+Output: a single self-contained k6 JS file with env var configuration at the top.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#testing-skills-catalog" class="card-title">K6 Load Profile Gen</a>
+          <button class="card-title" onclick="openSkillPanel(this)">K6 Load Profile Gen</button>
           <p class="card-desc">Converts a Playwright user-journey script into a K6 load test with realistic think-time, VU stages, and threshold assertions.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/k6-profile-gen.ts --input ./tests/checkout.spec.ts --out ./load/checkout.k6.js')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -86,12 +143,37 @@
           </div>
         </div>
 
-        <div class="card" data-category="skill" data-search="regex log scraper error signature unstructured server logs planned">
+        <div class="card"
+          data-category="skill"
+          data-search="regex log scraper error signature unstructured server logs planned"
+          data-title="Regex Log Scraper"
+          data-description="Clusters millions of lines of unstructured server logs into unique error signatures with suggested regex patterns for alerting — turning noise into actionable observability rules."
+          data-command="npx tsx scripts/regex-log-scraper.ts --file ./logs/production.log --top 50"
+          data-prompt="You are a log-analysis expert. Given unstructured server log lines, produce a structured analysis:
+
+Step 1 — Clustering
+  Group lines into unique error signatures using edit-distance similarity (threshold: 80%).
+  Extract variable parts (timestamps, IDs, IPs) as named capture groups.
+
+Step 2 — Per-cluster output (JSON array):
+  {
+    pattern:     regex string with named groups,
+    sample:      one representative raw log line,
+    frequency:   occurrence count,
+    severity:    critical | error | warn | info,
+    component:   inferred service or module name,
+    alertExpr:   Datadog / Grafana alert query suggestion
+  }
+
+Step 3 — Markdown summary
+  - Top 10 clusters by frequency
+  - Total unique signatures found
+  - Recommended alert thresholds per severity tier">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#testing-skills-catalog" class="card-title">Regex Log Scraper</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Regex Log Scraper</button>
           <p class="card-desc">Clusters millions of lines of unstructured server logs into unique error signatures with suggested regex patterns for alerting.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/regex-log-scraper.ts --file ./logs/production.log --top 50')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -100,12 +182,30 @@
           </div>
         </div>
 
-        <div class="card" data-category="skill" data-search="jwt manipulator expired unsigned security token planned">
+        <div class="card"
+          data-category="skill"
+          data-search="jwt manipulator expired unsigned security token planned"
+          data-title="JWT Manipulator"
+          data-description="Creates expired, unsigned, algorithm-confused, and misconfigured JWT tokens for auth boundary and negative security testing — making auth bypass scenarios reproducible and CI-friendly."
+          data-command="npx tsx scripts/jwt-manipulator.ts --secret test --out ./fixtures/tokens.json"
+          data-prompt="You are a security researcher testing authentication boundaries. Generate one JWT per attack category:
+
+  expired        — exp set 24 h in the past, nbf in the past
+  not-yet-valid  — nbf set 24 h in the future
+  no-signature   — alg: 'none', signature segment empty
+  null-signature — valid header.payload but signature is all zeros
+  alg-confusion  — RS256 token signed with the HS256 secret
+  role-escalation — payload contains { role: 'admin', sudo: true }
+  jwk-injection  — embeds a self-signed JWK in the header
+  oversized       — payload is 64 KB of random claims
+
+Output: fixtures/tokens.json as an object keyed by attack name.
+Each entry: { token: string, description: string, expectedHttpStatus: number }">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#testing-skills-catalog" class="card-title">JWT Manipulator</a>
+          <button class="card-title" onclick="openSkillPanel(this)">JWT Manipulator</button>
           <p class="card-desc">Creates expired, unsigned, algorithm-confused, and misconfigured JWT tokens for auth boundary and negative security testing.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/jwt-manipulator.ts --secret test --out ./fixtures/tokens.json')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -117,6 +217,32 @@
       </div>
     </main>
   </div>
+
+  <!-- Slide-Over Panel -->
+  <div class="panel-overlay" id="panelOverlay" onclick="closeSkillPanel()" aria-hidden="true"></div>
+  <aside class="slide-panel" id="slidePanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <div class="panel-header">
+      <span class="panel-title" id="panelTitle"></span>
+      <button class="panel-close" id="panelClose" onclick="closeSkillPanel()" aria-label="Close panel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div>
+        <p class="panel-section-label">How it works</p>
+        <p class="panel-desc" id="panelDesc"></p>
+      </div>
+      <div id="panelCommandSection">
+        <p class="panel-section-label">CLI Run Command</p>
+        <div class="panel-command-wrap">
+          <code class="panel-command" id="panelCommand"></code>
+          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()">📋 Copy</button>
+        </div>
+      </div>
+      <div id="panelCodeSection">
+        <p class="panel-section-label">System Prompt / Instructions</p>
+        <pre class="panel-code" id="panelCode"></pre>
+      </div>
+    </div>
+  </aside>
 
   <script src="js/site.js"></script>
   <script>
