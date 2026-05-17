@@ -1,308 +1,624 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Testing Toolkit Marketplace</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intelligent Testing Toolkit | Skills & Agents</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* Reset & Base Variables */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-body: #f4f3ed;
+      --bg-card: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-light: #e5e7eb;
+      
+      --btn-bg: #eff6ff;
+      --btn-text: #2563eb;
+      --btn-hover: #dbeafe;
+      
+      --badge-green-bg: #dcfce7;
+      --badge-green-text: #166534;
+      --badge-orange-bg: #ffedd5;
+      --badge-orange-text: #9a3412;
+      
+      --banner-bg: #e0e7ff;
+      --banner-text: #3730a3;
+    }
+
     body {
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 60px;
     }
-    .page {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 32px 24px 64px;
-    }
-    .hero {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    h1 {
-      font-size: clamp(2.5rem, 2rem + 1vw, 3.5rem);
-      margin: 0;
-      color: #e0f2fe;
-    }
-    p.lead {
-      margin: 16px auto 0;
-      max-width: 780px;
-      color: #cbd5e1;
-      line-height: 1.7;
-    }
-    .card {
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-      border-radius: 24px;
-      padding: 24px;
-      margin-bottom: 28px;
-      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
-    }
-    .card h2 {
-      margin-top: 0;
-      font-size: 1.5rem;
-      color: #bae6fd;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 16px;
-    }
-    th, td {
-      text-align: left;
-      padding: 14px 12px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-    }
-    th {
-      font-size: 0.95rem;
-      color: #cbd5e1;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    tr:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-    a {
-      color: #7dd3fc;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-    .status {
-      display: inline-flex;
+
+    /* Top Banner */
+    .info-banner {
+      background: var(--banner-bg);
+      color: var(--banner-text);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: 8px;
+      max-width: 1300px;
+      margin: 24px auto 0;
+      border: 1px solid #c7d2fe;
+    }
+    
+    .info-banner a {
+      color: var(--banner-text);
+      text-decoration: underline;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 24px 16px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 800px;
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      flex: 0 0 280px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 24px;
+      position: sticky;
+      top: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .search-box:focus { border-color: var(--btn-text); }
+    
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .filter-group { margin-bottom: 24px; }
+    
+    .filter-group:last-child { margin-bottom: 0; }
+
+    .filter-group h3 {
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: #374151;
       font-weight: 600;
     }
-    .status span {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      display: inline-block;
-    }
-    .active { background: #22c55e; }
-    .planned { background: #f59e0b; }
-    .filter {
+
+    .filter-option {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 12px;
       align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: #4b5563;
+      cursor: pointer;
     }
-    .filter input {
-      flex: 1 1 260px;
-      min-width: 220px;
-      padding: 12px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(15, 23, 42, 0.8);
-      color: #f8fafc;
+
+    .filter-option-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .meta {
-      color: #94a3b8;
+
+    .filter-option input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--btn-text);
+    }
+    
+    .filter-count {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Main Content Area */
+    .content { flex: 1; }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      color: var(--text-muted);
       font-size: 0.95rem;
-      margin-top: 6px;
+      padding-top: 8px;
     }
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      color: #94a3b8;
-      font-size: 0.95rem;
+
+    /* Grid & Cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 24px;
     }
-    @media (max-width: 720px) {
-      th, td {
-        padding: 12px 8px;
-      }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-green { background: var(--badge-green-bg); color: var(--badge-green-text); }
+    .badge-orange { background: var(--badge-orange-bg); color: var(--badge-orange-text); }
+
+    .creator {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #111827;
+      text-decoration: none;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .card-title:hover { color: var(--btn-text); }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      flex-grow: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Action Button */
+    .btn-action {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: background 0.2s;
+      font-family: inherit;
+      text-decoration: none;
+    }
+
+    .btn-action:hover { background: var(--btn-hover); }
+
+    /* Card Footer */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+    }
+
+    .stats {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .stats span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-tags {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tool-tag {
+      background: #f3f4f6;
+      color: #374151;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+
+    @media (max-width: 900px) {
+      .container { flex-direction: column; }
+      .sidebar { width: 100%; position: static; }
+      .info-banner { margin: 16px 24px 0; }
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="hero">
-      <h1>AI Testing Toolkit Marketplace</h1>
-      <p class="lead">Browse the full QA automation marketplace: agents, data generators, prompts, and ideas in one view. Open any entry to inspect source code, docs, or copy prompts into your workflows.</p>
-    </div>
 
-    <div class="card">
-      <div class="filter">
-        <label for="search">Search marketplace</label>
-        <input id="search" type="search" placeholder="Filter by name, status, tag, or category" aria-label="Search marketplace" />
+  <div class="info-banner" id="infoBanner">
+    <div>
+      💡 First time here? <a href="#">Start here</a>
+    </div>
+    <button style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'">×</button>
+  </div>
+
+  <header>
+    <h1>All Skills</h1>
+    <p class="subtitle">Discover and install automated skills for Playwright and QA testing. Powered by Claude, Cursor, and AI agents.</p>
+  </header>
+
+  <div class="container">
+    
+    <aside class="sidebar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search...">
       </div>
-      <div class="meta">Tip: search terms like <code>Playwright</code>, <code>Claude</code>, <code>Data</code>, or <code>Prompt</code>.</div>
-    </div>
+      
+      <div class="filter-group">
+        <h3>Filter by Category</h3>
+        
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <input type="checkbox" value="agent" class="category-filter">
+            🤖 Agents
+          </div>
+          <span class="filter-count">(2)</span>
+        </label>
+        
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <input type="checkbox" value="skill" class="category-filter">
+            🛠️ Data Gen
+          </div>
+          <span class="filter-count">(1)</span>
+        </label>
+        
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <input type="checkbox" value="prompt" class="category-filter">
+            🧠 Prompts
+          </div>
+          <span class="filter-count">(3)</span>
+        </label>
+      </div>
 
-    <div class="card" id="agents-card">
-      <h2>🤖 Autonomous Agents</h2>
-      <p class="meta">Agents can make decisions, inspect pages, and report findings automatically.</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Agent Name</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Tags</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr data-keywords="self-healing locator playwright claude resilience active">
-            <td><a href="./01-Self-Healing-Tests">Self-Healing Locator</a></td>
-            <td>Detects failing Playwright locators and uses the DOM plus an LLM to suggest corrected selectors.</td>
-            <td><span class="status"><span class="active"></span>Active</span></td>
-            <td><code>Playwright</code> <code>Claude</code> <code>Resilience</code></td>
-          </tr>
-          <tr data-keywords="automated triage debugging jira logs active">
-            <td><a href="./03-Automated-Bug-Report">Automated Triage</a></td>
-            <td>Ingests CI/CD stack traces and generates a Jira-ready Markdown root-cause analysis report.</td>
-            <td><span class="status"><span class="active"></span>Active</span></td>
-            <td><code>Debugging</code> <code>Jira</code> <code>Logs</code></td>
-          </tr>
-          <tr data-keywords="visual regression bot vision ui ux planned">
-            <td>Visual Regression Bot</td>
-            <td>Compares screenshots using Vision AI to detect styling anomalies and UI bugs.</td>
-            <td><span class="status"><span class="planned"></span>Planned</span></td>
-            <td><code>Vision</code> <code>UI/UX</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="filter-group" style="margin-top: 32px;">
+        <h3>Trust Level</h3>
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <input type="checkbox" checked disabled>
+            <span style="color:var(--badge-green-text)">●</span> Verified
+          </div>
+        </label>
+      </div>
+    </aside>
 
-    <div class="card" id="skills-card">
-      <h2>🛠️ Testing Skills & Data Generators</h2>
-      <p class="meta">Reusable utilities and generators that support API fuzzing, test data, and backend mocking.</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Skill Name</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Tags</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr data-keywords="edge-case data gen api data fuzzing active">
-            <td><a href="./02-Smart-Data-Gen">Edge-Case Data Gen</a></td>
-            <td>Generates extreme, complex, and malicious JSON payloads for API fuzzing.</td>
-            <td><span class="status"><span class="active"></span>Active</span></td>
-            <td><code>API</code> <code>Data</code> <code>Fuzzing</code></td>
-          </tr>
-          <tr data-keywords="dynamic api mocker backend mocking planned">
-            <td>Dynamic API Mocker</td>
-            <td>AI reads an OpenAPI spec and generates a live mock server with intelligent responses.</td>
-            <td><span class="status"><span class="planned"></span>Planned</span></td>
-            <td><code>Backend</code> <code>Mocking</code></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <main class="content">
+      <div class="top-bar">
+        <span id="resultCount">6 skills found</span>
+      </div>
 
-    <div class="card" id="prompts-card">
-      <h2>🧠 Prompt Library</h2>
-      <p class="meta">System prompts for Claude, ChatGPT, and Cursor IDE to improve QA workflows.</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Prompt / Persona</th>
-            <th>Use Case</th>
-            <th>Link</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr data-keywords="hacker qa sql xss boundary payloads prompt active">
-            <td>The "Hacker" QA</td>
-            <td>Break forms with SQLi, XSS, and boundary-pushing payloads.</td>
-            <td><a href="./02-Smart-Data-Gen/prompts">View Prompt</a></td>
-          </tr>
-          <tr data-keywords="prd test matrix doc test plan prompt planned">
-            <td>PRD to Test Matrix</td>
-            <td>Convert a Product Requirement Doc into a full test plan.</td>
-            <td><span>Need Contributor</span></td>
-          </tr>
-          <tr data-keywords="cursor rules ide playwright prompt planned">
-            <td>Cursor Rules</td>
-            <td>Make your Cursor IDE a Playwright master.</td>
-            <td><span>Need Contributor</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="grid" id="skillsGrid">
+        
+        <div class="card" data-category="agent" data-search="self healing locator playwright ai">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+              <span class="badge badge-orange">🔥 Popular</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./01-Self-Healing-Tests" class="card-title">Self-Healing Locator</a>
+          <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catch TimeoutErrors and fix them instantly.</p>
+          
+          <button class="btn-action" onclick="copyAction(this, 'npm run test -- 01-Self-Healing-Tests/src/auto-locator.ts')">
+            💬 Copy Run Command
+          </button>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 12</span>
+              <span>⬇ 5,360</span>
+              <span>⭐ 5.0</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">🎭 Playwright</span>
+              <span class="tool-tag">🧠 Claude</span>
+            </div>
+          </div>
+        </div>
 
-    <div class="card" id="demos-card">
-      <h2>⚡ Live Demos</h2>
-      <p class="meta">Run the curated demos locally. The scripts include MOCK fallbacks so they run without external API keys.</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Demo</th>
-            <th>Description</th>
-            <th>Run</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Self-Healing Locator</td>
-            <td>Playwright demo that auto-recovers a broken selector (mock mode available).</td>
-            <td>
-              <code id="cmd-heal">npx tsx "01-Self-Healing-Tests/self-healing.ts"</code>
-              <button data-cmd="cmd-heal" class="copy">Copy</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Edge-Case Data Gen</td>
-            <td>Generate extreme JSON payloads for API fuzzing (mock mode available).</td>
-            <td>
-              <code id="cmd-data">npx tsx "02-Smart-Data-Gen/generate-test-data.ts"</code>
-              <button data-cmd="cmd-data" class="copy">Copy</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Automated Bug Report</td>
-            <td>Analyze test logs and output a Jira-ready Markdown report (mock mode available).</td>
-            <td>
-              <code id="cmd-bug">npx tsx "03-Automated-Bug-Report/log-analyzer.ts"</code>
-              <button data-cmd="cmd-bug" class="copy">Copy</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <div class="card" data-category="agent" data-search="automated triage log analyzer jira ci">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./03-Automated-Bug-Report" class="card-title">Automated Triage</a>
+          <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
+          
+          <button class="btn-action" onclick="copyAction(this, 'npx tsx 03-Automated-Bug-Report/src/log-analyzer.ts')">
+            💬 Copy Run Command
+          </button>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 8</span>
+              <span>⬇ 1,475</span>
+              <span>⭐ 4.8</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">⚙️ CI/CD</span>
+            </div>
+          </div>
+        </div>
 
-    <footer>
-      <p>Built from the AI Testing Toolkit repository. Open the linked folders to explore code, scripts, and prompt libraries.</p>
-    </footer>
+        <div class="card" data-category="skill" data-search="smart data gen api fuzzing payload">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+              <span class="badge badge-orange">🔥 Popular</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./02-Smart-Data-Gen" class="card-title">Smart Data Gen</a>
+          <p class="card-desc">Generates extreme, complex, and malicious JSON payloads for API fuzzing and boundary testing.</p>
+          
+          <button class="btn-action" onclick="copyAction(this, 'npx tsx 02-Smart-Data-Gen/src/generate-test-data.ts')">
+            💬 Copy Run Command
+          </button>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 24</span>
+              <span>⬇ 3,045</span>
+              <span>⭐ 4.9</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">🔌 API</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="cursorrules prompt ide">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./.cursorrules" class="card-title">God-Mode .cursorrules</a>
+          <p class="card-desc">Forces your Cursor IDE to act as an Elite SDET, writing unbreakable, flaky-free Playwright test code.</p>
+          
+          <a href="./.cursorrules" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
+            📄 View Source File
+          </a>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 45</span>
+              <span>⬇ 8,122</span>
+              <span>⭐ 5.0</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">💻 Cursor</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="test plan generator prd matrix prompt">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./claude-projects/Test-Plan-Generator.md" class="card-title">PRD to Test Matrix</a>
+          <p class="card-desc">System prompt that converts Product Requirements Documents (PRDs) into edge-case heavy test matrices.</p>
+          
+          <a href="./claude-projects/Test-Plan-Generator.md" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
+            📄 View Source File
+          </a>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 19</span>
+              <span>⬇ 1,866</span>
+              <span>⭐ 4.7</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">🧠 Claude</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="hacker qa data gen prompt malicious">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">✔ Verified</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          
+          <a href="./02-Smart-Data-Gen/prompts/claude-data-gen.md" class="card-title">The "Hacker" QA</a>
+          <p class="card-desc">System prompt designed to force the LLM to generate boundary-pushing and malicious JSON test data.</p>
+          
+          <a href="./02-Smart-Data-Gen/prompts/claude-data-gen.md" class="btn-action" style="background: #f3f4f6; color: #1f2937; border: 1px solid #e5e7eb;">
+            📄 View Source File
+          </a>
+          
+          <div class="card-footer">
+            <div class="stats">
+              <span>♡ 31</span>
+              <span>⬇ 4,532</span>
+              <span>⭐ 4.9</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">🛡️ Security</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
   </div>
 
   <script>
-    const searchInput = document.getElementById('search');
-    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    // Filtering Logic
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilters = document.querySelectorAll('.category-filter');
+    const cards = document.querySelectorAll('.card');
+    const resultCount = document.getElementById('resultCount');
 
-    searchInput.addEventListener('input', () => {
-      const query = searchInput.value.trim().toLowerCase();
-      rows.forEach(row => {
-        const text = row.dataset.keywords || row.textContent.toLowerCase();
-        row.style.display = text.includes(query) ? '' : 'none';
-      });
-    });
+    function filterCards() {
+      const searchTerm = searchInput.value.toLowerCase();
+      
+      // Get checked categories
+      const activeCategories = Array.from(categoryFilters)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
 
-    // Copy demo command buttons
-    document.querySelectorAll('button.copy').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const codeId = btn.getAttribute('data-cmd');
-        const codeEl = document.getElementById(codeId);
-        if (!codeEl) return;
-        const text = codeEl.textContent.trim();
-        try {
-          await navigator.clipboard.writeText(text);
-          const original = btn.textContent;
-          btn.textContent = 'Copied';
-          setTimeout(() => btn.textContent = original, 1200);
-        } catch (e) {
-          console.warn('Clipboard failed', e);
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const textToSearch = card.getAttribute('data-search').toLowerCase();
+        const category = card.getAttribute('data-category');
+        
+        const matchesSearch = textToSearch.includes(searchTerm);
+        const matchesCategory = activeCategories.length === 0 || activeCategories.includes(category);
+
+        if (matchesSearch && matchesCategory) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
         }
       });
-    });
+
+      resultCount.textContent = `${visibleCount} skills found`;
+    }
+
+    searchInput.addEventListener('input', filterCards);
+    categoryFilters.forEach(cb => cb.addEventListener('change', filterCards));
+
+    // Copy to Clipboard Logic
+    function copyAction(buttonElement, textToCopy) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = buttonElement.innerHTML;
+        buttonElement.innerHTML = '✅ Copied!';
+        buttonElement.style.background = '#dcfce7';
+        buttonElement.style.color = '#166534';
+        
+        setTimeout(() => {
+          buttonElement.innerHTML = originalText;
+          buttonElement.style.background = '';
+          buttonElement.style.color = '';
+        }, 2000);
+      });
+    }
   </script>
 </body>
 </html>
