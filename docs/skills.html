@@ -46,7 +46,7 @@
 
     <main class="content">
       <div class="top-bar">
-        <span id="resultCount" data-i18n-label="label_skills">5 skills found</span>
+        <span id="resultCount" data-i18n-label="label_skills">9 skills found</span>
       </div>
 
       <div class="grid" id="skillsGrid">
@@ -234,6 +234,159 @@
           </div>
         </div>
 
+
+        <!-- Playwright POM Builder -->
+        <div class="card"
+          data-category="skill"
+          data-search="playwright pom builder page object model typescript strict typed locator getByRole active"
+          data-title="Playwright POM Builder"
+          data-description="Generates robust, strict-typed Playwright Page Object Model (POM) classes from raw HTML snippets. Outputs complete TypeScript POM files with getByRole locators, JSDoc, and zero XPath."
+          data-command="npx tsx scripts/pom-builder.ts --html ./fixtures/page.html --out ./pages"
+          data-prompt="You are a Senior SDET specializing in Playwright TypeScript automation. When given a raw HTML snippet, generate a complete, strict-typed Page Object Model (POM) class. Rules: 1. Use ONLY getByRole, getByLabel, getByTestId, getByText locators — never XPath or CSS selectors. 2. Every Locator property must be typed as Locator from @playwright/test. 3. Include a constructor that accepts a Page parameter. 4. Write one async action method per interactive element (click, fill, select). 5. Write one async assertion method per key state (isVisible, hasText). 6. Add JSDoc comments on every public method. 7. Export the class as a default export. Output: a single self-contained TypeScript file that compiles with strict: true.">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
+              <span class="badge badge-orange">
+                <span class="material-symbols-outlined badge-icon">local_fire_department</span>
+                <span data-i18n="badge_popular">Popular</span>
+              </span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
+          </div>
+          <button class="card-title" onclick="openSkillPanel(this)">Playwright POM Builder</button>
+          <p class="card-desc">Generates robust, strict-typed Playwright Page Object Models from raw HTML — zero XPath, pure TypeScript, JSDoc included.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/pom-builder.ts --html ./fixtures/page.html --out ./pages')">
+            <span class="material-symbols-outlined btn-icon">terminal</span>
+            <span data-i18n="btn_copy_command">Copy Run Command</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 31</span><span>⬇ 4,210</span><span>⭐ 4.9</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">theater_comedy</span> Playwright</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">code</span> TypeScript</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Fuzzer Matrix -->
+        <div class="card"
+          data-category="skill"
+          data-search="api fuzzer matrix rest openapi boundary json payload sqli xss null type confusion active security"
+          data-title="API Fuzzer Matrix"
+          data-description="Creates boundary-pushing JSON payloads for REST API security and edge-case testing. Generates SQLi, XSS, nulls, and type-confusion payloads based on an OpenAPI spec or JSON schema."
+          data-command="npx tsx scripts/api-fuzzer-matrix.ts --spec ./api/openapi.yaml --out ./fixtures/fuzz-payloads.json"
+          data-prompt="You are an elite API Security Engineer. When given an OpenAPI 3.x spec or a sample JSON payload, generate a comprehensive fuzzing matrix. For every field in the schema, produce payloads in these categories: 1. SQL Injection — classic, blind, time-based, and second-order. 2. XSS — reflected, stored, DOM, and SVG vectors. 3. Type Confusion — string where integer expected, array where object expected, boolean as string. 4. Null and Missing — null value, field omitted entirely, empty string vs null. 5. Boundary Values — max integer (2^53-1), min integer (-2^53), string at maxLength+1, empty string at minLength. 6. Special Characters — Unicode RTL override, zero-width joiners, emoji in IDs, null bytes. Output: a JSON array where each entry has { field, category, value, expectedStatus, notes }. Return ONLY the JSON array with no markdown fences.">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
+          </div>
+          <button class="card-title" onclick="openSkillPanel(this)">API Fuzzer Matrix</button>
+          <p class="card-desc">Creates boundary-pushing JSON payloads for REST API security testing — SQLi, XSS, nulls, and type-confusion based on your OpenAPI spec.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/api-fuzzer-matrix.ts --spec ./api/openapi.yaml --out ./fixtures/fuzz-payloads.json')">
+            <span class="material-symbols-outlined btn-icon">terminal</span>
+            <span data-i18n="btn_copy_command">Copy Run Command</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 27</span><span>⬇ 3,580</span><span>⭐ 4.8</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">api</span> REST API</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">security</span> Security</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BDD Gherkin Architect -->
+        <div class="card"
+          data-category="skill"
+          data-search="bdd gherkin architect given when then feature scenario prd behavior driven active"
+          data-title="BDD Gherkin Architect"
+          data-description="Converts Product Requirements Documents (PRDs) into exhaustive BDD/Gherkin (Given/When/Then) test scenarios. Covers happy paths, negative flows, boundary values, and NFRs with Scenario Outlines."
+          data-command="npx tsx scripts/bdd-gherkin-architect.ts --prd ./docs/feature.md --out ./features"
+          data-prompt="You are a Principal QA Engineer and BDD specialist. When given a PRD, user story, or feature brief, produce a complete .feature file suite. Rules: 1. Use Given for preconditions with concrete data, When for user actions, Then for observable outcomes. 2. Never put multiple user actions in a single When step unless they are atomic. 3. Reuse step wording across scenarios — do not invent synonyms for the same action. 4. For every feature include: one Happy Path Scenario with realistic test data, at least three Negative Scenarios (invalid input, unauthorized access, downstream 500), two Edge Case Scenario Outlines with Examples tables (boundary values, concurrent actions), one NFR scenario tagged @nfr (performance or accessibility). 5. Apply tags: @smoke for golden path, @regression for all scenarios, @nfr for non-functional, @wip only if blocked — add # BLOCKED: comment. 6. Use Scenario Outline with Examples tables for any scenario testing multiple similar inputs. Output: a single Markdown document with one or more Gherkin Feature blocks, ready to paste into a .feature file.">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
+              <span class="badge badge-orange">
+                <span class="material-symbols-outlined badge-icon">local_fire_department</span>
+                <span data-i18n="badge_popular">Popular</span>
+              </span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
+          </div>
+          <button class="card-title" onclick="openSkillPanel(this)">BDD Gherkin Architect</button>
+          <p class="card-desc">Converts PRDs into exhaustive BDD Gherkin scenarios — happy paths, negative flows, edge cases, and NFRs with Scenario Outlines.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/bdd-gherkin-architect.ts --prd ./docs/feature.md --out ./features')">
+            <span class="material-symbols-outlined btn-icon">terminal</span>
+            <span data-i18n="btn_copy_command">Copy Run Command</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 22</span><span>⬇ 2,890</span><span>⭐ 4.9</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">rate_review</span> BDD</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">description</span> Gherkin</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- A11y WCAG Auditor -->
+        <div class="card"
+          data-category="skill"
+          data-search="a11y wcag auditor accessibility aria semantic html dom violations screen reader wcag21aa active"
+          data-title="A11y WCAG Auditor"
+          data-description="Analyzes DOM structures for WCAG 2.1 AA accessibility violations and suggests exact ARIA attributes and semantic HTML fixes — turning compliance debt into actionable, copy-paste remediation."
+          data-command="npx tsx scripts/a11y-wcag-auditor.ts --url https://your-app.com --standard WCAG21AA"
+          data-prompt="You are a WCAG 2.1 AA accessibility expert and senior front-end engineer. When given a DOM snippet or HTML file, perform a comprehensive accessibility audit. For each violation, output a structured finding: { criterion: WCAG success criterion number e.g. 1.1.1, level: A or AA or AAA, element: CSS selector of the offending element, violation: one-sentence description of the problem, impact: critical or serious or moderate or minor, fix: exact corrected HTML with all required ARIA attributes or semantic elements, testCommand: Playwright or axe-core assertion that verifies the fix }. Categories to audit: 1. Images — missing alt, decorative images with non-empty alt. 2. Forms — inputs without associated labels, missing fieldset/legend, absent error announcements. 3. Interactive elements — buttons with no accessible name, links with generic text such as click here or read more. 4. Structure — heading hierarchy violations, missing landmark regions (main, nav, banner), skipped heading levels. 5. Color and contrast — flag elements that commonly fail 4.5:1 ratio (provide selector only). 6. Keyboard — interactive elements not reachable by Tab, missing focus indicators, dialog traps. Output: a JSON array sorted by impact severity, followed by a Markdown summary with total violations per WCAG level.">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
+          </div>
+          <button class="card-title" onclick="openSkillPanel(this)">A11y WCAG Auditor</button>
+          <p class="card-desc">Analyzes DOM for WCAG 2.1 AA violations and outputs exact ARIA attribute and semantic HTML fixes — compliance debt cleared, copy-paste ready.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/a11y-wcag-auditor.ts --url https://your-app.com --standard WCAG21AA')">
+            <span class="material-symbols-outlined btn-icon">terminal</span>
+            <span data-i18n="btn_copy_command">Copy Run Command</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 19</span><span>⬇ 2,450</span><span>⭐ 4.7</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">accessibility_new</span> A11y</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">edit_note</span> WCAG</span>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /grid -->
     </main>
   </div><!-- /container -->
@@ -263,7 +416,17 @@
         </div>
       </div>
       <div id="panelCodeSection">
-        <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
+        <div class="panel-section-row">
+          <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
+          <div class="panel-code-actions">
+            <button class="panel-icon-btn" id="panelCopyPromptBtn" onclick="copyPanelPrompt()" title="Copy prompt">
+              <span class="material-symbols-outlined">content_copy</span>
+            </button>
+            <button class="panel-icon-btn" id="panelDownloadBtn" onclick="downloadSkillMD()" title="Download as SKILL.md">
+              <span class="material-symbols-outlined">download</span>
+            </button>
+          </div>
+        </div>
         <pre class="panel-code" id="panelCode"></pre>
       </div>
       <div>
