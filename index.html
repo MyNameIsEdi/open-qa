@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Testing Toolkit Marketplace</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    h1 {
+      font-size: clamp(2.5rem, 2rem + 1vw, 3.5rem);
+      margin: 0;
+      color: #e0f2fe;
+    }
+    p.lead {
+      margin: 16px auto 0;
+      max-width: 780px;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      color: #bae6fd;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    th, td {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    th {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    a {
+      color: #7dd3fc;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+    .status span {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+    .active { background: #22c55e; }
+    .planned { background: #f59e0b; }
+    .filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .filter input {
+      flex: 1 1 260px;
+      min-width: 220px;
+      padding: 12px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.8);
+      color: #f8fafc;
+    }
+    .meta {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      margin-top: 6px;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 720px) {
+      th, td {
+        padding: 12px 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>AI Testing Toolkit Marketplace</h1>
+      <p class="lead">Browse the full QA automation marketplace: agents, data generators, prompts, and ideas in one view. Open any entry to inspect source code, docs, or copy prompts into your workflows.</p>
+    </div>
+
+    <div class="card">
+      <div class="filter">
+        <label for="search">Search marketplace</label>
+        <input id="search" type="search" placeholder="Filter by name, status, tag, or category" aria-label="Search marketplace" />
+      </div>
+      <div class="meta">Tip: search terms like <code>Playwright</code>, <code>Claude</code>, <code>Data</code>, or <code>Prompt</code>.</div>
+    </div>
+
+    <div class="card" id="agents-card">
+      <h2>🤖 Autonomous Agents</h2>
+      <p class="meta">Agents can make decisions, inspect pages, and report findings automatically.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Agent Name</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Tags</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-keywords="self-healing locator playwright claude resilience active">
+            <td><a href="./01-Self-Healing-Tests">Self-Healing Locator</a></td>
+            <td>Detects failing Playwright locators and uses the DOM plus an LLM to suggest corrected selectors.</td>
+            <td><span class="status"><span class="active"></span>Active</span></td>
+            <td><code>Playwright</code> <code>Claude</code> <code>Resilience</code></td>
+          </tr>
+          <tr data-keywords="automated triage debugging jira logs active">
+            <td><a href="./03-Automated-Bug-Report">Automated Triage</a></td>
+            <td>Ingests CI/CD stack traces and generates a Jira-ready Markdown root-cause analysis report.</td>
+            <td><span class="status"><span class="active"></span>Active</span></td>
+            <td><code>Debugging</code> <code>Jira</code> <code>Logs</code></td>
+          </tr>
+          <tr data-keywords="visual regression bot vision ui ux planned">
+            <td>Visual Regression Bot</td>
+            <td>Compares screenshots using Vision AI to detect styling anomalies and UI bugs.</td>
+            <td><span class="status"><span class="planned"></span>Planned</span></td>
+            <td><code>Vision</code> <code>UI/UX</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" id="skills-card">
+      <h2>🛠️ Testing Skills & Data Generators</h2>
+      <p class="meta">Reusable utilities and generators that support API fuzzing, test data, and backend mocking.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Skill Name</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Tags</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-keywords="edge-case data gen api data fuzzing active">
+            <td><a href="./02-Smart-Data-Gen">Edge-Case Data Gen</a></td>
+            <td>Generates extreme, complex, and malicious JSON payloads for API fuzzing.</td>
+            <td><span class="status"><span class="active"></span>Active</span></td>
+            <td><code>API</code> <code>Data</code> <code>Fuzzing</code></td>
+          </tr>
+          <tr data-keywords="dynamic api mocker backend mocking planned">
+            <td>Dynamic API Mocker</td>
+            <td>AI reads an OpenAPI spec and generates a live mock server with intelligent responses.</td>
+            <td><span class="status"><span class="planned"></span>Planned</span></td>
+            <td><code>Backend</code> <code>Mocking</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" id="prompts-card">
+      <h2>🧠 Prompt Library</h2>
+      <p class="meta">System prompts for Claude, ChatGPT, and Cursor IDE to improve QA workflows.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Prompt / Persona</th>
+            <th>Use Case</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-keywords="hacker qa sql xss boundary payloads prompt active">
+            <td>The "Hacker" QA</td>
+            <td>Break forms with SQLi, XSS, and boundary-pushing payloads.</td>
+            <td><a href="./02-Smart-Data-Gen/prompts">View Prompt</a></td>
+          </tr>
+          <tr data-keywords="prd test matrix doc test plan prompt planned">
+            <td>PRD to Test Matrix</td>
+            <td>Convert a Product Requirement Doc into a full test plan.</td>
+            <td><span>Need Contributor</span></td>
+          </tr>
+          <tr data-keywords="cursor rules ide playwright prompt planned">
+            <td>Cursor Rules</td>
+            <td>Make your Cursor IDE a Playwright master.</td>
+            <td><span>Need Contributor</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>Built from the AI Testing Toolkit repository. Open the linked folders to explore code, scripts, and prompt libraries.</p>
+    </footer>
+  </div>
+
+  <script>
+    const searchInput = document.getElementById('search');
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim().toLowerCase();
+      rows.forEach(row => {
+        const text = row.dataset.keywords || row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>
