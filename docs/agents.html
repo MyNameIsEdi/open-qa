@@ -46,7 +46,27 @@
 
       <div class="grid" id="skillsGrid">
 
-        <div class="card" data-category="agent" data-search="self healing locator playwright ai dom timeout active">
+        <div class="card"
+          data-category="agent"
+          data-search="self healing locator playwright ai dom timeout active"
+          data-title="Self-Healing Locator"
+          data-description="Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catches TimeoutErrors and suggests getByRole locators that survive UI refactors without requiring manual test updates."
+          data-command="npx tsx src/agents/self-healing.ts"
+          data-prompt="You are an Elite SDET. When a Playwright test throws a TimeoutError or locator-not-found error, analyse the current DOM snapshot alongside the failing selector.
+
+Output a ranked list of 3-5 replacement locators using ONLY resilient strategies:
+  1. getByRole()  — preferred for interactive elements
+  2. getByLabel() — preferred for form inputs
+  3. getByText()  — preferred for visible buttons and links
+  4. data-testid  — last resort only
+
+For each suggestion return JSON:
+  { locator: string, confidence: 0-100, reason: string }
+
+Rules:
+- Never suggest CSS class selectors or XPath
+- Prefer aria attributes over positional selectors
+- Explain WHY the original selector broke">
           <div class="card-top">
             <div class="badges">
               <span class="badge badge-green">🟢 Active</span>
@@ -54,7 +74,7 @@
             </div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Self-Healing Locator</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Self-Healing Locator</button>
           <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catches TimeoutErrors and suggests getByRole locators.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/agents/self-healing.ts')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -63,12 +83,30 @@
           </div>
         </div>
 
-        <div class="card" data-category="agent" data-search="automated triage log analyzer jira ci stack trace bug report active">
+        <div class="card"
+          data-category="agent"
+          data-search="automated triage log analyzer jira ci stack trace bug report active"
+          data-title="Automated Triage"
+          data-description="Reads failing CI logs, analyses stack traces, and creates Jira-ready Markdown root-cause reports automatically — cutting triage time from hours to seconds."
+          data-command="npx tsx src/skills/log-analyzer.ts"
+          data-prompt="You are a senior QA engineer performing CI triage. Given a raw CI/CD failure log, extract and structure the following:
+
+1. Root Cause — one concise sentence
+2. Failing Component — file path + line number if present
+3. Blast Radius — which test suites / services are affected
+4. Reproduction Steps — minimal command to reproduce locally
+5. Jira Ticket Draft:
+   Title: [Severity] Short description
+   Description: Root cause + stack excerpt
+   Priority: Critical / High / Medium / Low
+   Labels: regression, ci-failure, &lt;component&gt;
+
+Output as clean Markdown. No filler text — just the structured report.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Automated Triage</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Automated Triage</button>
           <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/skills/log-analyzer.ts')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -77,12 +115,29 @@
           </div>
         </div>
 
-        <div class="card" data-category="agent" data-search="auto pom page object model playwright typescript html parser planned">
+        <div class="card"
+          data-category="agent"
+          data-search="auto pom page object model playwright typescript html parser planned"
+          data-title="Auto-POM Builder"
+          data-description="Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods — eliminating boilerplate and enforcing best practices from day one."
+          data-command="npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages"
+          data-prompt="You are a Playwright architect. Given raw HTML markup for a page, generate a strictly typed TypeScript Page Object Model class.
+
+Rules:
+- Export exactly one class per page file
+- All locators declared as readonly Locator properties
+- Use ONLY getByRole / getByLabel / getByText — no CSS or XPath
+- Action methods (fillEmail, clickSubmit) return Promise&lt;void&gt;
+- Navigation methods (goto) accept baseURL and return Promise&lt;void&gt;
+- Add JSDoc to each public method with @param and @returns
+- No hardcoded wait times — use expect().toBeVisible() guards
+
+Output: complete TypeScript file ready to import in Playwright tests.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Auto-POM Builder</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Auto-POM Builder</button>
           <p class="card-desc">Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -91,12 +146,31 @@
           </div>
         </div>
 
-        <div class="card" data-category="agent" data-search="network interceptor mock route playwright har traffic planned">
+        <div class="card"
+          data-category="agent"
+          data-search="network interceptor mock route playwright har traffic planned"
+          data-title="Network Interceptor &amp; Mock Gen"
+          data-description="Records browser network traffic during a test run and auto-generates Playwright page.route() mock handlers with typed fixtures — making tests fully offline-capable and deterministic."
+          data-command="npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks"
+          data-prompt="You are a test-infrastructure engineer. Given a Playwright HAR trace file, generate page.route() mock handlers for every XHR/fetch request captured.
+
+Deliverables:
+1. mocks/index.ts — barrel exporting all route handlers
+2. fixtures/&lt;endpoint&gt;.json — typed response fixture per unique URL
+3. helpers/toggleMocks.ts — function to switch real vs mock mode via env var
+
+Conventions:
+- Handler functions named mock&lt;Method&gt;&lt;Resource&gt; (e.g. mockGetUsers)
+- Fixtures typed with TypeScript interfaces
+- Support wildcard URL patterns for paginated endpoints
+- Log intercepted calls in verbose mode
+
+Output ready-to-import TypeScript with no external dependencies beyond Playwright.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Network Interceptor &amp; Mock Gen</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Network Interceptor &amp; Mock Gen</button>
           <p class="card-desc">Records browser network traffic during a test run and auto-generates Playwright page.route() mock handlers with typed fixtures.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -105,12 +179,33 @@
           </div>
         </div>
 
-        <div class="card" data-category="agent" data-search="visual accessibility a11y wcag axe screenshot dom planned">
+        <div class="card"
+          data-category="agent"
+          data-search="visual accessibility a11y wcag axe screenshot dom planned"
+          data-title="Visual A11y Scanner"
+          data-description="Analyses DOM snapshots and screenshots for WCAG 2.1 AA violations and returns exact CSS/HTML remediation snippets mapped to each failing node — making accessibility fixes actionable, not theoretical."
+          data-command="npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA"
+          data-prompt="You are a WCAG 2.1 AA accessibility expert. Analyse the provided DOM snapshot and page screenshot.
+
+For each violation return:
+| WCAG Criterion | Element Selector | Description | Severity | Fix |
+
+Severity levels: critical / serious / moderate / minor
+
+Fix must be an exact HTML or CSS change — no vague guidance.
+
+Then provide a summary block:
+- Total violations by severity
+- Top 3 most impactful fixes
+- Estimated remediation effort in dev-hours
+- axe-core equivalent rule IDs for CI integration
+
+Format the full report as Markdown.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Visual A11y Scanner</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Visual A11y Scanner</button>
           <p class="card-desc">Analyzes DOM + screenshots for WCAG violations and returns exact CSS/HTML remediation snippets mapped to failing nodes.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -119,12 +214,32 @@
           </div>
         </div>
 
-        <div class="card" data-category="agent" data-search="chaos monkey ui resilience latency network block random click planned">
+        <div class="card"
+          data-category="agent"
+          data-search="chaos monkey ui resilience latency network block random click planned"
+          data-title="Chaos Monkey UI"
+          data-description="Stress-tests frontend resilience by clicking random elements, injecting latency, and blocking arbitrary network routes during Playwright runs — surfacing fragility before production does."
+          data-command="npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42"
+          data-prompt="You are a chaos engineering specialist operating inside a Playwright browser context.
+
+Chaos actions (apply randomly throughout the run):
+1. Random Clicks — click interactive elements not in the critical user path every 8-15 s
+2. Network Latency — add 200 ms-4 s delay to 30% of outbound requests via page.route()
+3. Request Blocking — return 503 for 15% of non-auth, non-critical API calls
+4. Slow Render — inject CSS animation: none override on random components every 30 s
+
+Reporting:
+- Log every chaos event: { timestamp, action, target, responseCode }
+- Write chaos-report.json on exit
+- Flag any unhandled JS exceptions triggered by chaos actions
+- Stop on navigation to an error page or after --duration seconds
+
+Seed the random number generator with --seed for reproducible chaos runs.">
           <div class="card-top">
             <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
             <div class="creator">Creator: toolkit-ai</div>
           </div>
-          <a href="../README.md#autonomous-agents-catalog" class="card-title">Chaos Monkey UI</a>
+          <button class="card-title" onclick="openSkillPanel(this)">Chaos Monkey UI</button>
           <p class="card-desc">Stress-tests frontend resilience by clicking random elements, injecting latency, and blocking arbitrary network routes during Playwright runs.</p>
           <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42')">💬 Copy Run Command</button>
           <div class="card-footer">
@@ -136,6 +251,32 @@
       </div>
     </main>
   </div>
+
+  <!-- Slide-Over Panel -->
+  <div class="panel-overlay" id="panelOverlay" onclick="closeSkillPanel()" aria-hidden="true"></div>
+  <aside class="slide-panel" id="slidePanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <div class="panel-header">
+      <span class="panel-title" id="panelTitle"></span>
+      <button class="panel-close" id="panelClose" onclick="closeSkillPanel()" aria-label="Close panel">✕</button>
+    </div>
+    <div class="panel-body">
+      <div>
+        <p class="panel-section-label">How it works</p>
+        <p class="panel-desc" id="panelDesc"></p>
+      </div>
+      <div id="panelCommandSection">
+        <p class="panel-section-label">CLI Run Command</p>
+        <div class="panel-command-wrap">
+          <code class="panel-command" id="panelCommand"></code>
+          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()">📋 Copy</button>
+        </div>
+      </div>
+      <div id="panelCodeSection">
+        <p class="panel-section-label">System Prompt / Instructions</p>
+        <pre class="panel-code" id="panelCode"></pre>
+      </div>
+    </div>
+  </aside>
 
   <script src="js/site.js"></script>
   <script>

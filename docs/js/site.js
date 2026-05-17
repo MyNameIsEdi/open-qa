@@ -79,3 +79,65 @@ function initCardFilter(
 }
 
 document.addEventListener('DOMContentLoaded', initNavigation);
+
+/* ── Slide-Over Panel ──────────────────────────────────────────────── */
+
+/**
+ * Opens the slide-over detail panel, populating it from the card's data-* attributes.
+ * @param {HTMLElement} triggerEl - any element inside (or the) .card element
+ */
+function openSkillPanel(triggerEl) {
+  const card = triggerEl.closest('[data-title]') || triggerEl;
+  const title   = card.dataset.title       || 'Details';
+  const desc    = card.dataset.description || '';
+  const command = card.dataset.command     || '';
+  const prompt  = card.dataset.prompt      || '';
+
+  document.getElementById('panelTitle').textContent = title;
+  document.getElementById('panelDesc').textContent  = desc;
+
+  const cmdEl      = document.getElementById('panelCommand');
+  const cmdSection = document.getElementById('panelCommandSection');
+  if (command) {
+    cmdEl.textContent      = command;
+    cmdSection.style.display = '';
+  } else {
+    cmdSection.style.display = 'none';
+  }
+
+  const codeSection = document.getElementById('panelCodeSection');
+  const codeEl      = document.getElementById('panelCode');
+  if (prompt) {
+    codeEl.textContent        = prompt;
+    codeSection.style.display = '';
+  } else {
+    codeSection.style.display = 'none';
+  }
+
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('slidePanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('panelClose').focus();
+}
+
+function closeSkillPanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('slidePanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function copyPanelCommand() {
+  const text = document.getElementById('panelCommand').textContent.trim();
+  const btn  = document.getElementById('panelCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
+}
+
+/* Close panel on Escape key */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSkillPanel();
+});
