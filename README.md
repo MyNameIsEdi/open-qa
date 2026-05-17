@@ -144,7 +144,7 @@ intelligent-testing-toolkit/
 
 We welcome contributions from automation engineers and AI enthusiasts!
 
-1. **Read the [Contributor Guide**](https://www.google.com/search?q=./CONTRIBUTING.md) — workflow, PR checklist, release process.
+1. **Read the [Contributor Guide**](https://github.com/MyNameIsEdi/intelligent-testing-toolkit/blob/main/CONTRIBUTING.md) — workflow, PR checklist, release process.
 2. **Open an issue** or discussion before starting major work.
 3. **Submit a PR** with your skill, tests, and documentation updates.
 
