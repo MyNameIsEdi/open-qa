@@ -1,0 +1,51 @@
+name: AI Toolkit Code Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-typescript:
+    runs-on: ubuntu-latest
+    name: Type Check & Build Validation
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ==========================================
+      # 01 - Self Healing Tests
+      # ==========================================
+      - name: 🛠️ Setup & Validate Self-Healing
+        working-directory: ./01-Self-Healing-Tests
+        run: |
+          npm install
+          npx tsc --noEmit
+
+      # ==========================================
+      # 02 - Smart Data Generation
+      # ==========================================
+      - name: 🛠️ Setup & Validate Smart Data Gen
+        working-directory: ./02-Smart-Data-Gen
+        run: |
+          npm install
+          npx tsc --noEmit
+
+      # ==========================================
+      # 03 - Automated Bug Report
+      # ==========================================
+      - name: 🛠️ Setup & Validate Bug Report
+        working-directory: ./03-Automated-Bug-Report
+        run: |
+          npm install
+          npx tsc --noEmit
+
+      - name: ✅ Pipeline Passed
+        run: echo "All TypeScript files compiled successfully without syntax errors!"
