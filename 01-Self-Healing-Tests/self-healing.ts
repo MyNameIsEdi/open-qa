@@ -1,12 +1,18 @@
-import { chromium, Page } from 'playwright';
+import { chromium } from 'playwright';
 import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '../.env' }); // מושך את המפתח מהתיקייה הראשית
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const USE_MOCK: boolean = !Boolean(process.env.ANTHROPIC_API_KEY);
+let anthropic: any = undefined;
+if (!USE_MOCK) {
+  anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
+} else {
+  console.warn('⚠️ Anthropic API key not found — running in MOCK mode for demo.');
+}
 
 /**
  * פונקציית הריפוי: פונה ל-AI עם ה-HTML הנוכחי ומבקשת סלקטור חדש
@@ -28,6 +34,26 @@ async function healLocator(htmlContent: string, targetDescription: string): Prom
   `;
 
   try {
+    if (USE_MOCK) {
+      // Simple heuristic fallback for demo: prefer data-test-id, then class names.
+      const dataTestMatch = htmlContent.match(/data-test-id=\"([^\"]+)\"/i);
+      if (dataTestMatch) {
+        const selector = `button[data-test-id="${dataTestMatch[1]}"]`;
+        console.log(`✨ [Self-Healing][MOCK] Suggesting selector: "${selector}"`);
+        return selector;
+      }
+      const classMatch = htmlContent.match(/class=\"([^\"]*btn[^\"]*)\"/i);
+      if (classMatch) {
+        const cls = classMatch[1].split(' ').join('.');
+        const selector = `button.${cls}`;
+        console.log(`✨ [Self-Healing][MOCK] Suggesting selector: "${selector}"`);
+        return selector;
+      }
+      // ultimate fallback
+      console.log('✨ [Self-Healing][MOCK] Using generic fallback selector: button');
+      return 'button';
+    }
+
     const response = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
       max_tokens: 100,
@@ -48,8 +74,9 @@ async function healLocator(htmlContent: string, targetDescription: string): Prom
 /**
  * הפעלת תרחיש הבדיקה (Demo)
  */
-async function runDemoTest() {
-  const browser = await chromium.launch({ headless: false }); // נראה את הדפדפן נפתח
+export async function runDemoTest(): Promise<void> {
+  const headlessEnv = (process.env.HEADLESS === '1' || process.env.HEADLESS === 'true' || process.env.CI === 'true');
+  const browser = await chromium.launch({ headless: !!headlessEnv });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -91,8 +118,10 @@ async function runDemoTest() {
       
       // בונוס תצוגה ויזואלית בדפדפן לפני שנסגר
       await page.evaluate((sel) => {
-        document.querySelector(sel).style.backgroundColor = '#33ff00';
-        document.querySelector(sel).innerText = 'Healed by AI!';
+        const element = document.querySelector(sel) as HTMLElement | null;
+        if (!element) return;
+        element.style.backgroundColor = '#33ff00';
+        element.innerText = 'Healed by AI!';
       }, newSelector);
       await page.waitForTimeout(3000); 
     }
@@ -101,4 +130,8 @@ async function runDemoTest() {
   await browser.close();
 }
 
-runDemoTest();
+export { healLocator };
+
+if (process.argv.some(arg => arg.endsWith('self-healing.ts'))) {
+  runDemoTest();
+}

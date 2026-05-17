@@ -229,6 +229,46 @@
       </table>
     </div>
 
+    <div class="card" id="demos-card">
+      <h2>⚡ Live Demos</h2>
+      <p class="meta">Run the curated demos locally. The scripts include MOCK fallbacks so they run without external API keys.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Demo</th>
+            <th>Description</th>
+            <th>Run</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Self-Healing Locator</td>
+            <td>Playwright demo that auto-recovers a broken selector (mock mode available).</td>
+            <td>
+              <code id="cmd-heal">npx tsx "01-Self-Healing-Tests/self-healing.ts"</code>
+              <button data-cmd="cmd-heal" class="copy">Copy</button>
+            </td>
+          </tr>
+          <tr>
+            <td>Edge-Case Data Gen</td>
+            <td>Generate extreme JSON payloads for API fuzzing (mock mode available).</td>
+            <td>
+              <code id="cmd-data">npx tsx "02-Smart-Data-Gen/generate-test-data.ts"</code>
+              <button data-cmd="cmd-data" class="copy">Copy</button>
+            </td>
+          </tr>
+          <tr>
+            <td>Automated Bug Report</td>
+            <td>Analyze test logs and output a Jira-ready Markdown report (mock mode available).</td>
+            <td>
+              <code id="cmd-bug">npx tsx "03-Automated-Bug-Report/log-analyzer.ts"</code>
+              <button data-cmd="cmd-bug" class="copy">Copy</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <footer>
       <p>Built from the AI Testing Toolkit repository. Open the linked folders to explore code, scripts, and prompt libraries.</p>
     </footer>
@@ -243,6 +283,24 @@
       rows.forEach(row => {
         const text = row.dataset.keywords || row.textContent.toLowerCase();
         row.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+
+    // Copy demo command buttons
+    document.querySelectorAll('button.copy').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const codeId = btn.getAttribute('data-cmd');
+        const codeEl = document.getElementById(codeId);
+        if (!codeEl) return;
+        const text = codeEl.textContent.trim();
+        try {
+          await navigator.clipboard.writeText(text);
+          const original = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => btn.textContent = original, 1200);
+        } catch (e) {
+          console.warn('Clipboard failed', e);
+        }
       });
     });
   </script>
