@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intelligent Testing Toolkit | Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
   <nav class="top-nav">
     <div class="nav-inner">
-      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <a href="index.html" class="nav-brand">
+        <span class="material-symbols-outlined">smart_toy</span>Intelligent Testing Toolkit
+      </a>
       <div class="nav-links">
-        <a href="index.html"   data-i18n="nav_home">Home</a>
-        <a href="agents.html"  data-i18n="nav_agents">Agents</a>
-        <a href="skills.html"  data-i18n="nav_skills">Skills</a>
-        <a href="prompts.html" data-i18n="nav_prompts">Prompts</a>
+        <a href="index.html"><span class="material-symbols-outlined nav-icon">home</span><span data-i18n="nav_home">Home</span></a>
+        <a href="agents.html"><span class="material-symbols-outlined nav-icon">precision_manufacturing</span><span data-i18n="nav_agents">Agents</span></a>
+        <a href="skills.html"><span class="material-symbols-outlined nav-icon">build</span><span data-i18n="nav_skills">Skills</span></a>
+        <a href="prompts.html"><span class="material-symbols-outlined nav-icon">psychology</span><span data-i18n="nav_prompts">Prompts</span></a>
+        <a href="documentation.html"><span class="material-symbols-outlined nav-icon">menu_book</span><span data-i18n="nav_docs">Docs</span></a>
       </div>
       <div class="lang-toggle" role="group" aria-label="Language">
         <button class="lang-btn" data-lang="en" onclick="applyLanguage('en')">EN</button>
@@ -38,15 +42,20 @@
   </section>
 
   <div class="info-banner" id="infoBanner" style="margin-top:0;">
-    <div>
-      <span data-i18n="banner_text">💡 First time here? Run <code>npm install && npm test</code> — no API key required.</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--banner-text)">lightbulb</span>
+      <span data-i18n="banner_text">First time here? Run <code>npm install &amp;&amp; npm test</code> — no API key required.</span>
       <a href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit#getting-started" data-i18n="banner_link">Getting Started</a>
     </div>
-    <button type="button" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:inherit;" onclick="document.getElementById('infoBanner').style.display='none'" aria-label="Dismiss">×</button>
+    <button type="button" style="background:none;border:none;cursor:pointer;color:inherit;display:flex;align-items:center;" onclick="document.getElementById('infoBanner').style.display='none'" aria-label="Dismiss">
+      <span class="material-symbols-outlined" style="font-size:1.2rem">close</span>
+    </button>
   </div>
 
   <section class="section" id="getting-started">
-    <h2 data-i18n="section_started">🚀 Getting Started (&lt; 5 minutes)</h2>
+    <h2>
+      <span class="material-symbols-outlined section-icon">rocket_launch</span><span data-i18n="section_started">Getting Started (&lt; 5 minutes)</span>
+    </h2>
     <p data-i18n="section_started_desc">All demos run in <strong>MOCK mode</strong> by default — no <code>ANTHROPIC_API_KEY</code> needed.</p>
     <pre class="code-block">git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
 cd intelligent-testing-toolkit
@@ -58,7 +67,9 @@ npm run verify:demos</pre>
   </section>
 
   <section class="section" id="overview">
-    <h2 data-i18n="section_overview">📂 Repository Overview</h2>
+    <h2>
+      <span class="material-symbols-outlined section-icon">folder_open</span><span data-i18n="section_overview">Repository Overview</span>
+    </h2>
     <pre class="tree">intelligent-testing-toolkit/
 ├── docs/                 # UI Marketplace (this site)
 ├── src/
@@ -71,17 +82,26 @@ npm run verify:demos</pre>
 
     <div class="feature-grid">
       <article class="feature-card">
-        <h3 data-i18n="feature_agents_title">🤖 Autonomous Agents</h3>
+        <h3>
+          <span class="material-symbols-outlined feature-icon">precision_manufacturing</span>
+          <span data-i18n="feature_agents_title">Autonomous Agents</span>
+        </h3>
         <p data-i18n="feature_agents_desc">Self-healing locators and automated triage scripts that reason over DOM and stack traces.</p>
         <a href="agents.html" data-i18n="feature_agents_link">Explore Agents →</a>
       </article>
       <article class="feature-card">
-        <h3 data-i18n="feature_skills_title">🛠️ Testing Skills</h3>
+        <h3>
+          <span class="material-symbols-outlined feature-icon">build</span>
+          <span data-i18n="feature_skills_title">Testing Skills</span>
+        </h3>
         <p data-i18n="feature_skills_desc">Edge-case generators and utilities that plug into your existing Playwright suites.</p>
         <a href="skills.html" data-i18n="feature_skills_link">Explore Skills →</a>
       </article>
       <article class="feature-card">
-        <h3 data-i18n="feature_prompts_title">🧠 System Prompts</h3>
+        <h3>
+          <span class="material-symbols-outlined feature-icon">psychology</span>
+          <span data-i18n="feature_prompts_title">System Prompts</span>
+        </h3>
         <p data-i18n="feature_prompts_desc">Copy-paste personas for Claude, Cursor, and ChatGPT — test plans, data gen, IDE rules.</p>
         <a href="prompts.html" data-i18n="feature_prompts_link">Explore Prompts →</a>
       </article>
@@ -89,12 +109,15 @@ npm run verify:demos</pre>
   </section>
 
   <section class="section">
-    <h2 data-i18n="section_marketplace">🛒 Live Marketplace</h2>
+    <h2>
+      <span class="material-symbols-outlined section-icon">storefront</span><span data-i18n="section_marketplace">Live Marketplace</span>
+    </h2>
     <p data-i18n="section_marketplace_desc">Browse the full catalog across dedicated pages — search, filter, and copy run commands instantly.</p>
     <div class="hero-cta" style="justify-content:flex-start;margin-top:16px;">
-      <a href="agents.html"  class="btn-outline" data-i18n="marketplace_agents">Agents (6)</a>
-      <a href="skills.html"  class="btn-outline" data-i18n="marketplace_skills">Skills (5)</a>
-      <a href="prompts.html" class="btn-outline" data-i18n="marketplace_prompts">Prompts (6)</a>
+      <a href="agents.html"        class="btn-outline" data-i18n="marketplace_agents">Agents (6)</a>
+      <a href="skills.html"        class="btn-outline" data-i18n="marketplace_skills">Skills (5)</a>
+      <a href="prompts.html"       class="btn-outline" data-i18n="marketplace_prompts">Prompts (6)</a>
+      <a href="documentation.html" class="btn-outline" data-i18n="nav_docs">Docs</a>
     </div>
   </section>
 

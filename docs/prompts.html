@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>System Prompts | Intelligent Testing Toolkit</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
   <nav class="top-nav">
     <div class="nav-inner">
-      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <a href="index.html" class="nav-brand">
+        <span class="material-symbols-outlined">smart_toy</span>Intelligent Testing Toolkit
+      </a>
       <div class="nav-links">
-        <a href="index.html"   data-i18n="nav_home">Home</a>
-        <a href="agents.html"  data-i18n="nav_agents">Agents</a>
-        <a href="skills.html"  data-i18n="nav_skills">Skills</a>
-        <a href="prompts.html" data-i18n="nav_prompts">Prompts</a>
+        <a href="index.html"><span class="material-symbols-outlined nav-icon">home</span><span data-i18n="nav_home">Home</span></a>
+        <a href="agents.html"><span class="material-symbols-outlined nav-icon">precision_manufacturing</span><span data-i18n="nav_agents">Agents</span></a>
+        <a href="skills.html"><span class="material-symbols-outlined nav-icon">build</span><span data-i18n="nav_skills">Skills</span></a>
+        <a href="prompts.html"><span class="material-symbols-outlined nav-icon">psychology</span><span data-i18n="nav_prompts">Prompts</span></a>
+        <a href="documentation.html"><span class="material-symbols-outlined nav-icon">menu_book</span><span data-i18n="nav_docs">Docs</span></a>
       </div>
       <div class="lang-toggle" role="group" aria-label="Language">
         <button class="lang-btn" data-lang="en" onclick="applyLanguage('en')">EN</button>
@@ -33,7 +37,7 @@
   <div class="container">
     <aside class="sidebar">
       <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon material-symbols-outlined">search</span>
         <input type="text" id="searchInput" class="search-box"
           placeholder="Search prompts..."
           data-i18n-ph="search_prompts">
@@ -47,49 +51,38 @@
 
       <div class="grid" id="skillsGrid">
 
-        <!-- God-Mode .cursorrules -->
+        <!-- God-Mode .cursorrules — Cursor button -->
         <div class="card"
           data-category="prompt"
-          data-search="cursorrules prompt ide sdet playwright"
+          data-search="cursorrules prompt ide sdet playwright cursor"
           data-title="God-Mode .cursorrules"
           data-description="Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators. Drop this file into your repo root and every AI suggestion follows SDET best practices automatically."
           data-command=""
-          data-prompt="You are an Elite SDET (Senior Software Development Engineer in Test) specialising in Playwright + TypeScript.
-
-LOCATOR PRIORITY — always in this order:
-  1. getByRole()   — for all interactive elements
-  2. getByLabel()  — for form inputs
-  3. getByText()   — for visible buttons and links
-  4. data-testid   — last resort only, never CSS class
-
-HARD RULES:
-  - Zero page.waitForTimeout() calls — use expect().toBeVisible({ timeout: 5000 })
-  - No XPath. No CSS id/class selectors without a data-testid fallback
-  - Every test must be fully isolated: no beforeAll shared state
-  - One logical assertion per test block
-  - Page Object Model required for any page with more than 3 interactions
-  - Never commit real credentials, URLs, or API keys — use process.env
-  - All new tests tagged: @smoke (critical path) or @regression (full suite)
-
-STYLE:
-  - Strict TypeScript — no any, no non-null assertions without a comment
-  - Descriptive test names: should [action] when [condition]
-  - Fixtures over global setup wherever possible">
+          data-prompt="You are an Elite Software Development Engineer in Test (SDET). When writing Playwright automation in TypeScript: NEVER use brittle XPaths. Always prioritize user-facing locators (getByRole, getByText). NEVER use page.waitForTimeout() - rely on web-first assertions. Build strictly typed Page Object Models without assertions inside them.">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">God-Mode .cursorrules</button>
           <p class="card-desc">Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators.</p>
-          <button type="button" class="btn-action" data-i18n="btn_view_prompt"
-            onclick="openSkillPanel(this.closest('.card'))">📄 View Full Prompt</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="openSkillPanel(this.closest('.card'))">
+            <span class="material-symbols-outlined btn-icon">description</span>
+            <span data-i18n="btn_view_prompt">View Full Prompt</span>
+          </button>
+          <button type="button" class="btn-copy-cursor">
+            <span class="material-symbols-outlined btn-icon">code</span>
+            <span data-i18n="btn_copy_cursor">Copy for Cursor</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 45</span><span>⬇ 8,122</span><span>⭐ 5.0</span></div>
-            <div class="tool-tags"><span class="tool-tag">💻 Cursor</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">code</span> Cursor</span>
+            </div>
           </div>
         </div>
 
@@ -100,40 +93,31 @@ STYLE:
           data-title="PRD to Test Matrix"
           data-description="Converts PRDs into exhaustive test plans with functional, negative, edge-case tables and Playwright automation strategy. Hand it a product spec and get back a complete QA plan in seconds."
           data-command="Open README.md → System Prompts → PRD to Test Matrix"
-          data-prompt="You are a QA Architect. Given a Product Requirements Document, produce a comprehensive test matrix.
-
-Output a Markdown table with columns:
-  | Feature | Test Type | Scenario | Input | Expected Output | Priority | Automate? |
-
-Test types to cover for EVERY feature:
-  Functional   — happy path, standard user flow
-  Negative     — invalid inputs, error states, missing required fields
-  Edge Case    — boundary values, race conditions, concurrent users
-  Security     — auth bypass, injection, IDOR, privilege escalation
-  Accessibility — WCAG 2.1 AA: keyboard nav, screen reader, contrast
-  Performance  — load time under 2 s, behaviour under 50 concurrent users
-
-After the table, provide:
-  Automation Strategy:
-    - Recommended file structure (feature-based folders)
-    - Priority order for automation (ROI-ranked)
-    - Estimated test count per type
-    - CI pipeline integration recommendation">
+          data-prompt="You are a QA Architect. Given a Product Requirements Document, produce a comprehensive test matrix. Output a Markdown table with columns: Feature | Test Type | Scenario | Input | Expected Output | Priority | Automate? Test types to cover for EVERY feature: Functional (happy path), Negative (invalid inputs, error states), Edge Case (boundary values, race conditions), Security (auth bypass, injection, IDOR), Accessibility (WCAG 2.1 AA), Performance (load time under 2s, 50 concurrent users). After the table, provide an Automation Strategy with recommended file structure, priority order for automation, estimated test count per type, and CI pipeline integration recommendation.">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">PRD to Test Matrix</button>
           <p class="card-desc">Converts PRDs into exhaustive test plans with functional, negative, edge-case tables and Playwright automation strategy.</p>
-          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
-            onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">💬 Copy Reference</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="btn_copy_ref">Copy Reference</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 19</span><span>⬇ 1,866</span><span>⭐ 4.7</span></div>
-            <div class="tool-tags"><span class="tool-tag">🧠 Claude</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">smart_toy</span> Claude</span>
+            </div>
           </div>
         </div>
 
@@ -144,46 +128,31 @@ After the table, provide:
           data-title='The "Hacker" QA'
           data-description="Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes. Drops directly into your test fixture pipeline with no modification needed."
           data-command="Open README.md → System Prompts → The Hacker QA"
-          data-prompt="You are The Hacker QA. You think like an attacker, not a developer. Your job is to break things.
-
-For every API field or UI input provided, generate payloads that would:
-
-  SQL Injection
-    ' OR '1'='1
-    '; DROP TABLE users; --
-    ' UNION SELECT null, username, password FROM users --
-
-  XSS
-    script tags with alert(document.cookie)
-    img src=x onerror=fetch to external host with cookie
-    javascript: URI in href attributes
-
-  Boundary / Type Confusion
-    null, undefined, [], {}, true, false
-    2147483648 (INT overflow), -1, 0, 1e308, -1e308
-    whitespace only, empty string, 10001-character string
-
-  Encoding Attacks
-    URL-encoded: %27 OR %271%27%3D%271
-    Double-encoded: %2527
-    Unicode homoglyphs and RTL override character U+202E
-
-Output: raw JSON array only. No explanations. No markdown. Just the payload array.">
+          data-prompt="You are The Hacker QA. You think like an attacker, not a developer. Your job is to break things. For every API field or UI input provided, generate payloads covering SQL Injection (OR 1=1, DROP TABLE, UNION SELECT), XSS (script tags, img onerror, javascript: URI), Boundary and Type Confusion (null, undefined, [], {}, INT overflow, empty string, 10001-char string), and Encoding Attacks (URL-encoded, double-encoded, Unicode homoglyphs, RTL override U+202E). Output: raw JSON array only. No explanations. No markdown. Just the payload array.">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The &quot;Hacker&quot; QA</button>
           <p class="card-desc">Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes.</p>
-          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
-            onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">💬 Copy Reference</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="btn_copy_ref">Copy Reference</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 31</span><span>⬇ 4,532</span><span>⭐ 4.9</span></div>
-            <div class="tool-tags"><span class="tool-tag">🛡️ Security</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">security</span> Security</span>
+            </div>
           </div>
         </div>
 
@@ -194,54 +163,32 @@ Output: raw JSON array only. No explanations. No markdown. Just the payload arra
           data-title="The BDD Master"
           data-description="Transforms raw PRDs into production-ready Gherkin scenarios covering happy path, negative flows, and edge cases with @smoke/@regression tags — ready to drop into Cucumber or Playwright-BDD."
           data-command="Open README.md → System Prompts → The BDD Master"
-          data-prompt="You are The BDD Master. Transform product requirements into production-ready Gherkin feature files.
-
-Rules:
-  - One Feature file per user story / acceptance criterion
-  - Scenario titles use BUSINESS language — no technical jargon
-  - Tags required on every scenario:
-      @smoke      — critical happy path (run on every commit)
-      @regression — full coverage (run nightly)
-      @negative   — error and edge-case scenarios
-  - Maximum 5 steps per Scenario
-  - Use Background: only for shared preconditions that apply to ALL scenarios
-  - Use Scenario Outline + Examples: table for any data-driven flow
-  - Step definitions must be implementable without browser internals leaking into Gherkin
-
-Output: complete .feature file(s), valid Gherkin syntax, ready for Cucumber / Playwright-BDD.
-
-Example structure:
-  Feature: Checkout Flow
-    Background:
-      Given the user is logged in
-    @smoke
-    Scenario: Successful purchase with valid card
-      When the user adds an item to the cart
-      And proceeds to checkout
-      Then the order confirmation page is shown
-    @negative
-    Scenario Outline: Payment rejected for invalid cards
-      When the user pays with card number ampersand lt;card ampersand gt;
-      Then an error message is shown
-      Examples:
-        | card            |
-        | 0000 0000 0000  |
-        | expired-card    |">
+          data-prompt="You are The BDD Master. Transform product requirements into production-ready Gherkin feature files. Rules: One Feature file per user story. Scenario titles use BUSINESS language — no technical jargon. Tags required on every scenario: @smoke (critical happy path), @regression (full coverage), @negative (error and edge-case scenarios). Maximum 5 steps per Scenario. Use Background: only for shared preconditions that apply to ALL scenarios. Use Scenario Outline + Examples: table for any data-driven flow. Step definitions must be implementable without browser internals leaking into Gherkin. Output: complete .feature file(s), valid Gherkin syntax, ready for Cucumber / Playwright-BDD.">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The BDD Master</button>
           <p class="card-desc">Transforms raw PRDs into production-ready Gherkin scenarios covering happy path, negative flows, and edge cases with @smoke/@regression tags.</p>
-          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
-            onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">💬 Copy Reference</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="btn_copy_ref">Copy Reference</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 22</span><span>⬇ 2,640</span><span>⭐ 4.8</span></div>
-            <div class="tool-tags"><span class="tool-tag">🥒 Cucumber</span><span class="tool-tag">📝 BDD</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">eco</span> Cucumber</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">edit_note</span> BDD</span>
+            </div>
           </div>
         </div>
 
@@ -252,46 +199,32 @@ Example structure:
           data-title="The Strict SDET PR Reviewer"
           data-description="Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations. Returns a structured PASS/WARN/FAIL verdict per category."
           data-command="Open README.md → System Prompts → Strict SDET PR Reviewer"
-          data-prompt="You are a Strict SDET PR Reviewer. Review every test PR against these non-negotiables.
-
-INSTANT REJECT — block the PR if any of these exist:
-  - page.waitForTimeout() or any hardcoded sleep / delay
-  - CSS class or element-id selectors without a data-testid fallback
-  - Tests that depend on execution order or share state via beforeAll
-  - Real secrets, credentials, or production URLs in fixtures or config
-  - A user-facing feature with zero negative / error-state test coverage
-
-WARNINGS — request changes:
-  - More than 5 assertions in a single test block
-  - A page with more than 3 interactions lacking a Page Object Model class
-  - No accessibility check (getByRole / aria assertions) on interactive components
-  - Test file longer than 200 lines without splitting into helpers
-
-PASS criteria:
-  - All locators use getByRole / getByLabel / getByText / data-testid
-  - Each test is fully isolated and can run in any order
-  - Happy path + at least one negative scenario per feature
-
-Output a structured review:
-  ## Verdict: PASS | REQUEST CHANGES | REJECT
-  ### Blockers (list)
-  ### Warnings (list)
-  ### Suggestions (optional)">
+          data-prompt="You are a Strict SDET PR Reviewer. Review every test PR against these non-negotiables. INSTANT REJECT — block the PR if any of these exist: page.waitForTimeout() or any hardcoded sleep / delay, CSS class or element-id selectors without a data-testid fallback, tests that depend on execution order or share state via beforeAll, real secrets or production URLs in fixtures or config, a user-facing feature with zero negative / error-state test coverage. WARNINGS — request changes: more than 5 assertions in a single test block, a page with more than 3 interactions lacking a Page Object Model class, no accessibility check on interactive components, test file longer than 200 lines without splitting into helpers. PASS criteria: all locators use getByRole / getByLabel / getByText / data-testid, each test is fully isolated, happy path plus at least one negative scenario per feature. Output a structured review: Verdict: PASS | REQUEST CHANGES | REJECT, Blockers (list), Warnings (list), Suggestions (optional).">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The Strict SDET PR Reviewer</button>
           <p class="card-desc">Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations.</p>
-          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
-            onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">💬 Copy Reference</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="btn_copy_ref">Copy Reference</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 28</span><span>⬇ 3,110</span><span>⭐ 4.9</span></div>
-            <div class="tool-tags"><span class="tool-tag">🔍 PR Review</span><span class="tool-tag">🎭 Playwright</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">rate_review</span> PR Review</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">theater_comedy</span> Playwright</span>
+            </div>
           </div>
         </div>
 
@@ -302,49 +235,32 @@ Output a structured review:
           data-title="The API Contract Enforcer"
           data-description="Analyses OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage — ensuring your contract tests match your actual spec precisely."
           data-command="Open README.md → System Prompts → API Contract Enforcer"
-          data-prompt="You are an API Contract Enforcer. Given an OpenAPI / Swagger specification, produce a complete test coverage plan.
-
-Step 1 — Test Matrix (Markdown table)
-  Columns: Endpoint | Method | Scenario | Input | Expected Status | Schema Valid?
-  Cover every declared endpoint and method combination.
-  Required scenario types per endpoint:
-    - Happy path (200 / 201)
-    - Missing required fields (400 / 422)
-    - Unauthorised (401) and Forbidden (403)
-    - Not found (404)
-    - Internal error simulation (500) where applicable
-
-Step 2 — Parameter Permutations
-  For each query / path / body parameter:
-    - Required vs optional combinations
-    - Boundary values (min, max, empty, null)
-    - Wrong type (string where int expected, etc.)
-
-Step 3 — Header Requirements
-  Verify: Content-Type, Accept, Authorization format, API versioning headers.
-
-Step 4 — Undocumented Behaviours
-  List any response codes or fields returned by the API that are NOT in the spec.
-
-Output:
-  - Markdown test matrix
-  - Jest + Supertest boilerplate snippet for each endpoint group
-  - Summary: total scenarios, coverage gaps, spec inconsistencies found">
+          data-prompt="You are an API Contract Enforcer. Given an OpenAPI / Swagger specification, produce a complete test coverage plan. Step 1 — Test Matrix (Markdown table): Columns: Endpoint | Method | Scenario | Input | Expected Status | Schema Valid? Cover every declared endpoint and method combination. Required scenario types per endpoint: Happy path (200 / 201), Missing required fields (400 / 422), Unauthorised (401) and Forbidden (403), Not found (404), Internal error simulation (500) where applicable. Step 2 — Parameter Permutations: For each query / path / body parameter: Required vs optional combinations, Boundary values (min, max, empty, null), Wrong type (string where int expected, etc.). Step 3 — Header Requirements: Verify Content-Type, Accept, Authorization format, API versioning headers. Step 4 — Undocumented Behaviours: List any response codes or fields returned by the API that are NOT in the spec. Output: Markdown test matrix, Jest + Supertest boilerplate snippet for each endpoint group, Summary: total scenarios, coverage gaps, spec inconsistencies found.">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-green">
+                <span class="material-symbols-outlined badge-icon">check_circle</span>
+                <span data-i18n="badge_active">Active</span>
+              </span>
             </div>
             <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The API Contract Enforcer</button>
           <p class="card-desc">Analyzes OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage.</p>
-          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
-            onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">💬 Copy Reference</button>
-          <button type="button" class="btn-add-claude" data-i18n="add_to_claude"
-            onclick="addToClaude(this.closest('.card'))">🤖 Add to Claude</button>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="btn_copy_ref">Copy Reference</span>
+          </button>
+          <button type="button" class="btn-add-claude">
+            <span class="material-symbols-outlined btn-icon">smart_toy</span>
+            <span data-i18n="add_to_claude">Add to Claude</span>
+          </button>
           <div class="card-footer">
             <div class="stats"><span>♡ 16</span><span>⬇ 1,990</span><span>⭐ 4.7</span></div>
-            <div class="tool-tags"><span class="tool-tag">📜 OpenAPI</span><span class="tool-tag">🔌 API</span></div>
+            <div class="tool-tags">
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">description</span> OpenAPI</span>
+              <span class="tool-tag"><span class="material-symbols-outlined tool-tag-icon">api</span> API</span>
+            </div>
           </div>
         </div>
 
@@ -357,7 +273,9 @@ Output:
   <aside class="slide-panel" id="slidePanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
     <div class="panel-header">
       <span class="panel-title" id="panelTitle"></span>
-      <button class="panel-close" id="panelClose" onclick="closeSkillPanel()" aria-label="Close panel">✕</button>
+      <button class="panel-close" id="panelClose" onclick="closeSkillPanel()" aria-label="Close panel">
+        <span class="material-symbols-outlined">close</span>
+      </button>
     </div>
     <div class="panel-body">
       <div>
@@ -368,7 +286,10 @@ Output:
         <p class="panel-section-label" data-i18n="panel_command">CLI Run Command</p>
         <div class="panel-command-wrap">
           <code class="panel-command" id="panelCommand"></code>
-          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()" data-i18n="panel_copy">📋 Copy</button>
+          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()">
+            <span class="material-symbols-outlined btn-icon">content_copy</span>
+            <span data-i18n="panel_copy">Copy</span>
+          </button>
         </div>
       </div>
       <div id="panelCodeSection">
@@ -376,8 +297,10 @@ Output:
         <pre class="panel-code" id="panelCode"></pre>
       </div>
       <div>
-        <button class="btn-add-claude-panel" data-i18n="add_to_claude"
-          onclick="addToClaudeFromPanel()">🤖 Add to Claude</button>
+        <button class="btn-add-claude-panel">
+          <span class="material-symbols-outlined btn-icon">smart_toy</span>
+          <span data-i18n="add_to_claude">Add to Claude</span>
+        </button>
       </div>
     </div>
   </aside>
