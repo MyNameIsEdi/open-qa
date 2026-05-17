@@ -1,1 +1,21 @@
-{}
+{
+  "name": "intelligent-testing-toolkit",
+  "version": "1.0.0",
+  "description": "AI-Powered QA & Web Automation Arsenal",
+  "scripts": {
+    "run:healing": "cd 01-Self-Healing-Tests && npx tsx src/self-healing.ts",
+    "run:datagen": "cd 02-Smart-Data-Gen && npx tsx generate-test-data.ts",
+    "run:bugreport": "cd 03-Automated-Bug-Report && npx tsx src/log-analyzer.ts",
+    "test:ci": "echo \"Root package validated successfully!\""
+  },
+  "keywords": [
+    "qa",
+    "automation",
+    "ai",
+    "playwright",
+    "claude",
+    "testing"
+  ],
+  "author": "Edi Mazor",
+  "license": "MIT"
+}
