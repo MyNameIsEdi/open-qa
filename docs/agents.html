@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Autonomous Agents | Intelligent Testing Toolkit</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -13,39 +13,56 @@
     <div class="nav-inner">
       <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
       <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="agents.html">Agents</a>
-        <a href="skills.html">Skills</a>
-        <a href="prompts.html">Prompts</a>
+        <a href="index.html"   data-i18n="nav_home">Home</a>
+        <a href="agents.html"  data-i18n="nav_agents">Agents</a>
+        <a href="skills.html"  data-i18n="nav_skills">Skills</a>
+        <a href="prompts.html" data-i18n="nav_prompts">Prompts</a>
+      </div>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn" data-lang="en" onclick="applyLanguage('en')">EN</button>
+        <button class="lang-btn" data-lang="he" onclick="applyLanguage('he')">עב</button>
       </div>
     </div>
   </nav>
 
   <header>
-    <h1>Autonomous Agents</h1>
-    <p class="subtitle">Independent scripts that analyze DOM context, recover from failures, intercept network traffic, and triage CI logs automatically.</p>
+    <h1 data-i18n="agents_title">Autonomous Agents</h1>
+    <p class="subtitle" data-i18n="agents_subtitle">Independent scripts that analyze DOM context, recover from failures, intercept network traffic, and triage CI logs automatically.</p>
   </header>
 
   <div class="container">
     <aside class="sidebar">
       <div class="search-wrapper">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-box" placeholder="Search agents...">
+        <input type="text" id="searchInput" class="search-box"
+          placeholder="Search agents..."
+          data-i18n-ph="search_agents">
       </div>
       <div class="filter-group">
-        <h3>Status</h3>
-        <label class="filter-option"><div class="filter-option-left"><span style="color:var(--badge-green-text)">●</span> Active</div></label>
-        <label class="filter-option"><div class="filter-option-left"><span style="color:var(--badge-blue-text)">●</span> Planned</div></label>
+        <h3 data-i18n="filter_status">Status</h3>
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <span style="color:var(--badge-green-text)">●</span>
+            <span data-i18n="filter_active_label">Active</span>
+          </div>
+        </label>
+        <label class="filter-option">
+          <div class="filter-option-left">
+            <span style="color:var(--badge-blue-text)">●</span>
+            <span data-i18n="filter_planned_label">Planned</span>
+          </div>
+        </label>
       </div>
     </aside>
 
     <main class="content">
       <div class="top-bar">
-        <span id="resultCount" data-label="agents">6 agents found</span>
+        <span id="resultCount" data-i18n-label="label_agents">6 agents found</span>
       </div>
 
       <div class="grid" id="skillsGrid">
 
+        <!-- Self-Healing Locator -->
         <div class="card"
           data-category="agent"
           data-search="self healing locator playwright ai dom timeout active"
@@ -69,20 +86,22 @@ Rules:
 - Explain WHY the original selector broke">
           <div class="card-top">
             <div class="badges">
-              <span class="badge badge-green">🟢 Active</span>
-              <span class="badge badge-orange">🔥 Popular</span>
+              <span class="badge badge-green"  data-i18n="badge_active">🟢 Active</span>
+              <span class="badge badge-orange" data-i18n="badge_popular">🔥 Popular</span>
             </div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Self-Healing Locator</button>
           <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catches TimeoutErrors and suggests getByRole locators.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/agents/self-healing.ts')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx src/agents/self-healing.ts')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 12</span><span>⬇ 5,360</span><span>⭐ 5.0</span></div>
             <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">🧠 Claude</span></div>
           </div>
         </div>
 
+        <!-- Automated Triage -->
         <div class="card"
           data-category="agent"
           data-search="automated triage log analyzer jira ci stack trace bug report active"
@@ -99,27 +118,31 @@ Rules:
    Title: [Severity] Short description
    Description: Root cause + stack excerpt
    Priority: Critical / High / Medium / Low
-   Labels: regression, ci-failure, &lt;component&gt;
+   Labels: regression, ci-failure, component
 
 Output as clean Markdown. No filler text — just the structured report.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-green" data-i18n="badge_active">🟢 Active</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Automated Triage</button>
           <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/skills/log-analyzer.ts')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx src/skills/log-analyzer.ts')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 8</span><span>⬇ 1,475</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">⚙️ CI/CD</span></div>
           </div>
         </div>
 
+        <!-- Auto-POM Builder -->
         <div class="card"
           data-category="agent"
           data-search="auto pom page object model playwright typescript html parser planned"
           data-title="Auto-POM Builder"
-          data-description="Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods — eliminating boilerplate and enforcing best practices from day one."
+          data-description="Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods — eliminating boilerplate and enforcing best practices."
           data-command="npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages"
           data-prompt="You are a Playwright architect. Given raw HTML markup for a page, generate a strictly typed TypeScript Page Object Model class.
 
@@ -129,23 +152,27 @@ Rules:
 - Use ONLY getByRole / getByLabel / getByText — no CSS or XPath
 - Action methods (fillEmail, clickSubmit) return Promise&lt;void&gt;
 - Navigation methods (goto) accept baseURL and return Promise&lt;void&gt;
-- Add JSDoc to each public method with @param and @returns
+- Add JSDoc to each public method
 - No hardcoded wait times — use expect().toBeVisible() guards
 
 Output: complete TypeScript file ready to import in Playwright tests.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-planned" data-i18n="badge_planned">🟡 Planned</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Auto-POM Builder</button>
           <p class="card-desc">Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 6</span><span>⬇ 892</span><span>⭐ 4.6</span></div>
             <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">📐 POM</span></div>
           </div>
         </div>
 
+        <!-- Network Interceptor -->
         <div class="card"
           data-category="agent"
           data-search="network interceptor mock route playwright har traffic planned"
@@ -156,29 +183,33 @@ Output: complete TypeScript file ready to import in Playwright tests.">
 
 Deliverables:
 1. mocks/index.ts — barrel exporting all route handlers
-2. fixtures/&lt;endpoint&gt;.json — typed response fixture per unique URL
+2. fixtures/endpoint.json — typed response fixture per unique URL
 3. helpers/toggleMocks.ts — function to switch real vs mock mode via env var
 
 Conventions:
-- Handler functions named mock&lt;Method&gt;&lt;Resource&gt; (e.g. mockGetUsers)
+- Handler functions named mockMethodResource (e.g. mockGetUsers)
 - Fixtures typed with TypeScript interfaces
 - Support wildcard URL patterns for paginated endpoints
 - Log intercepted calls in verbose mode
 
 Output ready-to-import TypeScript with no external dependencies beyond Playwright.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-planned" data-i18n="badge_planned">🟡 Planned</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Network Interceptor &amp; Mock Gen</button>
           <p class="card-desc">Records browser network traffic during a test run and auto-generates Playwright page.route() mock handlers with typed fixtures.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 11</span><span>⬇ 1,204</span><span>⭐ 4.7</span></div>
             <div class="tool-tags"><span class="tool-tag">🌐 Network</span><span class="tool-tag">🎭 Playwright</span></div>
           </div>
         </div>
 
+        <!-- Visual A11y Scanner -->
         <div class="card"
           data-category="agent"
           data-search="visual accessibility a11y wcag axe screenshot dom planned"
@@ -202,18 +233,22 @@ Then provide a summary block:
 
 Format the full report as Markdown.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-planned" data-i18n="badge_planned">🟡 Planned</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Visual A11y Scanner</button>
           <p class="card-desc">Analyzes DOM + screenshots for WCAG violations and returns exact CSS/HTML remediation snippets mapped to failing nodes.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 17</span><span>⬇ 2,310</span><span>⭐ 4.8</span></div>
             <div class="tool-tags"><span class="tool-tag">♿ A11y</span><span class="tool-tag">🧠 Claude</span></div>
           </div>
         </div>
 
+        <!-- Chaos Monkey UI -->
         <div class="card"
           data-category="agent"
           data-search="chaos monkey ui resilience latency network block random click planned"
@@ -226,7 +261,7 @@ Chaos actions (apply randomly throughout the run):
 1. Random Clicks — click interactive elements not in the critical user path every 8-15 s
 2. Network Latency — add 200 ms-4 s delay to 30% of outbound requests via page.route()
 3. Request Blocking — return 503 for 15% of non-auth, non-critical API calls
-4. Slow Render — inject CSS animation: none override on random components every 30 s
+4. Slow Render — inject CSS animation-duration: 10s on random components every 30 s
 
 Reporting:
 - Log every chaos event: { timestamp, action, target, responseCode }
@@ -236,21 +271,24 @@ Reporting:
 
 Seed the random number generator with --seed for reproducible chaos runs.">
           <div class="card-top">
-            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
-            <div class="creator">Creator: toolkit-ai</div>
+            <div class="badges">
+              <span class="badge badge-planned" data-i18n="badge_planned">🟡 Planned</span>
+            </div>
+            <div class="creator" data-i18n="creator">Creator: toolkit-ai</div>
           </div>
           <button class="card-title" onclick="openSkillPanel(this)">Chaos Monkey UI</button>
           <p class="card-desc">Stress-tests frontend resilience by clicking random elements, injecting latency, and blocking arbitrary network routes during Playwright runs.</p>
-          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42')">💬 Copy Run Command</button>
+          <button type="button" class="btn-action" data-i18n="btn_copy_command"
+            onclick="copyAction(this, 'npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42')">💬 Copy Run Command</button>
           <div class="card-footer">
             <div class="stats"><span>♡ 9</span><span>⬇ 1,088</span><span>⭐ 4.5</span></div>
             <div class="tool-tags"><span class="tool-tag">🐒 Chaos</span><span class="tool-tag">🎭 Playwright</span></div>
           </div>
         </div>
 
-      </div>
+      </div><!-- /grid -->
     </main>
-  </div>
+  </div><!-- /container -->
 
   <!-- Slide-Over Panel -->
   <div class="panel-overlay" id="panelOverlay" onclick="closeSkillPanel()" aria-hidden="true"></div>
@@ -261,18 +299,18 @@ Seed the random number generator with --seed for reproducible chaos runs.">
     </div>
     <div class="panel-body">
       <div>
-        <p class="panel-section-label">How it works</p>
+        <p class="panel-section-label" data-i18n="panel_how">How it works</p>
         <p class="panel-desc" id="panelDesc"></p>
       </div>
       <div id="panelCommandSection">
-        <p class="panel-section-label">CLI Run Command</p>
+        <p class="panel-section-label" data-i18n="panel_command">CLI Run Command</p>
         <div class="panel-command-wrap">
           <code class="panel-command" id="panelCommand"></code>
-          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()">📋 Copy</button>
+          <button class="panel-copy-btn" id="panelCopyBtn" onclick="copyPanelCommand()" data-i18n="panel_copy">📋 Copy</button>
         </div>
       </div>
       <div id="panelCodeSection">
-        <p class="panel-section-label">System Prompt / Instructions</p>
+        <p class="panel-section-label" data-i18n="panel_prompt_label">System Prompt / Instructions</p>
         <pre class="panel-code" id="panelCode"></pre>
       </div>
     </div>
