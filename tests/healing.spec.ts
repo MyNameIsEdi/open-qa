@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { clickWithSelfHealing, createMockHealedLocator, suggestLocator } from '../01-Self-Healing-Tests/src/auto-locator';
+import {
+  clickWithSelfHealing,
+  createMockHealedLocator,
+  suggestLocator,
+} from '../src/agents/self-healing';
 
 const MOCK_CHECKOUT_HTML = `
   <html>

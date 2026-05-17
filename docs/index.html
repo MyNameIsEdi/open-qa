@@ -56,13 +56,14 @@ npm run verify:demos</pre>
   <section class="section" id="overview">
     <h2>📂 Repository Overview</h2>
     <pre class="tree">intelligent-testing-toolkit/
-├── 01-Self-Healing-Tests/     # DOM-aware locator recovery
-├── 02-Smart-Data-Gen/         # Malicious & boundary JSON payloads
-├── 03-Automated-Bug-Report/   # CI log → Jira Markdown
-├── tests/                     # Playwright specs
-├── index.html                 # Marketplace home (this site)
-├── agents.html | skills.html | prompts.html
-└── README.md                  # Master documentation</pre>
+├── docs/                 # UI Marketplace (this site)
+├── src/
+│   ├── agents/           # Self-healing, visual regression
+│   ├── skills/           # Data-gen, log analyzer
+│   └── core/             # LLM client
+├── tests/                # Playwright specs
+├── output/               # Generated artifacts
+└── README.md</pre>
 
     <div class="feature-grid">
       <article class="feature-card">
@@ -87,9 +88,9 @@ npm run verify:demos</pre>
     <h2>🛒 Live Marketplace</h2>
     <p>Browse the full catalog across dedicated pages — search, filter, and copy run commands instantly.</p>
     <div class="hero-cta" style="justify-content:flex-start;margin-top:16px;">
-      <a href="agents.html" class="btn-outline">Agents (2)</a>
-      <a href="skills.html" class="btn-outline">Skills (1)</a>
-      <a href="prompts.html" class="btn-outline">Prompts (3)</a>
+      <a href="agents.html" class="btn-outline">Agents (6)</a>
+      <a href="skills.html" class="btn-outline">Skills (5)</a>
+      <a href="prompts.html" class="btn-outline">Prompts (6)</a>
     </div>
   </section>
 

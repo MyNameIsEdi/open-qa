@@ -20,6 +20,8 @@
   --badge-green-text: #166534;
   --badge-orange-bg: #ffedd5;
   --badge-orange-text: #9a3412;
+  --badge-blue-bg: #dbeafe;
+  --badge-blue-text: #1e40af;
 
   --banner-bg: #e0e7ff;
   --banner-text: #3730a3;
@@ -45,6 +47,8 @@
     --badge-green-text: #86efac;
     --badge-orange-bg: #7c2d12;
     --badge-orange-text: #fdba74;
+    --badge-blue-bg: #1e3a5f;
+    --badge-blue-text: #93c5fd;
 
     --banner-bg: #312e81;
     --banner-text: #c7d2fe;
@@ -334,6 +338,10 @@ h1 {
 .badge-orange {
   background: var(--badge-orange-bg);
   color: var(--badge-orange-text);
+}
+.badge-planned {
+  background: var(--badge-blue-bg);
+  color: var(--badge-blue-text);
 }
 
 .creator {

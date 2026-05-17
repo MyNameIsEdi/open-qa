@@ -183,7 +183,7 @@ export async function runDemoTest(): Promise<void> {
   console.log('🎬 Starting Visual Regression Agent demo...\n');
   
   // Create output directory
-  const outputDir = path.join(process.cwd(), 'visual-regression-output');
+  const outputDir = path.join(process.cwd(), 'output', 'visual-regression');
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }

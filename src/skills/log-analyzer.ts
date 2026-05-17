@@ -1,9 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { askClaude, USE_MOCK, warnMockMode } from '../../lib/ai-client';
+import { fileURLToPath } from 'url';
+import { askClaude, USE_MOCK, warnMockMode } from '../core/llm-client';
 
-const LOG_FILE = path.join(process.cwd(), '03-Automated-Bug-Report', 'mock-error.log');
-const OUTPUT_DIR = path.join(process.cwd(), '03-Automated-Bug-Report', 'output');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const LOG_FILE = path.join(__dirname, 'fixtures', 'mock-error.log');
+const OUTPUT_DIR = path.join(process.cwd(), 'output');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'AI_BUG_REPORT.md');
 
 const SYSTEM_PROMPT = `You are an elite QA Automation Architect.

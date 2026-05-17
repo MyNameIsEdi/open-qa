@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Agents | Intelligent Testing Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="skills.html">Skills</a>
+        <a href="prompts.html">Prompts</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <h1>Autonomous Agents</h1>
+    <p class="subtitle">Independent scripts that analyze DOM context, recover from failures, intercept network traffic, and triage CI logs automatically.</p>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search agents...">
+      </div>
+      <div class="filter-group">
+        <h3>Status</h3>
+        <label class="filter-option"><div class="filter-option-left"><span style="color:var(--badge-green-text)">●</span> Active</div></label>
+        <label class="filter-option"><div class="filter-option-left"><span style="color:var(--badge-blue-text)">●</span> Planned</div></label>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="top-bar">
+        <span id="resultCount" data-label="agents">6 agents found</span>
+      </div>
+
+      <div class="grid" id="skillsGrid">
+
+        <div class="card" data-category="agent" data-search="self healing locator playwright ai dom timeout active">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">🟢 Active</span>
+              <span class="badge badge-orange">🔥 Popular</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Self-Healing Locator</a>
+          <p class="card-desc">Auto-repairs broken Playwright selectors on the fly using LLM DOM analysis. Catches TimeoutErrors and suggests getByRole locators.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/agents/self-healing.ts')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 12</span><span>⬇ 5,360</span><span>⭐ 5.0</span></div>
+            <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">🧠 Claude</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="agent" data-search="automated triage log analyzer jira ci stack trace bug report active">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Automated Triage</a>
+          <p class="card-desc">Reads failing CI logs, analyzes stack traces, and creates Jira-ready Markdown root-cause reports automatically.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/skills/log-analyzer.ts')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 8</span><span>⬇ 1,475</span><span>⭐ 4.8</span></div>
+            <div class="tool-tags"><span class="tool-tag">⚙️ CI/CD</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="agent" data-search="auto pom page object model playwright typescript html parser planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Auto-POM Builder</a>
+          <p class="card-desc">Parses raw HTML pages and generates strictly typed Playwright Page Object Model classes with getByRole locators and reusable action methods.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/auto-pom-builder.ts --url https://app.example.com/checkout --out ./pages')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 6</span><span>⬇ 892</span><span>⭐ 4.6</span></div>
+            <div class="tool-tags"><span class="tool-tag">🎭 Playwright</span><span class="tool-tag">📐 POM</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="agent" data-search="network interceptor mock route playwright har traffic planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Network Interceptor &amp; Mock Gen</a>
+          <p class="card-desc">Records browser network traffic during a test run and auto-generates Playwright page.route() mock handlers with typed fixtures.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/network-mock-gen.ts --trace ./test-results/trace.zip --out ./mocks')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 11</span><span>⬇ 1,204</span><span>⭐ 4.7</span></div>
+            <div class="tool-tags"><span class="tool-tag">🌐 Network</span><span class="tool-tag">🎭 Playwright</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="agent" data-search="visual accessibility a11y wcag axe screenshot dom planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Visual A11y Scanner</a>
+          <p class="card-desc">Analyzes DOM + screenshots for WCAG violations and returns exact CSS/HTML remediation snippets mapped to failing nodes.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/visual-a11y-scanner.ts --url ./fixtures/checkout.html --standard WCAG21AA')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 17</span><span>⬇ 2,310</span><span>⭐ 4.8</span></div>
+            <div class="tool-tags"><span class="tool-tag">♿ A11y</span><span class="tool-tag">🧠 Claude</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="agent" data-search="chaos monkey ui resilience latency network block random click planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#autonomous-agents-catalog" class="card-title">Chaos Monkey UI</a>
+          <p class="card-desc">Stress-tests frontend resilience by clicking random elements, injecting latency, and blocking arbitrary network routes during Playwright runs.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/chaos-monkey-ui.ts --url https://app.example.com --duration 120 --seed 42')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 9</span><span>⬇ 1,088</span><span>⭐ 4.5</span></div>
+            <div class="tool-tags"><span class="tool-tag">🐒 Chaos</span><span class="tool-tag">🎭 Playwright</span></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/site.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initCardFilter('searchInput', 'skillsGrid', 'resultCount');
+    });
+  </script>
+</body>
+</html>

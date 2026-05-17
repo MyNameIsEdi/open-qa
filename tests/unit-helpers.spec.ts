@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { createMockEdgeCaseData } from '../02-Smart-Data-Gen/src/generate-test-data';
-import { createMockBugReport } from '../03-Automated-Bug-Report/src/log-analyzer';
-import { createMockHealedLocator } from '../01-Self-Healing-Tests/src/auto-locator';
+import { createMockEdgeCaseData } from '../src/skills/generate-test-data';
+import { createMockBugReport } from '../src/skills/log-analyzer';
+import { createMockHealedLocator } from '../src/agents/self-healing';
 
 test.describe('Mock mode helpers', () => {
   test('createMockEdgeCaseData returns edge-case payloads', () => {

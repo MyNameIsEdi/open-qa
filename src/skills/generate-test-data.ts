@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { askClaude, USE_MOCK, warnMockMode } from '../../lib/ai-client';
+import { fileURLToPath } from 'url';
+import { askClaude, USE_MOCK, warnMockMode } from '../core/llm-client';
 import { QA_ENGINEER_SYSTEM_PROMPT, buildEdgeCasePrompt } from './prompts/edge-case-prompts';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface EdgeCasePayload {
   scenario_description: string;
@@ -27,9 +30,9 @@ const DEFAULT_SCHEMA = {
   },
 };
 
-const OUTPUT_DIR = path.join(process.cwd(), '02-Smart-Data-Gen', 'output');
+const OUTPUT_DIR = path.join(process.cwd(), 'output');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'generated-edge-cases.json');
-const SCHEMA_FILE = path.join(process.cwd(), '02-Smart-Data-Gen', 'schema', 'checkout-api.json');
+const SCHEMA_FILE = path.join(__dirname, 'schema', 'checkout-api.json');
 
 export function createMockEdgeCaseData(count = 5): EdgeCasePayload[] {
   return Array.from({ length: count }, (_, i) => ({

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testing Skills | Intelligent Testing Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="skills.html">Skills</a>
+        <a href="prompts.html">Prompts</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <h1>Testing Skills &amp; Data Gen</h1>
+    <p class="subtitle">Utility generators and helpers for API fuzzing, load testing, log mining, and security boundary testing.</p>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search skills...">
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="top-bar">
+        <span id="resultCount" data-label="skills">5 skills found</span>
+      </div>
+
+      <div class="grid" id="skillsGrid">
+
+        <div class="card" data-category="skill" data-search="smart data gen api fuzzing payload sql xss boundary active">
+          <div class="card-top">
+            <div class="badges">
+              <span class="badge badge-green">🟢 Active</span>
+              <span class="badge badge-orange">🔥 Popular</span>
+            </div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#testing-skills-catalog" class="card-title">Smart Data Gen</a>
+          <p class="card-desc">Generates extreme, complex, and malicious JSON payloads for API fuzzing — SQLi, XSS, nulls, RTL text, and boundary numbers.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx src/skills/generate-test-data.ts')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 24</span><span>⬇ 3,045</span><span>⭐ 4.9</span></div>
+            <div class="tool-tags"><span class="tool-tag">🔌 API</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="skill" data-search="graphql fuzzer nested malicious query depth limit planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#testing-skills-catalog" class="card-title">GraphQL Fuzzer</a>
+          <p class="card-desc">Generates deeply nested and malicious GraphQL queries to probe backend depth limits, alias explosions, and rate limiting.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/graphql-fuzzer.ts --schema ./api/schema.graphql --depth 20')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 14</span><span>⬇ 1,780</span><span>⭐ 4.7</span></div>
+            <div class="tool-tags"><span class="tool-tag">◆ GraphQL</span><span class="tool-tag">🛡️ Security</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="skill" data-search="k6 load profile playwright journey performance planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#testing-skills-catalog" class="card-title">K6 Load Profile Gen</a>
+          <p class="card-desc">Converts a Playwright user-journey script into a K6 load test with realistic think-time, VU stages, and threshold assertions.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/k6-profile-gen.ts --input ./tests/checkout.spec.ts --out ./load/checkout.k6.js')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 10</span><span>⬇ 1,340</span><span>⭐ 4.6</span></div>
+            <div class="tool-tags"><span class="tool-tag">📈 K6</span><span class="tool-tag">🎭 Playwright</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="skill" data-search="regex log scraper error signature unstructured server logs planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#testing-skills-catalog" class="card-title">Regex Log Scraper</a>
+          <p class="card-desc">Clusters millions of lines of unstructured server logs into unique error signatures with suggested regex patterns for alerting.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/regex-log-scraper.ts --file ./logs/production.log --top 50')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 7</span><span>⬇ 960</span><span>⭐ 4.5</span></div>
+            <div class="tool-tags"><span class="tool-tag">📋 Logs</span><span class="tool-tag">🧠 Claude</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="skill" data-search="jwt manipulator expired unsigned security token planned">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-planned">🟡 Planned</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#testing-skills-catalog" class="card-title">JWT Manipulator</a>
+          <p class="card-desc">Creates expired, unsigned, algorithm-confused, and misconfigured JWT tokens for auth boundary and negative security testing.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'npx tsx scripts/jwt-manipulator.ts --secret test --out ./fixtures/tokens.json')">💬 Copy Run Command</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 18</span><span>⬇ 2,015</span><span>⭐ 4.8</span></div>
+            <div class="tool-tags"><span class="tool-tag">🔐 Auth</span><span class="tool-tag">🛡️ Security</span></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/site.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initCardFilter('searchInput', 'skillsGrid', 'resultCount');
+    });
+  </script>
+</body>
+</html>

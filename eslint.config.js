@@ -9,9 +9,10 @@ export default tseslint.config(
       'node_modules/**',
       'playwright-report/**',
       'test-results/**',
+      'output/**',
       'examples/**',
-      '05-Visual-Regression/**',
       'SKILL_TEMPLATE/**',
+      'docs/**',
     ],
   },
   {

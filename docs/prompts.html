@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Prompts | Intelligent Testing Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">🤖 Intelligent Testing Toolkit</a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="skills.html">Skills</a>
+        <a href="prompts.html">Prompts</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <h1>System Prompts Library</h1>
+    <p class="subtitle">Curated personas for Claude, Cursor, and ChatGPT — full prompts in README.md, copy references below.</p>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-box" placeholder="Search prompts...">
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="top-bar">
+        <span id="resultCount" data-label="prompts">6 prompts found</span>
+      </div>
+
+      <div class="grid" id="skillsGrid">
+
+        <div class="card" data-category="prompt" data-search="cursorrules prompt ide sdet playwright">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../.cursorrules" class="card-title">God-Mode .cursorrules</a>
+          <p class="card-desc">Forces Cursor IDE to act as an Elite SDET writing flaky-free Playwright tests with strict typing and accessibility-first locators.</p>
+          <a href="../.cursorrules" class="btn-action btn-secondary">📄 View Source File</a>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 45</span><span>⬇ 8,122</span><span>⭐ 5.0</span></div>
+            <div class="tool-tags"><span class="tool-tag">💻 Cursor</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="test plan generator prd matrix qa architect">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#prompt-prd-test-matrix" class="card-title">PRD to Test Matrix</a>
+          <p class="card-desc">Converts PRDs into exhaustive test plans with functional, negative, edge-case tables and Playwright automation strategy.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → PRD to Test Matrix')">💬 Copy Reference</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 19</span><span>⬇ 1,866</span><span>⭐ 4.7</span></div>
+            <div class="tool-tags"><span class="tool-tag">🧠 Claude</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="hacker qa data gen malicious sqli xss json">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#prompt-hacker-qa" class="card-title">The "Hacker" QA</a>
+          <p class="card-desc">Forces the LLM to generate boundary-pushing malicious JSON payloads — SQLi, XSS, nulls, RTL, and numeric extremes.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The Hacker QA')">💬 Copy Reference</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 31</span><span>⬇ 4,532</span><span>⭐ 4.9</span></div>
+            <div class="tool-tags"><span class="tool-tag">🛡️ Security</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="bdd gherkin cucumber given when then prd scenarios">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#prompt-bdd-master" class="card-title">The BDD Master</a>
+          <p class="card-desc">Transforms raw PRDs into production-ready Gherkin scenarios covering happy path, negative flows, and edge cases with @smoke/@regression tags.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → The BDD Master')">💬 Copy Reference</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 22</span><span>⬇ 2,640</span><span>⭐ 4.8</span></div>
+            <div class="tool-tags"><span class="tool-tag">🥒 Cucumber</span><span class="tool-tag">📝 BDD</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="sdet pr reviewer playwright cypress flaky locator dry">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#prompt-sdet-pr-reviewer" class="card-title">The Strict SDET PR Reviewer</a>
+          <p class="card-desc">Reviews Playwright/Cypress PRs for flaky locators, missing assertions, hardcoded waits, secret leakage, and DRY violations.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → Strict SDET PR Reviewer')">💬 Copy Reference</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 28</span><span>⬇ 3,110</span><span>⭐ 4.9</span></div>
+            <div class="tool-tags"><span class="tool-tag">🔍 PR Review</span><span class="tool-tag">🎭 Playwright</span></div>
+          </div>
+        </div>
+
+        <div class="card" data-category="prompt" data-search="openapi swagger api contract enforcer status codes parameters">
+          <div class="card-top">
+            <div class="badges"><span class="badge badge-green">🟢 Active</span></div>
+            <div class="creator">Creator: toolkit-ai</div>
+          </div>
+          <a href="../README.md#prompt-api-contract-enforcer" class="card-title">The API Contract Enforcer</a>
+          <p class="card-desc">Analyzes OpenAPI/Swagger specs and produces comprehensive API test matrices for parameter permutations and HTTP status coverage.</p>
+          <button type="button" class="btn-action" onclick="copyAction(this, 'Open README.md → System Prompts → API Contract Enforcer')">💬 Copy Reference</button>
+          <div class="card-footer">
+            <div class="stats"><span>♡ 16</span><span>⬇ 1,990</span><span>⭐ 4.7</span></div>
+            <div class="tool-tags"><span class="tool-tag">📜 OpenAPI</span><span class="tool-tag">🔌 API</span></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/site.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initCardFilter('searchInput', 'skillsGrid', 'resultCount');
+    });
+  </script>
+</body>
+</html>

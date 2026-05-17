@@ -1,5 +1,5 @@
 import { Page, Locator, errors } from 'playwright';
-import { askClaude, USE_MOCK, warnMockMode } from '../../lib/ai-client';
+import { askClaude, USE_MOCK, warnMockMode } from '../core/llm-client';
 
 export type LocatorStrategy =
   | 'getByRole'
@@ -11,9 +11,7 @@ export type LocatorStrategy =
 
 export interface HealedLocatorSpec {
   strategy: LocatorStrategy;
-  /** Role name, test id, text, or CSS selector depending on strategy */
   target: string;
-  /** Optional second argument (e.g. role options, exact match) */
   options?: Record<string, string | boolean | number>;
 }
 
@@ -125,7 +123,6 @@ export function buildLocator(page: Page, spec: HealedLocatorSpec): Locator {
   }
 }
 
-/** CLI demo: broken selector → self-heal → successful click */
 export async function runHealingDemo(): Promise<void> {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ headless: true });
@@ -165,8 +162,8 @@ export async function clickWithSelfHealing(
 }
 
 const isMain =
-  process.argv[1]?.includes('auto-locator') ||
-  process.argv[1]?.endsWith('auto-locator.ts');
+  process.argv[1]?.includes('self-healing') ||
+  process.argv[1]?.endsWith('self-healing.ts');
 
 if (isMain) {
   runHealingDemo().catch((err) => {
