@@ -1279,3 +1279,36 @@ body::after {
   .docs-container { grid-template-columns: 1fr; gap: 24px; }
   .docs-toc       { position: static; }
 }
+
+/* ── Panel code-section toolbar ─────────────────────────────────── */
+.panel-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.panel-section-row .panel-section-label { margin-bottom: 0; }
+
+.panel-code-actions { display: flex; gap: 4px; align-items: center; }
+
+.panel-icon-btn {
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 4px 7px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.panel-icon-btn:hover {
+  background: var(--btn-hover);
+  color: var(--text-main);
+  border-color: var(--btn-text);
+}
+.panel-icon-btn .material-symbols-outlined { font-size: 1rem; }
+
+[dir="rtl"] .panel-section-row { flex-direction: row-reverse; }
+[dir="rtl"] .panel-code-actions { flex-direction: row-reverse; }
