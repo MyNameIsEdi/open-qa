@@ -20,7 +20,7 @@ As applications grow more dynamic, static assertions and brittle locators are no
 
 Welcome to the AI Testing Marketplace! Browse our collection of **Agents**, **Skills**, and **Prompts** designed to supercharge your QA automation.
 
-> Open the live HTML marketplace: [index.html](./index.html)
+> Open the live HTML marketplace: [index.html](https://mynameisedi.github.io/intelligent-testing-toolkit/)
 
 # 🤖 Intelligent Testing Toolkit — Professional Edition
 
