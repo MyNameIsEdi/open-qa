@@ -16,6 +16,10 @@ Instead of brittle selectors and static assertions, leverage LLMs to understand 
 ## 🛒 The AI Toolkit Marketplace
 
 Welcome to the AI Testing Marketplace! Browse our collection of **Agents**, **Skills**, and **Prompts** across the multi-page UI:
+<p align="center">
+  <img src="./preview(2).jpeg" alt="Intelligent Testing Toolkit Preview 1" width="100%">
+  <img src="./preview(3).jpeg" alt="Intelligent Testing Toolkit Preview 2" width="100%">
+</p>
 
 | Page | Description |
 |------|-------------|
