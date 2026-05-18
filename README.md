@@ -1,6 +1,6 @@
 <div align="center">
 
-# open-qa — AI-Powered QA Arsenal
+# Test smarter with AI-driven QA
 
 **Production-ready Playwright + Claude toolkit with a React marketplace UI**
 
