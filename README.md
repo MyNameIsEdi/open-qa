@@ -1,3 +1,4 @@
+
 <div align="center">
 
 # Test smarter with AI-driven QA
@@ -9,6 +10,9 @@
 [![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg?style=flat-square)](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
+
+🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)**
 
 <img src="screenshots/home.jpeg" width="900" alt="open-qa home page" />
 
@@ -90,19 +94,22 @@ One-click copy reference with **10 collapsible sections** — all your go-to pat
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
+git clone [https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git](https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git)
 cd intelligent-testing-toolkit
 npm install
 npx playwright install chromium
+
 ```
 
 ### 2. Start the full app (no API key needed)
 
 ```bash
 npm run dev
+
 ```
 
-Opens the UI at **http://localhost:5174** and starts the API server on port 3001.  
+Opens the UI at **http://localhost:5174** and starts the API server on port 3001.
+
 All agents and the playground run in **MOCK mode** by default.
 
 ### 3. Run the test suite
@@ -110,6 +117,7 @@ All agents and the playground run in **MOCK mode** by default.
 ```bash
 npm test          # Playwright end-to-end specs
 npm run typecheck # TypeScript strict check
+
 ```
 
 ### 4. Enable live Claude (optional)
@@ -118,6 +126,7 @@ npm run typecheck # TypeScript strict check
 cp .env.example .env
 # Edit .env and add: ANTHROPIC_API_KEY=sk-ant-...
 npm run dev
+
 ```
 
 ---
@@ -133,6 +142,7 @@ npm run run:bugreport       # Automated bug triage → output/AI_BUG_REPORT.md
 npm run run:visual-regression  # Visual regression → output/visual-regression/
 npm run run:auto-pom        # Auto-POM Builder → output/auto-pom/
 npm run run:visual-a11y     # Visual A11y Scanner → output/A11Y_REPORT.md
+
 ```
 
 ---
@@ -161,12 +171,13 @@ open-qa/
 │   └── index.ts            # /api/agents, /api/skills, /api/run/:id, /api/playground
 ├── tests/                  # Playwright test suite
 └── output/                 # Generated artifacts (bug reports, test data, POM files)
+
 ```
 
 ### Tech stack
 
 | Layer | Technology |
-|-------|------------|
+| --- | --- |
 | AI | Anthropic Claude (`claude-3-5-sonnet-20241022`) |
 | UI | React 18 · Vite 6 · Tailwind CSS 3 · Material UI icons |
 | Server | Express 4 · CORS · SSE streaming |
@@ -195,20 +206,25 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
   },
   "run_command": "npx tsx src/agents/self-healing/index.ts"
 }
+
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] Native MCP server (`npx open-qa mcp-server`)
-- [ ] Network Interceptor & Mock Gen
-- [ ] Chaos Monkey UI
-- [ ] GraphQL Fuzzer skill
-- [ ] K6 Load Profile Generator skill
-- [ ] JWT Attack Suite skill
-- [ ] GitHub Pages live demo
+* [ ] Native MCP server (`npx open-qa mcp-server`)
+* [ ] Network Interceptor & Mock Gen
+* [ ] Chaos Monkey UI
+* [ ] GraphQL Fuzzer skill
+* [ ] K6 Load Profile Generator skill
+* [ ] JWT Attack Suite skill
+* [x] [GitHub Pages live demo](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
 
 ---
 
 > *"Automate the routine, use AI for the unpredictable."*
+
+```
+
+```
