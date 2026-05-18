@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ScheduleIcon from '@mui/icons-material/Schedule'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import CheckIcon from '@mui/icons-material/Check'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 
 export interface AgentDef {
   name: string
@@ -42,7 +47,7 @@ export default function AgentCard({ agent }: Props) {
 
   return (
     <div
-      className="group flex flex-col gap-3 p-5 rounded-2xl border bg-white transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5"
+      className="group flex flex-col gap-3 p-5 rounded-2xl border transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
     >
       {/* Header */}
@@ -50,15 +55,17 @@ export default function AgentCard({ agent }: Props) {
         <h3 className="font-semibold text-sm leading-snug" style={{ color: 'var(--text-main)' }}>
           {agent.name}
         </h3>
-        <span
-          className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-            agent.status === 'active'
-              ? 'bg-sage-100 text-sage-700'
-              : 'bg-amber-50 text-amber-600'
-          }`}
-        >
-          {agent.status === 'active' ? '🟢 Active' : '🟡 Planned'}
-        </span>
+        {agent.status === 'active' ? (
+          <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-sage-100 text-sage-700">
+            <CheckCircleIcon sx={{ fontSize: 12 }} />
+            Active
+          </span>
+        ) : (
+          <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+            <ScheduleIcon sx={{ fontSize: 12 }} />
+            Planned
+          </span>
+        )}
       </div>
 
       {/* Description */}
@@ -68,9 +75,10 @@ export default function AgentCard({ agent }: Props) {
 
       {/* Run command */}
       <code
-        className="block text-xs px-3 py-2 rounded-lg font-mono truncate"
+        className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-mono truncate"
         style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-muted)' }}
       >
+        <ContentCopyIcon sx={{ fontSize: 11, opacity: 0.5, flexShrink: 0 }} />
         {agent.runCommand}
       </code>
 
@@ -80,9 +88,15 @@ export default function AgentCard({ agent }: Props) {
         className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
       >
         {copied ? (
-          <>✅ Copied!</>
+          <>
+            <CheckIcon sx={{ fontSize: 14 }} />
+            Copied!
+          </>
         ) : (
-          <>🤖 Add to Claude</>
+          <>
+            <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+            Add to Claude
+          </>
         )}
       </button>
     </div>
