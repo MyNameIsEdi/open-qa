@@ -29,7 +29,7 @@ Every agent and skill card in the marketplace has an **"🤖 Add to Claude"** bu
       "required": ["failed_locator", "dom_snapshot"]
     }
   },
-  "run_command": "npx tsx src/agents/self-healing.ts"
+  "run_command": "npx tsx src/agents/self-healing/index.ts"
 }
 ```
 

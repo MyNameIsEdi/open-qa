@@ -6,7 +6,7 @@ Composable utilities that can be imported into any test framework or called via 
 
 ## 🟢 Smart Data Gen
 
-**Status:** Active | **File:** `src/skills/generate-test-data.ts`
+**Status:** Active | **File:** `src/skills/data-gen/index.ts`
 
 Generates extreme edge-case JSON payloads designed to break systems: SQL injection, XSS strings, null/missing fields, RTL text (Hebrew/Arabic), emoji, and boundary numbers. Perfect for API fuzzing.
 
@@ -14,7 +14,7 @@ Generates extreme edge-case JSON payloads designed to break systems: SQL injecti
 ```bash
 npm run run:datagen
 # or directly:
-npx tsx src/skills/generate-test-data.ts
+npx tsx src/skills/data-gen/index.ts
 ```
 
 ### Output
