@@ -8,12 +8,26 @@ import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined'
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined'
 import GitHubIcon from '@mui/icons-material/GitHub'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
+import EmojiObjectsOutlinedIcon from '@mui/icons-material/EmojiObjectsOutlined'
+import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined'
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined'
+import CallMergeOutlinedIcon from '@mui/icons-material/CallMerge'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 const featureKeys = [
   { Icon: BuildOutlinedIcon, titleKey: 'home.feature_healing_title', descKey: 'home.feature_healing_desc', color: 'text-primary-500' },
   { Icon: CasinoOutlinedIcon, titleKey: 'home.feature_datagen_title', descKey: 'home.feature_datagen_desc', color: 'text-sage-600' },
   { Icon: BugReportOutlinedIcon, titleKey: 'home.feature_triage_title', descKey: 'home.feature_triage_desc', color: 'text-coral-500' },
   { Icon: SmartToyOutlinedIcon, titleKey: 'home.feature_claude_title', descKey: 'home.feature_claude_desc', color: 'text-amber-500' },
+  { Icon: AssignmentOutlinedIcon, titleKey: 'home.feature_missions_title', descKey: 'home.feature_missions_desc', color: 'text-violet-500' },
+]
+
+const COMMUNITY_ITEMS = [
+  'GraphQL Fuzzer skill (in progress)',
+  'Cypress migration guide',
+  'k6 load profile generator',
+  'Multi-language test scaffolding',
 ]
 
 export default function HomePage() {
@@ -57,7 +71,7 @@ export default function HomePage() {
       </section>
 
       {/* Feature cards */}
-      <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+      <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
         {featureKeys.map(({ Icon, titleKey, descKey, color }) => (
           <div
             key={titleKey}
@@ -73,7 +87,7 @@ export default function HomePage() {
 
       {/* Getting started */}
       <section
-        className="p-6 rounded-2xl border mb-12"
+        className="p-6 rounded-2xl border mb-8"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
       >
         <h2 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
@@ -102,7 +116,7 @@ npm run dev       # starts UI + API server`}
 
       {/* Repo structure */}
       <section
-        className="p-6 rounded-2xl border"
+        className="p-6 rounded-2xl border mb-12"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
       >
         <h2 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
@@ -123,6 +137,111 @@ npm run dev       # starts UI + API server`}
 ├── tests/            # Playwright test suite
 └── output/           # Generated artifacts`}
         </pre>
+      </section>
+
+      {/* Why open-qa — Our Mission */}
+      <section
+        className="p-6 rounded-2xl border mb-8"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+      >
+        <h2 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+          <EmojiObjectsOutlinedIcon sx={{ fontSize: 18 }} style={{ color: '#f59e0b' }} />
+          {t('home.mission_title')}
+        </h2>
+        <p className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          {t('home.mission_desc')}
+        </p>
+        <ul className="flex flex-col gap-2">
+          {(['mission_p1', 'mission_p2', 'mission_p3', 'mission_p4'] as const).map((key) => (
+            <li key={key} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
+              {t(`home.${key}`)}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* How to Contribute */}
+      <section className="mb-8">
+        <h2 className="font-semibold text-base mb-1 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+          <GroupAddOutlinedIcon sx={{ fontSize: 18 }} className="text-primary-500" />
+          {t('home.contribute_title')}
+        </h2>
+        <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{t('home.contribute_subtitle')}</p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            {
+              icon: <BugReportOutlinedIcon sx={{ fontSize: 20 }} style={{ color: '#ef4444' }} />,
+              title: t('home.contribute_issues_title'),
+              desc: t('home.contribute_issues_desc'),
+              cta: t('home.contribute_issues_cta'),
+              href: 'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/issues',
+            },
+            {
+              icon: <ForumOutlinedIcon sx={{ fontSize: 20 }} style={{ color: '#8b5cf6' }} />,
+              title: t('home.contribute_discussions_title'),
+              desc: t('home.contribute_discussions_desc'),
+              cta: t('home.contribute_discussions_cta'),
+              href: 'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/discussions',
+            },
+            {
+              icon: <CallMergeOutlinedIcon sx={{ fontSize: 20 }} style={{ color: '#10b981' }} />,
+              title: t('home.contribute_prs_title'),
+              desc: t('home.contribute_prs_desc'),
+              cta: t('home.contribute_prs_cta'),
+              href: 'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/pulls',
+            },
+          ].map(({ icon, title, desc, cta, href }) => (
+            <div
+              key={title}
+              className="p-4 rounded-2xl border flex flex-col gap-3"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+            >
+              <div className="flex items-center gap-2">
+                {icon}
+                <span className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>{title}</span>
+              </div>
+              <p className="text-xs leading-relaxed flex-1" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-semibold transition-colors"
+                style={{ color: 'var(--primary-600, #4f46e5)' }}
+              >
+                {cta}
+                <OpenInNewIcon sx={{ fontSize: 12 }} />
+              </a>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* What the Community is Building */}
+      <section
+        className="p-6 rounded-2xl border"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+      >
+        <h2 className="font-semibold text-base mb-1 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+          <RocketLaunchOutlinedIcon sx={{ fontSize: 18 }} className="text-primary-500" />
+          {t('home.community_title')}
+        </h2>
+        <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>{t('home.community_subtitle')}</p>
+        <ul className="flex flex-col gap-2">
+          {COMMUNITY_ITEMS.map((item) => (
+            <li key={item} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              {item}
+            </li>
+          ))}
+        </ul>
+        <Link
+          to="/agents"
+          className="inline-flex items-center gap-1 text-xs font-semibold mt-4 transition-colors"
+          style={{ color: 'var(--primary-600, #4f46e5)' }}
+        >
+          View all agents & skills →
+        </Link>
       </section>
     </div>
   )

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist-ui/
+dist/
+
+# Vite cache
+.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Playwright reports and output
+playwright-report/
+test-results/
+output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
