@@ -199,6 +199,21 @@
     "Factory function pattern": "Factory function pattern",
     "Fixture file with typed data": "Fixture file with typed data"
   },
+  "submit": {
+    "title": "Submit an Agent",
+    "subtitle": "Share your QA agent with the community. Fill in the details and we'll open a pre-filled GitHub Issue.",
+    "field_name": "Agent Name",
+    "field_tagline": "Tagline",
+    "field_category": "Category",
+    "field_status": "Status",
+    "field_system_prompt": "System Prompt",
+    "field_run_command": "Run Command",
+    "field_github": "Your GitHub Handle",
+    "preview_title": "Live Preview",
+    "submit_btn": "Open GitHub Issue →",
+    "status_active": "Active",
+    "status_planned": "Planned"
+  },
   "docs": {
     "title": "Documentation",
     "subtitle": "Integration guide, architecture overview, and contributor reference.",
