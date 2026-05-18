@@ -8,6 +8,7 @@
     "generate": "Generate",
     "missions": "Missions",
     "guides": "Guides",
+    "playwright": "PW Dashboard",
     "cheatsheet": "Cheatsheet",
     "docs": "Docs"
   },
