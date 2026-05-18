@@ -1,8 +1,15 @@
+import { useState, useMemo } from 'react'
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import PromptCard, { PromptDef } from '../components/PromptCard'
 
-const prompts: PromptDef[] = [
+interface PromptEntry extends PromptDef {
+  category: string
+}
+
+const prompts: PromptEntry[] = [
   {
     name: 'PRD to Test Matrix',
+    category: 'planning',
     tagline: 'Convert requirements into exhaustive test plans',
     systemPrompt: `You are an elite Lead QA Architect with over 15 years of experience in enterprise software testing. You possess a hacker's mindset and a deep understanding of complex system architectures. Your expertise lies in breaking down ambiguous Product Requirements Documents (PRDs) or user stories into exhaustive, highly structured, and actionable Test Plans.
 
@@ -33,6 +40,7 @@ Be mercilessly thorough. Be specific — use exact values. Assume the user is ac
   },
   {
     name: 'The Hacker QA',
+    category: 'security',
     tagline: 'Generate malicious & boundary JSON test data',
     systemPrompt: `You are an elite Senior QA Data Engineer.
 Generate JSON test data designed to break systems — SQLi, XSS, nulls, RTL text, emoji, boundary numbers.
@@ -52,6 +60,7 @@ Cover:
   },
   {
     name: 'PRD Analyzer (Quick)',
+    category: 'analysis',
     tagline: 'Fast PRD → test matrix with sample API payloads',
     systemPrompt: `You are a meticulous QA Architect. I will provide you with a Product Requirements Document (PRD) or a feature description.
 
@@ -68,6 +77,7 @@ Cover:
   },
   {
     name: 'The BDD Master',
+    category: 'bdd',
     tagline: 'PRD → Gherkin/Cucumber scenarios (Given/When/Then)',
     systemPrompt: `You are a Principal QA Engineer and BDD specialist. Translate ambiguous product language into executable Gherkin scenarios.
 
@@ -94,6 +104,7 @@ Return a single Markdown document with Gherkin Feature blocks. Each feature must
   },
   {
     name: 'Strict SDET PR Reviewer',
+    category: 'review',
     tagline: 'Ruthless Playwright/Cypress PR review',
     systemPrompt: `You are a Staff SDET and test-architecture gatekeeper. Review PRs that modify end-to-end or integration tests.
 
@@ -127,6 +138,7 @@ Direct, technical. Quote the offending line. Provide the fixed line.`,
   },
   {
     name: 'API Contract Enforcer',
+    category: 'api',
     tagline: 'OpenAPI/Swagger → comprehensive API test matrices',
     systemPrompt: `You are a Senior API Test Architect specializing in contract testing and OpenAPI 3.x analysis.
 
@@ -163,10 +175,24 @@ Reference operationIds. Flag # AMBIGUITY: for unclear specs. Include security ca
   },
 ]
 
+const ALL_CATEGORIES = ['all', ...Array.from(new Set(prompts.map((p) => p.category)))]
+
 export default function PromptsPage() {
+  const [search, setSearch] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return prompts.filter((p) => {
+      const matchesSearch = !q || p.name.toLowerCase().includes(q) || p.tagline.toLowerCase().includes(q)
+      const matchesCategory = activeCategory === 'all' || p.category === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [search, activeCategory])
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
-      <div className="mb-10">
+      <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
           System Prompts Library
         </h1>
@@ -175,11 +201,56 @@ export default function PromptsPage() {
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {prompts.map((p) => (
-          <PromptCard key={p.name} prompt={p} />
-        ))}
+      {/* Search + filters */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <SearchOutlinedIcon
+            sx={{ fontSize: 16 }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: 'var(--text-muted)' }}
+          />
+          <input
+            type="text"
+            placeholder="Search prompts…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border outline-none focus:ring-2 focus:ring-primary-300"
+            style={{
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all duration-150 ${
+                activeCategory === cat
+                  ? 'bg-primary-600 text-white shadow-soft'
+                  : 'hover:bg-neutral-100'
+              }`}
+              style={activeCategory === cat ? {} : { color: 'var(--text-muted)' }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-center py-16" style={{ color: 'var(--text-muted)' }}>
+          No prompts match your search.
+        </p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((p) => (
+            <PromptCard key={p.name} prompt={p} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

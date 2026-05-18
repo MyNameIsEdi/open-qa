@@ -1,11 +1,19 @@
+import { useState, useMemo } from 'react'
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import AgentCard, { AgentDef } from '../components/AgentCard'
 
-const agents: AgentDef[] = [
+interface AgentEntry extends AgentDef {
+  category: string
+}
+
+const agents: AgentEntry[] = [
   {
     name: 'Self-Healing Locator',
+    category: 'locator',
     description:
       'When a Playwright test fails because the UI changed, this agent suggests a new getByRole / getByTestId locator from stripped DOM context using Claude.',
     status: 'active',
+    runId: 'healing',
     runCommand: 'npx tsx src/agents/self-healing.ts',
     systemPrompt:
       'You are a senior Playwright automation engineer. Given a failed locator and a DOM snapshot, suggest the single best alternative locator using getByRole, getByLabel, or getByTestId. Return only the locator string, no explanation.',
@@ -24,9 +32,11 @@ const agents: AgentDef[] = [
   },
   {
     name: 'Automated Bug Triage',
+    category: 'triage',
     description:
       'Reads an error log file and writes a Jira-ready Markdown report with root-cause analysis, severity classification, and reproduction steps.',
     status: 'active',
+    runId: 'triage',
     runCommand: 'npx tsx src/skills/log-analyzer.ts',
     systemPrompt:
       'You are an elite QA engineer. Read the error log and produce a structured bug report: Title, Severity (P0–P3), Summary, Root Cause, Steps to Reproduce, Expected vs Actual, Environment. Output clean Markdown.',
@@ -44,6 +54,7 @@ const agents: AgentDef[] = [
   },
   {
     name: 'Auto-POM Builder',
+    category: 'architecture',
     description:
       'Crawls a URL, analyzes the page structure, and auto-generates a Playwright Page Object Model class with typed selectors and action methods.',
     status: 'planned',
@@ -53,6 +64,7 @@ const agents: AgentDef[] = [
   },
   {
     name: 'Network Interceptor & Mock Gen',
+    category: 'network',
     description:
       'Analyzes a Playwright network trace and generates MSW/Playwright mock handlers for all captured API endpoints.',
     status: 'planned',
@@ -62,6 +74,7 @@ const agents: AgentDef[] = [
   },
   {
     name: 'Visual A11y Scanner',
+    category: 'visual',
     description:
       'Screenshots a page, analyzes it with Claude Vision, and produces a WCAG 2.1 AA accessibility report with specific remediation steps.',
     status: 'planned',
@@ -71,6 +84,7 @@ const agents: AgentDef[] = [
   },
   {
     name: 'Chaos Monkey UI',
+    category: 'chaos',
     description:
       'Randomly interacts with UI elements, captures unexpected errors and console exceptions, and reports all anomalies found during the chaos session.',
     status: 'planned',
@@ -80,13 +94,27 @@ const agents: AgentDef[] = [
   },
 ]
 
+const ALL_CATEGORIES = ['all', ...Array.from(new Set(agents.map((a) => a.category)))]
+
 export default function AgentsPage() {
+  const [search, setSearch] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return agents.filter((a) => {
+      const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
+      const matchesCategory = activeCategory === 'all' || a.category === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [search, activeCategory])
+
   const active = agents.filter((a) => a.status === 'active')
   const planned = agents.filter((a) => a.status === 'planned')
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
-      <div className="mb-10">
+      <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
           Autonomous Agents
         </h1>
@@ -95,11 +123,58 @@ export default function AgentsPage() {
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {agents.map((agent) => (
-          <AgentCard key={agent.name} agent={agent} />
-        ))}
+      {/* Search + filters */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <div
+          className="relative flex-1"
+        >
+          <SearchOutlinedIcon
+            sx={{ fontSize: 16 }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: 'var(--text-muted)' }}
+          />
+          <input
+            type="text"
+            placeholder="Search agents…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border outline-none focus:ring-2 focus:ring-primary-300"
+            style={{
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all duration-150 ${
+                activeCategory === cat
+                  ? 'bg-primary-600 text-white shadow-soft'
+                  : 'hover:bg-neutral-100'
+              }`}
+              style={activeCategory === cat ? {} : { color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-center py-16" style={{ color: 'var(--text-muted)' }}>
+          No agents match your search.
+        </p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((agent) => (
+            <AgentCard key={agent.name} agent={agent} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
