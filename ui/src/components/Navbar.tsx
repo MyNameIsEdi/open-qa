@@ -15,6 +15,7 @@ const links = [
   { to: '/playground', labelKey: 'nav.playground' },
   { to: '/generate',   labelKey: 'nav.generate' },
   { to: '/missions',   labelKey: 'nav.missions' },
+  { to: '/guides',     labelKey: 'nav.guides' },
   { to: '/cheatsheet', labelKey: 'nav.cheatsheet' },
   { to: '/docs',       labelKey: 'nav.docs' },
 ]
