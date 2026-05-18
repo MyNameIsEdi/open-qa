@@ -186,16 +186,14 @@ export default function HomePage() {
             <SmartToyOutlinedIcon sx={{ fontSize: 16 }} />
             {t('home.browse_agents')}
           </Link>
-          <a
-            href="https://github.com/MyNameIsEdi/intelligent-testing-toolkit/issues/new"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/submit"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border text-sm font-semibold hover:bg-sand-400 transition-all duration-150 active:scale-95"
             style={{ borderColor: 'var(--border)', color: 'var(--text-main)' }}
           >
             <GitHubIcon sx={{ fontSize: 16 }} />
             Submit an Agent
-          </a>
+          </Link>
         </div>
 
         {/* Don't know where to start */}

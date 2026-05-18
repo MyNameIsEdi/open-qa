@@ -199,6 +199,21 @@
     "Factory function pattern": "דפוס פונקציית מפעל",
     "Fixture file with typed data": "קובץ fixture עם נתונים מוקלדים"
   },
+  "submit": {
+    "title": "שלח סוכן",
+    "subtitle": "שתף את הסוכן שלך עם הקהילה. מלא את הפרטים ונפתח GitHub Issue מוכן מראש.",
+    "field_name": "שם הסוכן",
+    "field_tagline": "תיאור קצר",
+    "field_category": "קטגוריה",
+    "field_status": "סטטוס",
+    "field_system_prompt": "פרומפט מערכת",
+    "field_run_command": "פקודת הרצה",
+    "field_github": "שם המשתמש שלך ב-GitHub",
+    "preview_title": "תצוגה מקדימה",
+    "submit_btn": "פתח GitHub Issue →",
+    "status_active": "פעיל",
+    "status_planned": "מתוכנן"
+  },
   "docs": {
     "title": "תיעוד",
     "subtitle": "מדריך שילוב, סקירת ארכיטקטורה, ומסמך תרומה.",

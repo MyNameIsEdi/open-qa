@@ -9,6 +9,7 @@ import CheatsheetPage from './pages/CheatsheetPage'
 import GeneratePage from './pages/GeneratePage'
 import DocsPage from './pages/DocsPage'
 import DailyMissionsPage from './pages/DailyMissionsPage'
+import SubmitAgentPage from './pages/SubmitAgentPage'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/missions" element={<DailyMissionsPage />} />
             <Route path="/cheatsheet" element={<CheatsheetPage />} />
             <Route path="/docs" element={<DocsPage />} />
+            <Route path="/submit" element={<SubmitAgentPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
