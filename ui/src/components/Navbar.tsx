@@ -6,6 +6,7 @@ import PsychologyOutlinedIcon from '@mui/icons-material/PsychologyOutlined'
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined'
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined'
 import GitHubIcon from '@mui/icons-material/GitHub'
 import BiotechIcon from '@mui/icons-material/Biotech'
 
@@ -15,6 +16,7 @@ const links = [
   { to: '/skills', label: 'Skills', Icon: BuildOutlinedIcon },
   { to: '/prompts', label: 'Prompts', Icon: PsychologyOutlinedIcon },
   { to: '/playground', label: 'Playground', Icon: ScienceOutlinedIcon },
+  { to: '/generate', label: 'Generate', Icon: AutoAwesomeOutlinedIcon },
   { to: '/cheatsheet', label: 'Cheatsheet', Icon: CodeOutlinedIcon },
   { to: '/docs', label: 'Docs', Icon: MenuBookOutlinedIcon },
 ]

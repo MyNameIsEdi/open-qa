@@ -294,6 +294,283 @@ jobs:
       },
     ],
   },
+  {
+    title: 'API Testing (APIRequestContext)',
+    snippets: [
+      {
+        label: 'GET / POST with request fixture',
+        language: 'typescript',
+        code: `import { test, expect } from '@playwright/test'
+
+test('GET /api/users returns list', async ({ request }) => {
+  const res = await request.get('/api/users')
+  expect(res.status()).toBe(200)
+  const body = await res.json()
+  expect(Array.isArray(body)).toBe(true)
+})
+
+test('POST /api/users creates a user', async ({ request }) => {
+  const res = await request.post('/api/users', {
+    data: { name: 'Alice', email: 'alice@example.com' },
+  })
+  expect(res.status()).toBe(201)
+  expect(await res.json()).toMatchObject({ name: 'Alice' })
+})`,
+      },
+      {
+        label: 'Auth headers + bearer token',
+        language: 'typescript',
+        code: `test('authenticated endpoint', async ({ request }) => {
+  const res = await request.get('/api/profile', {
+    headers: { Authorization: \`Bearer \${process.env.TEST_TOKEN}\` },
+  })
+  expect(res.ok()).toBeTruthy()
+})`,
+      },
+      {
+        label: 'Response schema validation',
+        language: 'typescript',
+        code: `test('response matches schema', async ({ request }) => {
+  const res = await request.get('/api/products/1')
+  const product = await res.json()
+
+  expect(product).toMatchObject({
+    id: expect.any(Number),
+    name: expect.any(String),
+    price: expect.any(Number),
+  })
+  expect(product.price).toBeGreaterThan(0)
+})`,
+      },
+      {
+        label: 'Contract testing (OpenAPI)',
+        language: 'typescript',
+        code: `// Install: npm i -D openapi-fetch @apidevtools/swagger-parser
+import SwaggerParser from '@apidevtools/swagger-parser'
+
+test('API contract matches OpenAPI spec', async ({ request }) => {
+  const api = await SwaggerParser.dereference('./openapi.yaml')
+  const schema = api.paths['/api/users'].get.responses['200'].content['application/json'].schema
+
+  const res = await request.get('/api/users')
+  const body = await res.json()
+
+  // Validate first item matches schema shape
+  expect(typeof body[0].id).toBe(schema.items.properties.id.type)
+})`,
+      },
+    ],
+  },
+  {
+    title: 'Accessibility Testing',
+    snippets: [
+      {
+        label: 'axe-core with Playwright',
+        language: 'typescript',
+        code: `// Install: npm i -D axe-playwright
+import { checkA11y, injectAxe } from 'axe-playwright'
+
+test('page has no critical a11y violations', async ({ page }) => {
+  await page.goto('/checkout')
+  await injectAxe(page)
+  await checkA11y(page, undefined, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+    violationCallback: (violations) => {
+      console.log(JSON.stringify(violations, null, 2))
+    },
+  })
+})`,
+      },
+      {
+        label: 'getByRole semantic checks',
+        language: 'typescript',
+        code: `test('form has accessible labels', async ({ page }) => {
+  await page.goto('/login')
+
+  // Every input should be reachable by label
+  await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible()
+
+  // Buttons should have descriptive names
+  await expect(page.getByRole('button', { name: /sign in/i })).toBeEnabled()
+
+  // No duplicate landmark regions
+  await expect(page.getByRole('main')).toHaveCount(1)
+})`,
+      },
+      {
+        label: 'Keyboard navigation',
+        language: 'typescript',
+        code: `test('tab order is logical', async ({ page }) => {
+  await page.goto('/form')
+
+  // Start at first focusable element
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('textbox', { name: 'First name' })).toBeFocused()
+
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('textbox', { name: 'Last name' })).toBeFocused()
+
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Submit' })).toBeFocused()
+})`,
+      },
+      {
+        label: 'Color contrast check',
+        language: 'typescript',
+        code: `test('button text meets contrast ratio', async ({ page }) => {
+  await page.goto('/')
+  const btn = page.getByRole('button', { name: 'Get started' })
+
+  const color = await btn.evaluate((el) => getComputedStyle(el).color)
+  const bg = await btn.evaluate((el) => getComputedStyle(el).backgroundColor)
+
+  // Log for manual verification — use axe for automated ratio checks
+  console.log({ color, bg })
+  await expect(btn).toBeVisible()
+})`,
+      },
+    ],
+  },
+  {
+    title: 'Mobile & Responsive',
+    snippets: [
+      {
+        label: 'Set viewport size',
+        language: 'typescript',
+        code: `test('mobile layout shows hamburger menu', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 }) // iPhone 14
+  await page.goto('/')
+
+  await expect(page.getByRole('button', { name: /menu/i })).toBeVisible()
+  await expect(page.getByRole('navigation')).toBeHidden() // desktop nav hidden
+})`,
+      },
+      {
+        label: 'Device presets in config',
+        language: 'typescript',
+        code: `// playwright.config.ts
+import { devices } from '@playwright/test'
+
+projects: [
+  { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
+  { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+  { name: 'tablet', use: { ...devices['iPad (gen 7)'] } },
+]`,
+      },
+      {
+        label: 'Touch events',
+        language: 'typescript',
+        code: `test('swipe gesture dismisses drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/app')
+
+  const drawer = page.getByRole('dialog')
+  await drawer.dispatchEvent('touchstart', { touches: [{ clientX: 300, clientY: 400 }] })
+  await drawer.dispatchEvent('touchend', { changedTouches: [{ clientX: 50, clientY: 400 }] })
+
+  await expect(drawer).toBeHidden()
+})`,
+      },
+      {
+        label: 'Responsive assertion helper',
+        language: 'typescript',
+        code: `async function atBreakpoint(page: Page, width: number, fn: () => Promise<void>) {
+  const prev = page.viewportSize()
+  await page.setViewportSize({ width, height: prev?.height ?? 800 })
+  await fn()
+  if (prev) await page.setViewportSize(prev)
+}
+
+// Usage:
+await atBreakpoint(page, 768, async () => {
+  await expect(page.getByTestId('sidebar')).toBeHidden()
+})`,
+      },
+    ],
+  },
+  {
+    title: 'Test Data with Faker.js',
+    snippets: [
+      {
+        label: 'Install & basic usage',
+        language: 'typescript',
+        code: `// Install: npm i -D @faker-js/faker
+import { faker } from '@faker-js/faker'
+
+const user = {
+  name: faker.person.fullName(),          // "Jeanne Dowd"
+  email: faker.internet.email(),          // "jeanne.dowd@example.com"
+  password: faker.internet.password({ length: 16 }),
+  phone: faker.phone.number(),
+  avatar: faker.image.avatar(),
+}`,
+      },
+      {
+        label: 'Seed for reproducibility',
+        language: 'typescript',
+        code: `import { faker } from '@faker-js/faker'
+
+// Same seed → same data every run (great for CI)
+faker.seed(12345)
+
+const product = {
+  name: faker.commerce.productName(),
+  price: parseFloat(faker.commerce.price({ min: 1, max: 999 })),
+  sku: faker.string.alphanumeric(8).toUpperCase(),
+}`,
+      },
+      {
+        label: 'Factory function pattern',
+        language: 'typescript',
+        code: `import { faker } from '@faker-js/faker'
+
+interface UserPayload {
+  name?: string
+  email?: string
+  role?: 'admin' | 'user'
+}
+
+export function buildUser(overrides: UserPayload = {}) {
+  return {
+    name: faker.person.fullName(),
+    email: faker.internet.email(),
+    role: 'user' as const,
+    createdAt: faker.date.recent().toISOString(),
+    ...overrides,
+  }
+}
+
+// Usage:
+const admin = buildUser({ role: 'admin', email: 'admin@test.com' })`,
+      },
+      {
+        label: 'Fixture file with typed data',
+        language: 'typescript',
+        code: `// tests/fixtures/users.ts
+import { faker } from '@faker-js/faker'
+
+faker.seed(999)
+
+export const testUsers = Array.from({ length: 5 }, (_, i) => ({
+  id: i + 1,
+  name: faker.person.fullName(),
+  email: faker.internet.email(),
+  address: faker.location.streetAddress(),
+}))
+
+// In test:
+import { testUsers } from './fixtures/users'
+for (const user of testUsers) {
+  test(\`user \${user.id} profile loads\`, async ({ page }) => {
+    await page.goto(\`/users/\${user.id}\`)
+    await expect(page.getByRole('heading')).toContainText(user.name)
+  })
+}`,
+      },
+    ],
+  },
 ]
 
 function CheatSection({ section }: { section: Section }) {
