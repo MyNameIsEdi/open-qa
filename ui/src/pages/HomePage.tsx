@@ -46,11 +46,33 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
   const [cmdIdx, setCmdIdx] = useState(0)
+  const [displayedCmd, setDisplayedCmd] = useState('')
+  const [showCursor, setShowCursor] = useState(true)
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
+  // Cycle commands
   useEffect(() => {
-    const id = setInterval(() => setCmdIdx(i => (i + 1) % COMMANDS.length), 2800)
+    const id = setInterval(() => setCmdIdx(i => (i + 1) % COMMANDS.length), 3600)
+    return () => clearInterval(id)
+  }, [])
+
+  // Typewriter effect
+  useEffect(() => {
+    const cmd = COMMANDS[cmdIdx]
+    setDisplayedCmd('')
+    let i = 0
+    const typing = setInterval(() => {
+      i++
+      setDisplayedCmd(cmd.slice(0, i))
+      if (i >= cmd.length) clearInterval(typing)
+    }, 55)
+    return () => clearInterval(typing)
+  }, [cmdIdx])
+
+  // Cursor blink
+  useEffect(() => {
+    const id = setInterval(() => setShowCursor(v => !v), 530)
     return () => clearInterval(id)
   }, [])
 
@@ -78,12 +100,14 @@ export default function HomePage() {
             fontFamily: "'Silkscreen', monospace",
             fontWeight: 700,
             lineHeight: 1.1,
-            fontSize: 'clamp(2.8rem, 10vw, 6rem)',
-            letterSpacing: '0.02em',
+            fontSize: 'clamp(3rem, 11vw, 6.5rem)',
+            letterSpacing: '0.04em',
             color: 'var(--text-main)',
+            textShadow: '4px 4px 0px rgba(26,58,143,0.18), 8px 8px 0px rgba(26,58,143,0.07)',
+            imageRendering: 'pixelated',
           }}
         >
-          OPEN<span className="text-primary-600">-QA</span>
+          OPEN<span style={{ color: '#1a3a8f', textShadow: '4px 4px 0px rgba(26,58,143,0.30), 8px 8px 0px rgba(26,58,143,0.12)' }}>-QA</span>
         </h1>
 
         <p className="text-lg sm:text-xl font-semibold mb-2" style={{ color: 'var(--text-main)' }}>
@@ -123,13 +147,20 @@ export default function HomePage() {
           7 Agents&nbsp;&middot;&nbsp;5 Skills&nbsp;&middot;&nbsp;Free &amp; Open Source
         </p>
 
-        {/* Cycling command block */}
-        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-sm mb-8 shadow-medium min-w-72">
+        {/* Cycling command block with typewriter */}
+        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-sm mb-8 shadow-medium"
+             style={{ minWidth: '22rem' }}>
           <span className="text-neutral-500 select-none">$</span>
-          <span className="flex-1 text-left transition-all duration-300">{COMMANDS[cmdIdx]}</span>
+          <span className="flex-1 text-left">
+            {displayedCmd}
+            <span
+              className="inline-block w-[2px] h-[1em] align-middle ml-0.5 bg-primary-400"
+              style={{ opacity: showCursor ? 1 : 0, transition: 'opacity 0.1s' }}
+            />
+          </span>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 text-neutral-400 hover:text-neutral-100 transition-colors active:scale-95"
+            className="flex items-center gap-1 text-neutral-400 hover:text-neutral-100 transition-colors active:scale-95 shrink-0"
             title="Copy"
           >
             {copied
