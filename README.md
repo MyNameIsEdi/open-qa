@@ -1,16 +1,20 @@
+
 <div align="center">
 
-# open-qa — AI-Powered QA Arsenal
+# OPEN-QA — The QA Toolkit AI Is Missing
 
-**A free, community-built Playwright + Claude toolkit. Open-source. No lock-in. Run locally. Fork and extend.**
+**Production-ready Playwright + Claude toolkit with a React marketplace UI**
 
 [![Claude AI](https://img.shields.io/badge/Claude_AI-D97757?style=flat-square&logo=anthropic&logoColor=white)](https://anthropic.com)
 [![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg?style=flat-square)](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
 
-<img src="screenshots/home.png" width="900" alt="open-qa home page" />
+🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)**
+
+<img src="screenshots/home.jpeg" width="900" alt="open-qa home page" />
 
 </div>
 
@@ -39,7 +43,6 @@ Browse and run AI agents directly from the UI. Active agents have a **▶ Run** 
 | Visual A11y Scanner | ✅ Active | DOM analysis → WCAG 2.1 AA violations with element-level fix recommendations |
 | Network Interceptor & Mock Gen | 🔜 Planned | Analyzes network traces → generates MSW/Playwright mock handlers |
 | Chaos Monkey UI | 🔜 Planned | Random UI interactions → captures console errors and anomalies |
-| Daily Missions | ✅ Active | 3 gamified QA challenges/day, XP tracking, streaks — practice from the UI |
 
 ---
 
@@ -62,6 +65,35 @@ Select one of 6 expert QA system prompts, paste your PRD / spec / log / test cod
 ### Test Generator
 
 Paste a user story or acceptance criteria and get a complete, production-ready Playwright `.spec.ts` file back — with options for Page Object Model output and authenticated tests. Includes a one-click download button.
+
+---
+
+### QA Automation Guides
+
+**12 hands-on chapters** built into the app — a complete course from zero to AI-powered QA:
+
+| # | Chapter | Level | Time |
+|---|---------|-------|------|
+| 1 | Intro to QA Automation | Beginner | 5 min |
+| 2 | Setting Up Playwright | Beginner | 10 min |
+| 3 | Writing Your First Test | Beginner | 10 min |
+| 4 | Locator Strategies | Beginner | 15 min |
+| 5 | Assertions & Expect API | Intermediate | 10 min |
+| 6 | Page Object Model (POM) | Intermediate | 15 min |
+| 7 | API Testing with Playwright | Intermediate | 15 min |
+| 8 | API Testing with Postman | Intermediate | 10 min |
+| 9 | SQL & Database Testing | Intermediate | 15 min |
+| 10 | Visual & Accessibility Testing | Intermediate | 10 min |
+| 11 | CI/CD with GitHub Actions | Advanced | 15 min |
+| 12 | AI-Powered QA with Claude | Advanced | 10 min |
+
+Each chapter includes narrative explanation, key concepts, copy-ready code snippets, and a **Mark as complete** toggle that persists progress in localStorage.
+
+---
+
+### Submit an Agent
+
+Fill in a form at `/submit` — name, system prompt, category, run command — and click **Open GitHub Issue →**. The app builds a pre-filled issue with a copy-ready `AgentsPage.tsx` snippet for the maintainer.
 
 ---
 
@@ -91,19 +123,22 @@ One-click copy reference with **10 collapsible sections** — all your go-to pat
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
+git clone [https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git](https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git)
 cd intelligent-testing-toolkit
 npm install
 npx playwright install chromium
+
 ```
 
 ### 2. Start the full app (no API key needed)
 
 ```bash
 npm run dev
+
 ```
 
-Opens the UI at **http://localhost:5174** and starts the API server on port 3001.  
+Opens the UI at **http://localhost:5174** and starts the API server on port 3001.
+
 All agents and the playground run in **MOCK mode** by default.
 
 ### 3. Run the test suite
@@ -111,6 +146,7 @@ All agents and the playground run in **MOCK mode** by default.
 ```bash
 npm test          # Playwright end-to-end specs
 npm run typecheck # TypeScript strict check
+
 ```
 
 ### 4. Enable live Claude (optional)
@@ -119,6 +155,7 @@ npm run typecheck # TypeScript strict check
 cp .env.example .env
 # Edit .env and add: ANTHROPIC_API_KEY=sk-ant-...
 npm run dev
+
 ```
 
 ---
@@ -157,7 +194,7 @@ open-qa/
 ├── ui/                     # React 18 + Vite + Tailwind marketplace
 │   └── src/
 │       ├── components/     # Navbar, AgentCard, SkillCard, PromptCard, RunOutput, CodeSnippet
-│       └── pages/          # Home, Agents, Skills, Prompts, Playground, Generate, Cheatsheet, Docs
+│       └── pages/          # Home, Agents, Skills, Prompts, Playground, Generate, Guides, Cheatsheet, Docs, Submit
 ├── server/                 # Express 4 API (port 3001)
 │   └── index.ts            # /api/agents, /api/skills, /api/run/:id, /api/playground
 ├── tests/                  # Playwright test suite
@@ -167,7 +204,7 @@ open-qa/
 ### Tech stack
 
 | Layer | Technology |
-|-------|------------|
+| --- | --- |
 | AI | Anthropic Claude (`claude-3-5-sonnet-20241022`) |
 | UI | React 18 · Vite 6 · Tailwind CSS 3 · Material UI icons |
 | Server | Express 4 · CORS · SSE streaming |
@@ -196,55 +233,29 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
   },
   "run_command": "npx tsx src/agents/self-healing/index.ts"
 }
+
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] Native MCP server (`npx open-qa mcp-server`)
-- [ ] Network Interceptor & Mock Gen
-- [ ] Chaos Monkey UI
-- [ ] GraphQL Fuzzer skill
-- [ ] K6 Load Profile Generator skill
-- [ ] JWT Attack Suite skill
-- [ ] GitHub Pages live demo
+* [ ] Native MCP server (`npx open-qa mcp-server`)
+* [ ] Network Interceptor & Mock Gen
+* [ ] Chaos Monkey UI
+* [ ] GraphQL Fuzzer skill
+* [ ] K6 Load Profile Generator skill
+* [ ] JWT Attack Suite skill
+* [x] [GitHub Pages live demo](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
+* [x] QA Automation Guides (12-chapter course)
+* [x] Submit an Agent page
+* [x] Skills-IL inspired warm-palette redesign
 
----
-
-## Community
-
-open-qa is built in the open. Every feature started as a GitHub Issue.
-
-> **Mission:** Democratize AI-assisted QA for every engineer, not just big teams with expensive tooling. We believe every developer deserves production-quality automation tooling for free.
-
-### How to Contribute
-
-1. **Report bugs or request features** → [GitHub Issues](https://github.com/MyNameIsEdi/intelligent-testing-toolkit/issues)
-2. **Ask questions or propose ideas** → [GitHub Discussions](https://github.com/MyNameIsEdi/intelligent-testing-toolkit/discussions)
-3. **Submit code** → Fork → feature branch → PR
-
-**PR checklist:**
-- [ ] `npm run lint` passes
-- [ ] `npm run typecheck` passes
-- [ ] `npm test` passes
-- [ ] README.md updated if behavior changed
-
-### What the Community is Building
-
-- GraphQL Fuzzer skill (in progress)
-- Cypress migration guide
-- k6 load profile generator
-- Multi-language test scaffolding
-
----
-
-## Built with the Community
-
-open-qa grows through contributions. If you use it, star it ⭐. If you improve it, PR it.
-
-[![GitHub stars](https://img.shields.io/github/stars/MyNameIsEdi/intelligent-testing-toolkit?style=social)](https://github.com/MyNameIsEdi/intelligent-testing-toolkit)
 
 ---
 
 > *"Automate the routine, use AI for the unpredictable."*
+
+```
+
+```
