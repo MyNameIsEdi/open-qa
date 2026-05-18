@@ -4,6 +4,8 @@ import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import CheckIcon from '@mui/icons-material/Check'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined'
+import RunOutput from './RunOutput'
 
 export interface AgentDef {
   name: string
@@ -12,6 +14,7 @@ export interface AgentDef {
   runCommand: string
   systemPrompt: string
   toolSchema?: object
+  runId?: string
 }
 
 interface Props {
@@ -38,11 +41,37 @@ function buildClaudePayload(agent: AgentDef) {
 
 export default function AgentCard({ agent }: Props) {
   const [copied, setCopied] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [output, setOutput] = useState('')
+  const [runError, setRunError] = useState('')
+  const [showOutput, setShowOutput] = useState(false)
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(buildClaudePayload(agent))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleRun = async () => {
+    if (!agent.runId) return
+    setRunning(true)
+    setOutput('')
+    setRunError('')
+    setShowOutput(true)
+
+    try {
+      const res = await fetch(`/api/run/${agent.runId}`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setRunError(data.error || data.stderr || 'Unknown error')
+      } else {
+        setOutput(data.output || '(no output)')
+      }
+    } catch (e) {
+      setRunError(e instanceof Error ? e.message : 'Network error')
+    } finally {
+      setRunning(false)
+    }
   }
 
   return (
@@ -82,23 +111,40 @@ export default function AgentCard({ agent }: Props) {
         {agent.runCommand}
       </code>
 
-      {/* Add to Claude button */}
-      <button
-        onClick={handleCopy}
-        className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
-      >
-        {copied ? (
-          <>
-            <CheckIcon sx={{ fontSize: 14 }} />
-            Copied!
-          </>
-        ) : (
-          <>
-            <AutoAwesomeIcon sx={{ fontSize: 14 }} />
-            Add to Claude
-          </>
+      {/* Output panel */}
+      {showOutput && (
+        <RunOutput output={output} loading={running} error={runError} />
+      )}
+
+      {/* Action buttons */}
+      <div className="mt-auto flex gap-2">
+        {agent.runId && (
+          <button
+            onClick={handleRun}
+            disabled={running}
+            className="flex items-center justify-center gap-1.5 flex-1 py-2 px-3 rounded-xl text-xs font-medium bg-sage-50 text-sage-700 hover:bg-sage-100 active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <PlayArrowOutlinedIcon sx={{ fontSize: 14 }} />
+            {running ? 'Running…' : 'Run'}
+          </button>
         )}
-      </button>
+        <button
+          onClick={handleCopy}
+          className="flex items-center justify-center gap-1.5 flex-1 py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
+        >
+          {copied ? (
+            <>
+              <CheckIcon sx={{ fontSize: 14 }} />
+              Copied!
+            </>
+          ) : (
+            <>
+              <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+              Add to Claude
+            </>
+          )}
+        </button>
+      </div>
     </div>
   )
 }
