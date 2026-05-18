@@ -6,6 +6,7 @@ import SkillsPage from './pages/SkillsPage'
 import PromptsPage from './pages/PromptsPage'
 import PlaygroundPage from './pages/PlaygroundPage'
 import CheatsheetPage from './pages/CheatsheetPage'
+import GeneratePage from './pages/GeneratePage'
 import DocsPage from './pages/DocsPage'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/prompts" element={<PromptsPage />} />
             <Route path="/playground" element={<PlaygroundPage />} />
             <Route path="/cheatsheet" element={<CheatsheetPage />} />
+            <Route path="/generate" element={<GeneratePage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

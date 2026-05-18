@@ -22,16 +22,17 @@ const USE_MOCK = !process.env.ANTHROPIC_API_KEY
 const CLAUDE_MODEL = 'claude-3-5-sonnet-20241022'
 
 const agentCatalog = [
-  { id: 'healing', name: 'Self-Healing Locator', status: 'active', runCommand: 'npx tsx src/agents/self-healing.ts' },
-  { id: 'triage', name: 'Automated Bug Triage', status: 'active', runCommand: 'npx tsx src/skills/log-analyzer.ts' },
-  { id: 'auto-pom', name: 'Auto-POM Builder', status: 'planned', runCommand: 'npx tsx scripts/auto-pom-builder.ts' },
+  { id: 'healing', name: 'Self-Healing Locator', status: 'active', runCommand: 'npx tsx src/agents/self-healing/index.ts' },
+  { id: 'triage', name: 'Automated Bug Triage', status: 'active', runCommand: 'npx tsx src/skills/log-analyzer/index.ts' },
+  { id: 'auto-pom', name: 'Auto-POM Builder', status: 'active', runCommand: 'npx tsx src/agents/auto-pom/index.ts' },
+  { id: 'visual-regression', name: 'Visual Regression Agent', status: 'active', runCommand: 'npx tsx src/agents/visual-regression/index.ts' },
+  { id: 'a11y', name: 'Visual A11y Scanner', status: 'active', runCommand: 'npx tsx src/agents/visual-a11y/index.ts' },
   { id: 'network-mock', name: 'Network Interceptor & Mock Gen', status: 'planned', runCommand: 'npx tsx scripts/network-mock-gen.ts' },
-  { id: 'a11y', name: 'Visual A11y Scanner', status: 'planned', runCommand: 'npx tsx scripts/visual-a11y-scanner.ts' },
   { id: 'chaos', name: 'Chaos Monkey UI', status: 'planned', runCommand: 'npx tsx scripts/chaos-monkey-ui.ts' },
 ]
 
 const skillCatalog = [
-  { id: 'datagen', name: 'Smart Data Gen', status: 'active', runCommand: 'npx tsx src/skills/generate-test-data.ts' },
+  { id: 'datagen', name: 'Smart Data Gen', status: 'active', runCommand: 'npx tsx src/skills/data-gen/index.ts' },
   { id: 'graphql-fuzzer', name: 'GraphQL Fuzzer', status: 'planned', runCommand: 'npx tsx scripts/graphql-fuzzer.ts' },
   { id: 'k6-profile', name: 'K6 Load Profile Gen', status: 'planned', runCommand: 'npx tsx scripts/k6-profile-gen.ts' },
   { id: 'log-scraper', name: 'Regex Log Scraper', status: 'planned', runCommand: 'npx tsx scripts/regex-log-scraper.ts' },

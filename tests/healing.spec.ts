@@ -3,7 +3,7 @@ import {
   clickWithSelfHealing,
   createMockHealedLocator,
   suggestLocator,
-} from '../src/agents/self-healing';
+} from '../src/agents/self-healing/index';
 
 const MOCK_CHECKOUT_HTML = `
   <html>
