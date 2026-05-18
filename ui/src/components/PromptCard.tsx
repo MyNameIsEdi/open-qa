@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function PromptCard({ prompt }: Props) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -45,9 +47,9 @@ export default function PromptCard({ prompt }: Props) {
           className="shrink-0 flex items-center gap-0.5 text-xs px-2 py-1 rounded-lg font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
         >
           {expanded ? (
-            <><ExpandLessIcon sx={{ fontSize: 14 }} /> Less</>
+            <><ExpandLessIcon sx={{ fontSize: 14 }} /> {t('prompts.less')}</>
           ) : (
-            <><ExpandMoreIcon sx={{ fontSize: 14 }} /> More</>
+            <><ExpandMoreIcon sx={{ fontSize: 14 }} /> {t('prompts.more')}</>
           )}
         </button>
       </div>
@@ -68,9 +70,9 @@ export default function PromptCard({ prompt }: Props) {
         className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
       >
         {copied ? (
-          <><CheckIcon sx={{ fontSize: 14 }} /> Copied!</>
+          <><CheckIcon sx={{ fontSize: 14 }} /> {t('common.copied')}</>
         ) : (
-          <><ContentCopyIcon sx={{ fontSize: 14 }} /> Copy System Prompt</>
+          <><ContentCopyIcon sx={{ fontSize: 14 }} /> {t('prompts.copy_prompt')}</>
         )}
       </button>
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckIcon from '@mui/icons-material/Check'
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function CodeSnippet({ code, language }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -36,7 +38,7 @@ export default function CodeSnippet({ code, language }: Props) {
           style={{ color: 'var(--text-muted)' }}
         >
           {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}
-          {copied ? 'Copied!' : 'Copy'}
+          {copied ? t('common.copied') : t('common.copy')}
         </button>
       </div>
       <pre className="text-xs font-mono p-3 overflow-auto leading-relaxed" style={{ color: 'var(--text-main)' }}>

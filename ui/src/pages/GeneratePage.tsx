@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined'
 import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined'
 import StopOutlinedIcon from '@mui/icons-material/StopOutlined'
@@ -31,6 +32,7 @@ Example:
 - Security: SQL injection in password field is rejected"`
 
 export default function GeneratePage() {
+  const { t } = useTranslation()
   const [userStory, setUserStory] = useState('')
   const [includePOM, setIncludePOM] = useState(false)
   const [includeAuth, setIncludeAuth] = useState(false)
@@ -123,10 +125,10 @@ export default function GeneratePage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
           <AutoAwesomeOutlinedIcon className="text-primary-500" sx={{ fontSize: 24 }} />
-          Test Generator
+          {t('generate.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Paste a user story or acceptance criteria — get a production-ready Playwright <code>.spec.ts</code> file.
+          {t('generate.subtitle')}
         </p>
       </div>
 
@@ -137,7 +139,7 @@ export default function GeneratePage() {
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
         >
           <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>User Story</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{t('generate.user_story')}</span>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none" style={{ color: 'var(--text-muted)' }}>
                 <input
@@ -176,7 +178,7 @@ export default function GeneratePage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
               >
                 <StopOutlinedIcon sx={{ fontSize: 16 }} />
-                Stop
+                {t('generate.stop')}
               </button>
             ) : (
               <button
@@ -185,11 +187,11 @@ export default function GeneratePage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <PlayArrowOutlinedIcon sx={{ fontSize: 16 }} />
-                Generate Test
+                {t('generate.generate_btn')}
               </button>
             )}
             <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>
-              {userStory.length > 0 ? `${userStory.length} chars` : 'No API key needed in MOCK mode'}
+              {userStory.length > 0 ? t('generate.chars', { count: userStory.length }) : t('generate.mock_hint')}
             </span>
           </div>
         </div>
@@ -201,7 +203,7 @@ export default function GeneratePage() {
         >
           <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
             <span className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
-              Generated <code className="text-xs">.spec.ts</code>
+              {t('generate.output_label')}
             </span>
             {output && (
               <div className="flex items-center gap-2">
@@ -212,7 +214,7 @@ export default function GeneratePage() {
                   title="Download .spec.ts"
                 >
                   <DownloadOutlinedIcon sx={{ fontSize: 14 }} />
-                  Download
+                  {t('generate.download')}
                 </button>
                 <button
                   onClick={handleCopy}
@@ -220,7 +222,7 @@ export default function GeneratePage() {
                   style={{ color: 'var(--text-muted)' }}
                 >
                   {copied ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? t('generate.copied') : t('generate.copy')}
                 </button>
               </div>
             )}
@@ -232,7 +234,7 @@ export default function GeneratePage() {
             )}
             {!output && !loading && (
               <p className="text-sm text-center mt-16" style={{ color: 'var(--text-muted)' }}>
-                Your generated test will appear here…
+                {t('generate.empty_hint')}
               </p>
             )}
             {output && (
@@ -246,7 +248,7 @@ export default function GeneratePage() {
             {loading && !output && (
               <div className="flex items-center gap-2 text-sm mt-16 justify-center" style={{ color: 'var(--text-muted)' }}>
                 <span className="inline-block w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-                Generating…
+                {t('generate.generating')}
               </div>
             )}
           </div>

@@ -5,6 +5,12 @@ export default defineConfig({
   root: '.',
   base: process.env.GITHUB_ACTIONS ? '/intelligent-testing-toolkit/' : '/',
   plugins: [react()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: ['react-i18next', 'i18next'],
+  },
   server: {
     port: 5173,
     proxy: {

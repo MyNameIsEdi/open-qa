@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
@@ -40,6 +41,7 @@ function buildClaudePayload(agent: AgentDef) {
 }
 
 export default function AgentCard({ agent }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [running, setRunning] = useState(false)
   const [output, setOutput] = useState('')
@@ -87,12 +89,12 @@ export default function AgentCard({ agent }: Props) {
         {agent.status === 'active' ? (
           <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-sage-100 text-sage-700">
             <CheckCircleIcon sx={{ fontSize: 12 }} />
-            Active
+            {t('common.active')}
           </span>
         ) : (
           <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
             <ScheduleIcon sx={{ fontSize: 12 }} />
-            Planned
+            {t('common.planned')}
           </span>
         )}
       </div>
@@ -125,7 +127,7 @@ export default function AgentCard({ agent }: Props) {
             className="flex items-center justify-center gap-1.5 flex-1 py-2 px-3 rounded-xl text-xs font-medium bg-sage-50 text-sage-700 hover:bg-sage-100 active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <PlayArrowOutlinedIcon sx={{ fontSize: 14 }} />
-            {running ? 'Running…' : 'Run'}
+            {running ? t('common.running') : t('common.run')}
           </button>
         )}
         <button
@@ -135,12 +137,12 @@ export default function AgentCard({ agent }: Props) {
           {copied ? (
             <>
               <CheckIcon sx={{ fontSize: 14 }} />
-              Copied!
+              {t('common.copied')}
             </>
           ) : (
             <>
               <AutoAwesomeIcon sx={{ fontSize: 14 }} />
-              Add to Claude
+              {t('common.add_to_claude')}
             </>
           )}
         </button>

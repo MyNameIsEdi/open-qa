@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 const sections = [
   {
     title: '🏗️ Architecture',
@@ -87,14 +89,15 @@ PR checklist:
 ]
 
 export default function DocsPage() {
+  const { t } = useTranslation()
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 animate-fade-up">
       <div className="mb-10">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
-          Documentation
+          {t('docs.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Integration guide, architecture overview, and contributor reference.
+          {t('docs.subtitle')}
         </p>
       </div>
 
@@ -106,7 +109,7 @@ export default function DocsPage() {
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
             <h2 className="font-semibold text-base mb-3" style={{ color: 'var(--text-main)' }}>
-              {s.title}
+              {t(`docs.${s.title}`, { defaultValue: s.title })}
             </h2>
             <pre
               className="text-xs font-mono whitespace-pre-wrap leading-relaxed"

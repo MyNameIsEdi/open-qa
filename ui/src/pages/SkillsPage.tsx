@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import SkillCard, { SkillDef } from '../components/SkillCard'
 
@@ -70,6 +71,7 @@ const skills: SkillEntry[] = [
 const ALL_CATEGORIES = ['all', ...Array.from(new Set(skills.map((s) => s.category)))]
 
 export default function SkillsPage() {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
 
@@ -89,10 +91,10 @@ export default function SkillsPage() {
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
-          Testing Skills
+          {t('skills.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {active.length} active · {planned.length} planned. Composable utilities you can import into any test framework.
+          {t('skills.subtitle', { active: active.length, planned: planned.length })}
         </p>
       </div>
 
@@ -106,7 +108,7 @@ export default function SkillsPage() {
           />
           <input
             type="text"
-            placeholder="Search skills…"
+            placeholder={t('skills.search_placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border outline-none focus:ring-2 focus:ring-primary-300"
@@ -137,7 +139,7 @@ export default function SkillsPage() {
 
       {filtered.length === 0 ? (
         <p className="text-sm text-center py-16" style={{ color: 'var(--text-muted)' }}>
-          No skills match your search.
+          {t('skills.no_match')}
         </p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

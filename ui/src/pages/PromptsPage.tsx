@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import PromptCard, { PromptDef } from '../components/PromptCard'
 
@@ -178,6 +179,7 @@ Reference operationIds. Flag # AMBIGUITY: for unclear specs. Include security ca
 const ALL_CATEGORIES = ['all', ...Array.from(new Set(prompts.map((p) => p.category)))]
 
 export default function PromptsPage() {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
 
@@ -194,10 +196,10 @@ export default function PromptsPage() {
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
-          System Prompts Library
+          {t('prompts.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {prompts.length} prompts — paste into Claude, Cursor, or any LLM. Click a card to expand the full prompt.
+          {t('prompts.subtitle', { count: prompts.length })}
         </p>
       </div>
 
@@ -211,7 +213,7 @@ export default function PromptsPage() {
           />
           <input
             type="text"
-            placeholder="Search prompts…"
+            placeholder={t('prompts.search_placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border outline-none focus:ring-2 focus:ring-primary-300"
@@ -242,7 +244,7 @@ export default function PromptsPage() {
 
       {filtered.length === 0 ? (
         <p className="text-sm text-center py-16" style={{ color: 'var(--text-muted)' }}>
-          No prompts match your search.
+          {t('prompts.no_match')}
         </p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
@@ -37,6 +38,7 @@ function buildClaudePayload(skill: SkillDef) {
 }
 
 export default function SkillCard({ skill }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -57,12 +59,12 @@ export default function SkillCard({ skill }: Props) {
         {skill.status === 'active' ? (
           <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-sage-100 text-sage-700">
             <CheckCircleIcon sx={{ fontSize: 12 }} />
-            Active
+            {t('common.active')}
           </span>
         ) : (
           <span className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
             <ScheduleIcon sx={{ fontSize: 12 }} />
-            Planned
+            {t('common.planned')}
           </span>
         )}
       </div>
@@ -86,12 +88,12 @@ export default function SkillCard({ skill }: Props) {
         {copied ? (
           <>
             <CheckIcon sx={{ fontSize: 14 }} />
-            Copied!
+            {t('common.copied')}
           </>
         ) : (
           <>
             <AutoAwesomeIcon sx={{ fontSize: 14 }} />
-            Add to Claude
+            {t('common.add_to_claude')}
           </>
         )}
       </button>

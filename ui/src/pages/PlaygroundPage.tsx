@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined'
 import StopOutlinedIcon from '@mui/icons-material/StopOutlined'
@@ -49,6 +50,7 @@ const PLACEHOLDER_MAP: Record<string, string> = {
 }
 
 export default function PlaygroundPage() {
+  const { t } = useTranslation()
   const [selectedPromptIdx, setSelectedPromptIdx] = useState(0)
   const [systemPrompt, setSystemPrompt] = useState(PROMPTS[0].systemPrompt)
   const [userInput, setUserInput] = useState('')
@@ -130,11 +132,10 @@ export default function PlaygroundPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
           <ScienceOutlinedIcon className="text-primary-500" sx={{ fontSize: 24 }} />
-          Prompt Playground
+          {t('playground.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Select a QA prompt, paste your PRD / log / spec, and run it through Claude.
-          Set <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> in <code className="font-mono text-xs">.env</code> for live AI responses.
+          {t('playground.subtitle')}
         </p>
       </div>
 
@@ -144,7 +145,7 @@ export default function PlaygroundPage() {
           {/* Prompt selector */}
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>
-              System Prompt
+              {t('playground.system_prompt')}
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {PROMPTS.map((p, i) => (
@@ -178,7 +179,7 @@ export default function PlaygroundPage() {
           {/* User input */}
           <div className="flex flex-col flex-1">
             <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>
-              Your Input
+              {t('playground.your_input')}
             </label>
             <textarea
               value={userInput}
@@ -202,7 +203,7 @@ export default function PlaygroundPage() {
               className="flex items-center justify-center gap-2 flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed shadow-soft"
             >
               <PlayArrowOutlinedIcon sx={{ fontSize: 16 }} />
-              {loading ? 'Running…' : 'Run'}
+              {loading ? t('playground.running') : t('playground.run')}
             </button>
             {loading && (
               <button
@@ -211,7 +212,7 @@ export default function PlaygroundPage() {
                 style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
               >
                 <StopOutlinedIcon sx={{ fontSize: 16 }} />
-                Stop
+                {t('playground.stop')}
               </button>
             )}
           </div>
@@ -221,11 +222,11 @@ export default function PlaygroundPage() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-              Output
+              {t('playground.output')}
               {loading && (
                 <span className="ml-2 inline-flex items-center gap-1 text-primary-500">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
-                  Streaming…
+                  {t('playground.streaming')}
                 </span>
               )}
             </label>
@@ -236,7 +237,7 @@ export default function PlaygroundPage() {
                 style={{ color: 'var(--text-muted)' }}
               >
                 {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? t('playground.copied') : t('playground.copy')}
               </button>
             )}
           </div>
@@ -254,7 +255,7 @@ export default function PlaygroundPage() {
               <div className="flex flex-col items-center justify-center h-full gap-3 p-8" style={{ color: 'var(--text-muted)' }}>
                 <ScienceOutlinedIcon sx={{ fontSize: 40, opacity: 0.3 }} />
                 <p className="text-sm text-center">
-                  Select a prompt, paste your input, and click Run to see the AI output here.
+                  {t('playground.empty_hint')}
                 </p>
               </div>
             )}
