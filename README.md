@@ -14,6 +14,8 @@
 
 🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)**
 
+<img src="screenshots/home.png" width="900" alt="open-qa home page" />
+
 <img src="screenshots/home.jpeg" width="900" alt="open-qa home page" />
 
 </div>
@@ -142,7 +144,6 @@ npm run run:bugreport       # Automated bug triage → output/AI_BUG_REPORT.md
 npm run run:visual-regression  # Visual regression → output/visual-regression/
 npm run run:auto-pom        # Auto-POM Builder → output/auto-pom/
 npm run run:visual-a11y     # Visual A11y Scanner → output/A11Y_REPORT.md
-
 ```
 
 ---
@@ -171,7 +172,6 @@ open-qa/
 │   └── index.ts            # /api/agents, /api/skills, /api/run/:id, /api/playground
 ├── tests/                  # Playwright test suite
 └── output/                 # Generated artifacts (bug reports, test data, POM files)
-
 ```
 
 ### Tech stack
@@ -220,6 +220,7 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 * [ ] K6 Load Profile Generator skill
 * [ ] JWT Attack Suite skill
 * [x] [GitHub Pages live demo](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
+
 
 ---
 
