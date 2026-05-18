@@ -1,0 +1,90 @@
+import { useState } from 'react'
+
+export interface AgentDef {
+  name: string
+  description: string
+  status: 'active' | 'planned'
+  runCommand: string
+  systemPrompt: string
+  toolSchema?: object
+}
+
+interface Props {
+  agent: AgentDef
+}
+
+function buildClaudePayload(agent: AgentDef) {
+  return JSON.stringify(
+    {
+      name: agent.name,
+      description: agent.description,
+      system_prompt: agent.systemPrompt,
+      tool_schema: agent.toolSchema ?? {
+        name: agent.name.toLowerCase().replace(/\s+/g, '_'),
+        description: agent.description,
+        input_schema: { type: 'object', properties: {}, required: [] },
+      },
+      run_command: agent.runCommand,
+    },
+    null,
+    2,
+  )
+}
+
+export default function AgentCard({ agent }: Props) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(buildClaudePayload(agent))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div
+      className="group flex flex-col gap-3 p-5 rounded-2xl border bg-white transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-semibold text-sm leading-snug" style={{ color: 'var(--text-main)' }}>
+          {agent.name}
+        </h3>
+        <span
+          className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+            agent.status === 'active'
+              ? 'bg-sage-100 text-sage-700'
+              : 'bg-amber-50 text-amber-600'
+          }`}
+        >
+          {agent.status === 'active' ? '🟢 Active' : '🟡 Planned'}
+        </span>
+      </div>
+
+      {/* Description */}
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+        {agent.description}
+      </p>
+
+      {/* Run command */}
+      <code
+        className="block text-xs px-3 py-2 rounded-lg font-mono truncate"
+        style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-muted)' }}
+      >
+        {agent.runCommand}
+      </code>
+
+      {/* Add to Claude button */}
+      <button
+        onClick={handleCopy}
+        className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
+      >
+        {copied ? (
+          <>✅ Copied!</>
+        ) : (
+          <>🤖 Add to Claude</>
+        )}
+      </button>
+    </div>
+  )
+}

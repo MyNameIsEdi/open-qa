@@ -1,0 +1,37 @@
+name: Update GitHub Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - '.github/wiki/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone wiki repo
+        run: |
+          git clone \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/MyNameIsEdi/intelligent-testing-toolkit.wiki.git \
+            wiki-repo
+
+      - name: Copy wiki pages
+        run: cp .github/wiki/*.md wiki-repo/
+
+      - name: Commit and push
+        working-directory: wiki-repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "docs: sync wiki from main [skip ci]"
+          git push
