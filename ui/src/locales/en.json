@@ -25,9 +25,9 @@
     "done": "Done"
   },
   "home": {
-    "badge": "open-qa — AI-Powered QA Arsenal",
-    "hero_title_1": "Test smarter with",
-    "hero_title_2": "AI-driven QA",
+    "badge": "Open QA — AI-Powered QA Arsenal",
+    "hero_title_1": "The QA Toolkit",
+    "hero_title_2": "AI Is Missing",
     "hero_desc": "Production-ready Playwright + Claude toolkit: self-healing tests, edge-case data generation, and automated bug triage. OpenHuman-style UI, zero lock-in.",
     "view_github": "View on GitHub",
     "browse_agents": "Browse Agents",

@@ -15,7 +15,7 @@ export default function App() {
     <HashRouter>
       <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-body)' }}>
         <Navbar />
-        <main className="pt-16">
+        <main className="pt-14">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/agents" element={<AgentsPage />} />

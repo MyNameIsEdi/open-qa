@@ -155,7 +155,7 @@ export default function PlaygroundPage() {
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 ${
                     i === selectedPromptIdx
                       ? 'bg-primary-600 text-white shadow-soft'
-                      : 'hover:bg-neutral-100'
+                      : 'hover:bg-sand-400'
                   }`}
                   style={i === selectedPromptIdx ? {} : { color: 'var(--text-muted)' }}
                 >
@@ -208,7 +208,7 @@ export default function PlaygroundPage() {
             {loading && (
               <button
                 onClick={handleStop}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 hover:bg-neutral-100"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 hover:bg-sand-400"
                 style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
               >
                 <StopOutlinedIcon sx={{ fontSize: 16 }} />
@@ -233,7 +233,7 @@ export default function PlaygroundPage() {
             {output && (
               <button
                 onClick={handleCopyOutput}
-                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg hover:bg-sand-400 transition-colors"
                 style={{ color: 'var(--text-muted)' }}
               >
                 {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}

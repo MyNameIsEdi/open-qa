@@ -205,7 +205,7 @@ export default function AgentsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all duration-150 ${
                 activeCategory === cat
                   ? 'bg-primary-600 text-white shadow-soft'
-                  : 'hover:bg-neutral-100'
+                  : 'hover:bg-sand-400'
               }`}
               style={activeCategory === cat ? {} : { color: 'var(--text-muted)', borderColor: 'var(--border)' }}
             >

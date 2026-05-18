@@ -209,7 +209,7 @@ export default function GeneratePage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-neutral-100 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-sand-400 transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                   title="Download .spec.ts"
                 >
@@ -218,7 +218,7 @@ export default function GeneratePage() {
                 </button>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-neutral-100 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-sand-400 transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   {copied ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
