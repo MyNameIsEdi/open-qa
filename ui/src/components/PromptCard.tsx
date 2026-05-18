@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import CheckIcon from '@mui/icons-material/Check'
 
 export interface PromptDef {
   name: string
@@ -38,9 +42,13 @@ export default function PromptCard({ prompt }: Props) {
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="shrink-0 text-xs px-2 py-1 rounded-lg font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
+          className="shrink-0 flex items-center gap-0.5 text-xs px-2 py-1 rounded-lg font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
         >
-          {expanded ? '▲ Less' : '▼ More'}
+          {expanded ? (
+            <><ExpandLessIcon sx={{ fontSize: 14 }} /> Less</>
+          ) : (
+            <><ExpandMoreIcon sx={{ fontSize: 14 }} /> More</>
+          )}
         </button>
       </div>
 
@@ -59,7 +67,11 @@ export default function PromptCard({ prompt }: Props) {
         onClick={handleCopy}
         className="flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
       >
-        {copied ? <>✅ Copied prompt!</> : <>📋 Copy System Prompt</>}
+        {copied ? (
+          <><CheckIcon sx={{ fontSize: 14 }} /> Copied!</>
+        ) : (
+          <><ContentCopyIcon sx={{ fontSize: 14 }} /> Copy System Prompt</>
+        )}
       </button>
     </div>
   )
