@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-const USE_MOCK = !Boolean(process.env.ANTHROPIC_API_KEY);
+const USE_MOCK = !process.env.ANTHROPIC_API_KEY;
 
 interface ScreenshotInfo {
   path: string;

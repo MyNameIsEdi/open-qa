@@ -9,7 +9,7 @@ import * as crypto from 'crypto';
  * and provides AI-powered analysis of visual changes.
  */
 
-const USE_MOCK = !Boolean(process.env.ANTHROPIC_API_KEY);
+const USE_MOCK = !process.env.ANTHROPIC_API_KEY;
 
 interface ScreenshotInfo {
   path: string;
