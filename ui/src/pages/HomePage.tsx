@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined'
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined'
@@ -32,16 +34,36 @@ const COMMUNITY_ITEMS = [
   'Multi-language test scaffolding',
 ]
 
-const INSTALL_CMD = 'npm run dev'
+const COMMANDS = [
+  'npm run dev',
+  'npx playwright test --ui',
+  'npm run generate',
+  'npm test',
+]
 
 export default function HomePage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
+  const [cmdIdx, setCmdIdx] = useState(0)
+  const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const id = setInterval(() => setCmdIdx(i => (i + 1) % COMMANDS.length), 2800)
+    return () => clearInterval(id)
+  }, [])
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(INSTALL_CMD)
+    await navigator.clipboard.writeText(COMMANDS[cmdIdx])
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) navigate(`/agents?q=${encodeURIComponent(query.trim())}`)
+    else navigate('/agents')
   }
 
   return (
@@ -49,13 +71,16 @@ export default function HomePage() {
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="text-center mb-20">
+        {/* Pixel logo */}
         <h1
-          className="font-black uppercase mb-5 select-none"
+          className="mb-5 select-none"
           style={{
+            fontFamily: "'Silkscreen', monospace",
+            fontWeight: 700,
+            lineHeight: 1.1,
+            fontSize: 'clamp(2.8rem, 10vw, 6rem)',
+            letterSpacing: '0.02em',
             color: 'var(--text-main)',
-            letterSpacing: '-0.04em',
-            lineHeight: 1,
-            fontSize: 'clamp(3.5rem, 12vw, 7rem)',
           }}
         >
           OPEN<span className="text-primary-600">-QA</span>
@@ -68,17 +93,43 @@ export default function HomePage() {
           Ready to install, verified, and open source
         </p>
 
-        <p className="text-sm mb-8 tracking-wide" style={{ color: 'var(--text-muted)' }}>
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-lg mx-auto mb-6">
+          <div
+            className="flex items-center gap-2 flex-1 px-4 py-2.5 rounded-xl border"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
+          >
+            <SearchOutlinedIcon sx={{ fontSize: 18 }} style={{ color: 'var(--text-muted)' }} />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search agents, skills, prompts…"
+              className="flex-1 bg-transparent text-sm outline-none"
+              style={{ color: 'var(--text-main)' }}
+            />
+          </div>
+          <Link
+            to="/playground"
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          >
+            <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+            AI Mode
+          </Link>
+        </form>
+
+        <p className="text-sm mb-6 tracking-wide" style={{ color: 'var(--text-muted)' }}>
           7 Agents&nbsp;&middot;&nbsp;5 Skills&nbsp;&middot;&nbsp;Free &amp; Open Source
         </p>
 
-        {/* Dark install command */}
-        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-sm mb-10 shadow-medium">
+        {/* Cycling command block */}
+        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-sm mb-8 shadow-medium min-w-72">
           <span className="text-neutral-500 select-none">$</span>
-          <span>{INSTALL_CMD}</span>
+          <span className="flex-1 text-left transition-all duration-300">{COMMANDS[cmdIdx]}</span>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 ml-2 text-neutral-400 hover:text-neutral-100 transition-colors active:scale-95"
+            className="flex items-center gap-1 text-neutral-400 hover:text-neutral-100 transition-colors active:scale-95"
             title="Copy"
           >
             {copied
@@ -89,7 +140,7 @@ export default function HomePage() {
         </div>
 
         {/* CTA buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
           <Link
             to="/agents"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 shadow-soft transition-all duration-150 active:scale-95"
@@ -115,6 +166,14 @@ export default function HomePage() {
             Submit an Agent
           </a>
         </div>
+
+        {/* Don't know where to start */}
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Don't know where to start?{' '}
+          <Link to="/docs" className="underline underline-offset-2 hover:text-primary-600 transition-colors">
+            Read the docs →
+          </Link>
+        </p>
       </section>
 
       {/* ── Feature cards ────────────────────────────────────── */}
