@@ -25,9 +25,9 @@
     "done": "סיום"
   },
   "home": {
-    "badge": "open-qa — ארסנל QA מבוסס AI",
-    "hero_title_1": "בדוק חכם יותר עם",
-    "hero_title_2": "QA מבוסס AI",
+    "badge": "Open QA — ארסנל QA מבוסס AI",
+    "hero_title_1": "ערכת כלים ה-QA",
+    "hero_title_2": "שה-AI חסר",
     "hero_desc": "ערכת כלים מוכנה לייצור עם Playwright + Claude: טסטים ריפוי עצמי, יצירת נתוני קצה, וטריאז' באגים אוטומטי. עיצוב בסגנון OpenHuman, ללא תלות.",
     "view_github": "צפה ב-GitHub",
     "browse_agents": "עיין בסוכנים",

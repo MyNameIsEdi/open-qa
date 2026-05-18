@@ -50,7 +50,7 @@ export default function RunOutput({ output, loading, error }: Props) {
         {output && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg hover:bg-neutral-100 transition-colors"
+            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg hover:bg-sand-400 transition-colors"
             style={{ color: 'var(--text-muted)' }}
           >
             {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}

@@ -44,7 +44,7 @@ export default function PromptCard({ prompt }: Props) {
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="shrink-0 flex items-center gap-0.5 text-xs px-2 py-1 rounded-lg font-medium text-neutral-500 hover:bg-neutral-100 transition-colors"
+          className="shrink-0 flex items-center gap-0.5 text-xs px-2 py-1 rounded-lg font-medium text-neutral-500 hover:bg-sand-400 transition-colors"
         >
           {expanded ? (
             <><ExpandLessIcon sx={{ fontSize: 14 }} /> {t('prompts.less')}</>
