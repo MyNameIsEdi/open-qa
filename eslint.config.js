@@ -13,6 +13,7 @@ export default tseslint.config(
       'examples/**',
       'SKILL_TEMPLATE/**',
       'docs/**',
+      'dist-ui/**',
     ],
   },
   {
