@@ -6,6 +6,7 @@
     "prompts": "פרומפטים",
     "playground": "מגרש משחקים",
     "generate": "יצירת טסטים",
+    "missions": "משימות",
     "cheatsheet": "דף עזר",
     "docs": "תיעוד"
   },
@@ -42,7 +43,28 @@
     "feature_triage_title": "טריאז' באגים אוטומטי",
     "feature_triage_desc": "קורא לוגי שגיאות וכותב דוחות באגים מוכנים ל-Jira עם ניתוח שורש.",
     "feature_claude_title": "מבוסס Claude",
-    "feature_claude_desc": "כל סוכן וכישור מופעל על ידי Anthropic Claude. מצב MOCK אינו דורש מפתח API."
+    "feature_claude_desc": "כל סוכן וכישור מופעל על ידי Anthropic Claude. מצב MOCK אינו דורש מפתח API.",
+    "feature_missions_title": "משימות יומיות",
+    "feature_missions_desc": "אתגרי QA גיימיפיקציה שמשתנים כל יום. צבור XP, בנה רצף, חדד את כישוריך.",
+    "mission_title": "למה open-qa? המשימה שלנו",
+    "mission_desc": "כלי אוטומציית QA צריכים להיות נגישים לכל מהנדס, לא רק לצוותים גדולים עם תקציב גבוה.",
+    "mission_p1": "דמוקרטיזציה של QA מבוסס AI לכל מהנדס",
+    "mission_p2": "קוד פתוח 100% — פצל, הרחב, הרץ מקומית",
+    "mission_p3": "קהילה בראש: כל תכונה התחילה כ-GitHub Issue",
+    "mission_p4": "ללא תלות: מצב MOCK עובד ללא מפתח API",
+    "contribute_title": "כיצד לתרום",
+    "contribute_subtitle": "open-qa חי וגדל בזכות תרומות הקהילה.",
+    "contribute_issues_title": "GitHub Issues",
+    "contribute_issues_desc": "דווח על באגים, בקש תכונות, שתף משוב",
+    "contribute_issues_cta": "פתח Issue",
+    "contribute_discussions_title": "GitHub Discussions",
+    "contribute_discussions_desc": "שאל שאלות, הצע רעיונות, התחבר לאחרים",
+    "contribute_discussions_cta": "התחל דיון",
+    "contribute_prs_title": "Pull Requests",
+    "contribute_prs_desc": "שלח תיקונים, הוסף סוכנים, שפר את ה-UI",
+    "contribute_prs_cta": "פתח PR",
+    "community_title": "מה הקהילה בונה",
+    "community_subtitle": "תכונות בהובלת הקהילה בפיתוח"
   },
   "agents": {
     "title": "סוכנים אוטונומיים",
@@ -93,6 +115,39 @@
     "empty_hint": "הטסט שנוצר יופיע כאן…",
     "mock_hint": "לא נדרש מפתח API במצב MOCK",
     "chars": "{{count}} תווים"
+  },
+  "missions": {
+    "title": "משימות יומיות",
+    "subtitle": "3 אתגרי QA חדשים כל יום. צבור XP, בנה רצף.",
+    "date": {
+      "label": "משימות היום",
+      "reset": "משימות חדשות בחצות UTC"
+    },
+    "streak": {
+      "label": "ימים ברצף"
+    },
+    "xp": {
+      "total": "סה\"כ XP",
+      "badge": "{{xp}} XP"
+    },
+    "difficulty": {
+      "easy": "קל",
+      "medium": "בינוני",
+      "hard": "קשה"
+    },
+    "complete": {
+      "button": "סמן כהושלם",
+      "done": "הושלם"
+    },
+    "hint": {
+      "show": "הצג רמז",
+      "hide": "הסתר רמז"
+    },
+    "allDone": {
+      "title": "כל המשימות הושלמו!",
+      "subtitle": "צברת את כל ה-XP להיום. חזור מחר ל-3 אתגרים חדשים.",
+      "comeback": "הרצף נמשך אם תשלים את כל 3 המשימות גם מחר."
+    }
   },
   "cheatsheet": {
     "title": "דף עזר QA",
@@ -147,6 +202,20 @@
   "docs": {
     "title": "תיעוד",
     "subtitle": "מדריך שילוב, סקירת ארכיטקטורה, ומסמך תרומה.",
+    "sidebar": {
+      "jump": "בדף זה"
+    },
+    "sections": {
+      "architecture": "ארכיטקטורה",
+      "env-vars": "משתני סביבה",
+      "running-tests": "הרצת טסטים",
+      "mcp": "שילוב MCP",
+      "tech-stack": "מחסנית טכנולוגית",
+      "contributing": "תרומה לפרויקט",
+      "faq": "שאלות נפוצות",
+      "troubleshooting": "פתרון בעיות",
+      "roadmap": "מפת דרכים"
+    },
     "🏗️ Architecture": "🏗️ ארכיטקטורה",
     "🔑 Environment Variables": "🔑 משתני סביבה",
     "🧪 Running Tests": "🧪 הרצת טסטים",

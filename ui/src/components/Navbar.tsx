@@ -8,6 +8,7 @@ import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined'
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import GitHubIcon from '@mui/icons-material/GitHub'
 import BiotechIcon from '@mui/icons-material/Biotech'
 import i18n from '../i18n'
@@ -19,6 +20,7 @@ const links = [
   { to: '/prompts', labelKey: 'nav.prompts', Icon: PsychologyOutlinedIcon },
   { to: '/playground', labelKey: 'nav.playground', Icon: ScienceOutlinedIcon },
   { to: '/generate', labelKey: 'nav.generate', Icon: AutoAwesomeOutlinedIcon },
+  { to: '/missions', labelKey: 'nav.missions', Icon: AssignmentOutlinedIcon },
   { to: '/cheatsheet', labelKey: 'nav.cheatsheet', Icon: CodeOutlinedIcon },
   { to: '/docs', labelKey: 'nav.docs', Icon: MenuBookOutlinedIcon },
 ]

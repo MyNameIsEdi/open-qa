@@ -2,7 +2,7 @@
 
 # open-qa — AI-Powered QA Arsenal
 
-**Production-ready Playwright + Claude toolkit with a React marketplace UI**
+**A free, community-built Playwright + Claude toolkit. Open-source. No lock-in. Run locally. Fork and extend.**
 
 [![Claude AI](https://img.shields.io/badge/Claude_AI-D97757?style=flat-square&logo=anthropic&logoColor=white)](https://anthropic.com)
 [![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
@@ -39,6 +39,7 @@ Browse and run AI agents directly from the UI. Active agents have a **▶ Run** 
 | Visual A11y Scanner | ✅ Active | DOM analysis → WCAG 2.1 AA violations with element-level fix recommendations |
 | Network Interceptor & Mock Gen | 🔜 Planned | Analyzes network traces → generates MSW/Playwright mock handlers |
 | Chaos Monkey UI | 🔜 Planned | Random UI interactions → captures console errors and anomalies |
+| Daily Missions | ✅ Active | 3 gamified QA challenges/day, XP tracking, streaks — practice from the UI |
 
 ---
 
@@ -208,6 +209,41 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 - [ ] K6 Load Profile Generator skill
 - [ ] JWT Attack Suite skill
 - [ ] GitHub Pages live demo
+
+---
+
+## Community
+
+open-qa is built in the open. Every feature started as a GitHub Issue.
+
+> **Mission:** Democratize AI-assisted QA for every engineer, not just big teams with expensive tooling. We believe every developer deserves production-quality automation tooling for free.
+
+### How to Contribute
+
+1. **Report bugs or request features** → [GitHub Issues](https://github.com/MyNameIsEdi/intelligent-testing-toolkit/issues)
+2. **Ask questions or propose ideas** → [GitHub Discussions](https://github.com/MyNameIsEdi/intelligent-testing-toolkit/discussions)
+3. **Submit code** → Fork → feature branch → PR
+
+**PR checklist:**
+- [ ] `npm run lint` passes
+- [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
+- [ ] README.md updated if behavior changed
+
+### What the Community is Building
+
+- GraphQL Fuzzer skill (in progress)
+- Cypress migration guide
+- k6 load profile generator
+- Multi-language test scaffolding
+
+---
+
+## Built with the Community
+
+open-qa grows through contributions. If you use it, star it ⭐. If you improve it, PR it.
+
+[![GitHub stars](https://img.shields.io/github/stars/MyNameIsEdi/intelligent-testing-toolkit?style=social)](https://github.com/MyNameIsEdi/intelligent-testing-toolkit)
 
 ---
 
