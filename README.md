@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-![open-qa home page](screenshots/home.png)
+<img src="screenshots/home.png" width="900" alt="open-qa home page" />
 
 </div>
 
@@ -18,7 +18,7 @@
 
 ## What is open-qa?
 
-open-qa combines a Node.js AI agent core (self-healing tests, data generation, bug triage) with a React/Vite/Tailwind marketplace UI. Every agent and skill runs with **no API key needed** in MOCK mode — swap in your `ANTHROPIC_API_KEY` to go live.
+open-qa combines a Node.js AI agent core (self-healing tests, data generation, bug triage, accessibility scanning, visual regression, POM generation) with a React/Vite/Tailwind marketplace UI. Every agent and skill runs with **no API key needed** in MOCK mode — swap in your `ANTHROPIC_API_KEY` to go live.
 
 ---
 
@@ -26,26 +26,27 @@ open-qa combines a Node.js AI agent core (self-healing tests, data generation, b
 
 ### Autonomous Agents
 
-![Agents page with search and category filters](screenshots/agents.png)
+<img src="screenshots/agents.png" width="900" alt="Agents page with search and category filters" />
 
-Browse and run AI agents directly from the UI. Active agents have a **▶ Run** button that executes the agent and streams output inline. All cards have **Add to Claude** to copy a complete MCP-ready JSON payload.
+Browse and run AI agents directly from the UI. Active agents have a **▶ Run** button that executes the agent and streams output inline.
 
 | Agent | Status | What it does |
 |-------|--------|--------------|
 | Self-Healing Locator | ✅ Active | Suggests new Playwright locators when UI changes break selectors |
 | Automated Bug Triage | ✅ Active | Reads error logs → writes Jira-ready Markdown bug reports with RCA |
-| Auto-POM Builder | 🔜 Planned | Crawls a URL and generates a typed Playwright Page Object Model |
+| Auto-POM Builder | ✅ Active | Generates typed Playwright Page Object Model classes from DOM HTML |
+| Visual Regression Agent | ✅ Active | Compares baseline screenshots → quantifies pixel diff → severity report |
+| Visual A11y Scanner | ✅ Active | DOM analysis → WCAG 2.1 AA violations with element-level fix recommendations |
 | Network Interceptor & Mock Gen | 🔜 Planned | Analyzes network traces → generates MSW/Playwright mock handlers |
-| Visual A11y Scanner | 🔜 Planned | Screenshots + DOM → WCAG 2.1 AA accessibility report |
 | Chaos Monkey UI | 🔜 Planned | Random UI interactions → captures console errors and anomalies |
 
 ---
 
 ### Prompt Playground
 
-![Prompt Playground](screenshots/playground.png)
+<img src="screenshots/playground.png" width="900" alt="Prompt Playground" />
 
-Select one of 6 expert QA system prompts, paste your PRD / spec / log / test code, and hit **Run**. Responses stream word-by-word. Works in MOCK mode out of the box; set `ANTHROPIC_API_KEY` for live Claude output.
+Select one of 6 expert QA system prompts, paste your PRD / spec / log / test code, and hit **Run**. Responses stream word-by-word. Works in MOCK mode out of the box.
 
 **Available prompts:**
 - PRD to Test Matrix
@@ -57,11 +58,30 @@ Select one of 6 expert QA system prompts, paste your PRD / spec / log / test cod
 
 ---
 
+### Test Generator
+
+Paste a user story or acceptance criteria and get a complete, production-ready Playwright `.spec.ts` file back — with options for Page Object Model output and authenticated tests. Includes a one-click download button.
+
+---
+
 ### QA Cheatsheet
 
-![Cheatsheet](screenshots/cheatsheet.png)
+<img src="screenshots/cheatsheet.png" width="900" alt="Cheatsheet" />
 
-One-click copy reference for Playwright patterns, assertions, network intercepts, POM boilerplate, `playwright.config.ts` templates, and GitHub Actions CI YAML — all in collapsible sections.
+One-click copy reference with **10 collapsible sections** — all your go-to patterns in one place:
+
+| Section | Contents |
+|---------|----------|
+| Playwright Locators | `getByRole`, `getByLabel`, chaining, filtering |
+| Common Assertions | Visibility, text, URL, count matchers |
+| Network Intercepts | Mock, modify, simulate errors, wait for request |
+| Page Object Model | POM class template + usage in tests |
+| playwright.config.ts | Base config + auth storageState setup |
+| GitHub Actions CI | Single workflow + sharded parallel runs |
+| API Testing | `APIRequestContext`, auth headers, schema validation |
+| Accessibility Testing | axe-core, keyboard navigation, contrast checks |
+| Mobile & Responsive | Viewport, device presets, touch events |
+| Test Data with Faker.js | Factory pattern, seeding, fixture files |
 
 ---
 
@@ -107,9 +127,12 @@ npm run dev
 Run agents directly from the terminal:
 
 ```bash
-npm run run:healing    # Self-healing locator agent
-npm run run:datagen    # Smart edge-case data generator
-npm run run:bugreport  # Automated bug triage → output/AI_BUG_REPORT.md
+npm run run:healing         # Self-healing locator agent
+npm run run:datagen         # Smart edge-case data generator
+npm run run:bugreport       # Automated bug triage → output/AI_BUG_REPORT.md
+npm run run:visual-regression  # Visual regression → output/visual-regression/
+npm run run:auto-pom        # Auto-POM Builder → output/auto-pom/
+npm run run:visual-a11y     # Visual A11y Scanner → output/A11Y_REPORT.md
 ```
 
 ---
@@ -119,17 +142,25 @@ npm run run:bugreport  # Automated bug triage → output/AI_BUG_REPORT.md
 ```
 open-qa/
 ├── src/                    # Core AI logic (Node.js / TypeScript)
-│   ├── agents/             # self-healing.ts, visual-regression.ts
-│   ├── skills/             # generate-test-data.ts, log-analyzer.ts, prompts/
-│   └── core/               # llm-client.ts (Anthropic SDK + MOCK mode)
+│   ├── agents/
+│   │   ├── self-healing/index.ts       # Self-Healing Locator
+│   │   ├── visual-regression/index.ts  # Visual Regression Agent
+│   │   ├── auto-pom/index.ts           # Auto-POM Builder
+│   │   └── visual-a11y/index.ts        # Visual A11y Scanner
+│   ├── skills/
+│   │   ├── data-gen/index.ts           # Smart Edge-Case Data Gen
+│   │   ├── data-gen/prompts.ts         # QA engineer system prompts
+│   │   └── log-analyzer/index.ts       # Automated Bug Triage
+│   └── core/
+│       └── llm-client.ts               # Anthropic SDK wrapper (MOCK + live)
 ├── ui/                     # React 18 + Vite + Tailwind marketplace
 │   └── src/
 │       ├── components/     # Navbar, AgentCard, SkillCard, PromptCard, RunOutput, CodeSnippet
-│       └── pages/          # Home, Agents, Skills, Prompts, Playground, Cheatsheet, Docs
+│       └── pages/          # Home, Agents, Skills, Prompts, Playground, Generate, Cheatsheet, Docs
 ├── server/                 # Express 4 API (port 3001)
 │   └── index.ts            # /api/agents, /api/skills, /api/run/:id, /api/playground
 ├── tests/                  # Playwright test suite
-└── output/                 # Generated artifacts (bug reports, test data)
+└── output/                 # Generated artifacts (bug reports, test data, POM files)
 ```
 
 ### Tech stack
@@ -162,7 +193,7 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
       }
     }
   },
-  "run_command": "npx tsx src/agents/self-healing.ts"
+  "run_command": "npx tsx src/agents/self-healing/index.ts"
 }
 ```
 
@@ -171,11 +202,11 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 ## Roadmap
 
 - [ ] Native MCP server (`npx open-qa mcp-server`)
-- [ ] Auto-POM Builder
-- [ ] Visual A11y Scanner (Claude Vision)
-- [ ] GraphQL Fuzzer
-- [ ] K6 Load Profile Generator
-- [ ] JWT Attack Suite
+- [ ] Network Interceptor & Mock Gen
+- [ ] Chaos Monkey UI
+- [ ] GraphQL Fuzzer skill
+- [ ] K6 Load Profile Generator skill
+- [ ] JWT Attack Suite skill
 - [ ] GitHub Pages live demo
 
 ---

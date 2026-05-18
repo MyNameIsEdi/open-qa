@@ -41,10 +41,10 @@ npm run ui:build      # React build — must succeed
 
 ## Adding a New Agent
 
-1. Create `src/agents/your-agent.ts` following the pattern in `self-healing.ts`
+1. Create `src/agents/your-agent/index.ts` following the subfolder pattern in `self-healing/index.ts`
 2. Add a `npm run run:your-agent` script in `package.json`
-3. Add an entry to the `agents` array in `ui/src/pages/AgentsPage.tsx`
-4. Add the agent to `agentCatalog` in `server/index.ts`
+3. Add an entry to the `agents` array in `ui/src/pages/AgentsPage.tsx` with `runId`
+4. Add the agent to `agentCatalog` in `server/index.ts` with `status: 'active'`
 5. Add a wiki entry to `.github/wiki/Agents.md`
 
 ## Adding a New Skill
