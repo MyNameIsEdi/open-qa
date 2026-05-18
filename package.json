@@ -1,7 +1,7 @@
 {
-  "name": "intelligent-testing-toolkit",
+  "name": "open-qa",
   "version": "1.0.0",
-  "description": "AI-Powered QA & Web Automation Arsenal",
+  "description": "AI-Powered Open QA — Intelligent testing toolkit with OpenHuman-style UI",
   "type": "module",
   "scripts": {
     "test:healing": "npx playwright test tests/healing.spec.ts",
@@ -13,35 +13,59 @@
     "run:bugreport": "npx tsx src/skills/log-analyzer.ts",
     "run:visual-regression": "npx tsx src/agents/visual-regression.ts",
     "verify:demos": "node ./scripts/verify-demos.js",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"**/*.{ts,json,md,yml}\"",
-    "format:check": "prettier --check \"**/*.{ts,json,md,yml}\""
+    "typecheck": "tsc --noEmit && npx tsc --project ui/tsconfig.json --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md,yml}\"",
+    "ui:dev": "cd ui && npx vite",
+    "ui:build": "cd ui && npx vite build",
+    "ui:preview": "cd ui && npx vite preview",
+    "server:dev": "npx tsx server/index.ts",
+    "dev": "npx concurrently \"npm run server:dev\" \"npm run ui:dev\""
   },
   "keywords": [
+    "open-qa",
     "qa",
     "automation",
     "ai",
     "playwright",
     "claude",
-    "testing"
+    "testing",
+    "openhuman"
   ],
   "author": "Edi Mazor",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
     "@playwright/test": "^1.60.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "playwright": "^1.60.0"
+    "express": "^4.19.2",
+    "playwright": "^1.60.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
     "eslint": "^9.17.0",
+    "postcss": "^8.4.49",
     "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.0"
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.0.5"
   }
 }
