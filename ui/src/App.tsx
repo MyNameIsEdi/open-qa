@@ -8,6 +8,7 @@ import PlaygroundPage from './pages/PlaygroundPage'
 import CheatsheetPage from './pages/CheatsheetPage'
 import GeneratePage from './pages/GeneratePage'
 import DocsPage from './pages/DocsPage'
+import DailyMissionsPage from './pages/DailyMissionsPage'
 
 export default function App() {
   return (
@@ -21,8 +22,9 @@ export default function App() {
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/prompts" element={<PromptsPage />} />
             <Route path="/playground" element={<PlaygroundPage />} />
-            <Route path="/cheatsheet" element={<CheatsheetPage />} />
             <Route path="/generate" element={<GeneratePage />} />
+            <Route path="/missions" element={<DailyMissionsPage />} />
+            <Route path="/cheatsheet" element={<CheatsheetPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -6,6 +6,7 @@
     "prompts": "Prompts",
     "playground": "Playground",
     "generate": "Generate",
+    "missions": "Missions",
     "cheatsheet": "Cheatsheet",
     "docs": "Docs"
   },
@@ -42,7 +43,28 @@
     "feature_triage_title": "Auto Bug Triage",
     "feature_triage_desc": "Reads error logs and writes Jira-ready bug reports with root-cause analysis.",
     "feature_claude_title": "Claude-Powered",
-    "feature_claude_desc": "Every agent and skill is powered by Anthropic Claude. MOCK mode requires no API key."
+    "feature_claude_desc": "Every agent and skill is powered by Anthropic Claude. MOCK mode requires no API key.",
+    "feature_missions_title": "Daily Missions",
+    "feature_missions_desc": "Gamified QA challenges that change every day. Earn XP, build streaks, sharpen your skills.",
+    "mission_title": "Why open-qa? Our Mission",
+    "mission_desc": "QA automation tooling should be accessible to every engineer, not just big teams with expensive tooling.",
+    "mission_p1": "Democratize AI-assisted QA for every engineer",
+    "mission_p2": "100% open-source — fork it, extend it, run it locally",
+    "mission_p3": "Community-first: every feature started as a GitHub Issue",
+    "mission_p4": "Zero vendor lock-in: MOCK mode works with no API key",
+    "contribute_title": "How to Contribute",
+    "contribute_subtitle": "open-qa lives and grows through community contributions.",
+    "contribute_issues_title": "GitHub Issues",
+    "contribute_issues_desc": "Report bugs, request features, share feedback",
+    "contribute_issues_cta": "Open an Issue",
+    "contribute_discussions_title": "GitHub Discussions",
+    "contribute_discussions_desc": "Ask questions, propose ideas, connect with others",
+    "contribute_discussions_cta": "Start a Discussion",
+    "contribute_prs_title": "Pull Requests",
+    "contribute_prs_desc": "Submit fixes, add agents, improve the UI",
+    "contribute_prs_cta": "Open a PR",
+    "community_title": "What the Community is Building",
+    "community_subtitle": "Community-led features in progress"
   },
   "agents": {
     "title": "Autonomous Agents",
@@ -93,6 +115,39 @@
     "empty_hint": "Your generated test will appear here…",
     "mock_hint": "No API key needed in MOCK mode",
     "chars": "{{count}} chars"
+  },
+  "missions": {
+    "title": "Daily Missions",
+    "subtitle": "3 fresh QA challenges every day. Earn XP, build your streak.",
+    "date": {
+      "label": "Today's missions",
+      "reset": "New missions at midnight UTC"
+    },
+    "streak": {
+      "label": "day streak"
+    },
+    "xp": {
+      "total": "total XP",
+      "badge": "{{xp}} XP"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "complete": {
+      "button": "Mark as Complete",
+      "done": "Completed"
+    },
+    "hint": {
+      "show": "Show hint",
+      "hide": "Hide hint"
+    },
+    "allDone": {
+      "title": "All missions complete!",
+      "subtitle": "You've earned all XP for today. Come back tomorrow for 3 new challenges.",
+      "comeback": "Streak continues if you complete all 3 again tomorrow."
+    }
   },
   "cheatsheet": {
     "title": "QA Cheatsheet",
@@ -147,6 +202,20 @@
   "docs": {
     "title": "Documentation",
     "subtitle": "Integration guide, architecture overview, and contributor reference.",
+    "sidebar": {
+      "jump": "On this page"
+    },
+    "sections": {
+      "architecture": "Architecture",
+      "env-vars": "Environment Variables",
+      "running-tests": "Running Tests",
+      "mcp": "MCP Integration",
+      "tech-stack": "Tech Stack",
+      "contributing": "Contributing",
+      "faq": "FAQ",
+      "troubleshooting": "Troubleshooting",
+      "roadmap": "Roadmap"
+    },
     "🏗️ Architecture": "🏗️ Architecture",
     "🔑 Environment Variables": "🔑 Environment Variables",
     "🧪 Running Tests": "🧪 Running Tests",
