@@ -1,7 +1,7 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckIcon from '@mui/icons-material/Check'
-import { useState } from 'react'
 
 interface Props {
   output: string
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function RunOutput({ output, loading, error }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const scrollRef = useRef<HTMLPreElement>(null)
 
@@ -38,12 +39,12 @@ export default function RunOutput({ output, loading, error }: Props) {
           {loading ? (
             <span className="flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
-              Running…
+              {t('common.running')}
             </span>
           ) : error ? (
-            <span className="text-coral-500">Error</span>
+            <span className="text-coral-500">{t('common.error')}</span>
           ) : (
-            <span className="text-sage-600">Done</span>
+            <span className="text-sage-600">{t('common.done')}</span>
           )}
         </span>
         {output && (
@@ -53,7 +54,7 @@ export default function RunOutput({ output, loading, error }: Props) {
             style={{ color: 'var(--text-muted)' }}
           >
             {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? t('common.copied') : t('common.copy')}
           </button>
         )}
       </div>
@@ -62,7 +63,7 @@ export default function RunOutput({ output, loading, error }: Props) {
         className="text-xs font-mono p-3 overflow-auto max-h-64 leading-relaxed whitespace-pre-wrap"
         style={{ color: error ? 'var(--coral-500, #ef4444)' : 'var(--text-main)' }}
       >
-        {error || output || (loading ? '' : 'No output.')}
+        {error || output || (loading ? '' : t('common.no_output'))}
       </pre>
     </div>
   )

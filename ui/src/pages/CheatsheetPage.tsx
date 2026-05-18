@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
@@ -574,6 +575,7 @@ for (const user of testUsers) {
 ]
 
 function CheatSection({ section }: { section: Section }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(true)
 
   return (
@@ -586,9 +588,9 @@ function CheatSection({ section }: { section: Section }) {
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-neutral-50 transition-colors text-left"
       >
         <h2 className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>
-          {section.title}
+          {t(`cheatsheet.${section.title}`, { defaultValue: section.title })}
           <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-            {section.snippets.length} snippet{section.snippets.length !== 1 ? 's' : ''}
+            {t('cheatsheet.snippets', { count: section.snippets.length })}
           </span>
         </h2>
         {open ? (
@@ -603,7 +605,7 @@ function CheatSection({ section }: { section: Section }) {
           {section.snippets.map((s) => (
             <div key={s.label} className="flex flex-col gap-1.5">
               <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                {s.label}
+                {t(`cheatsheet.${s.label}`, { defaultValue: s.label })}
               </p>
               <CodeSnippet code={s.code} language={s.language} />
             </div>
@@ -615,15 +617,16 @@ function CheatSection({ section }: { section: Section }) {
 }
 
 export default function CheatsheetPage() {
+  const { t } = useTranslation()
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
           <MenuBookOutlinedIcon className="text-primary-500" sx={{ fontSize: 24 }} />
-          QA Cheatsheet
+          {t('cheatsheet.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Quick-copy Playwright patterns, assertions, and CI snippets. Click any code block to copy it.
+          {t('cheatsheet.subtitle')}
         </p>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import AgentCard, { AgentDef } from '../components/AgentCard'
 
@@ -146,6 +147,7 @@ const agents: AgentEntry[] = [
 const ALL_CATEGORIES = ['all', ...Array.from(new Set(agents.map((a) => a.category)))]
 
 export default function AgentsPage() {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
 
@@ -165,10 +167,10 @@ export default function AgentsPage() {
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-main)' }}>
-          Autonomous Agents
+          {t('agents.title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {active.length} active · {planned.length} planned. Click "Add to Claude" to copy any agent's config.
+          {t('agents.subtitle', { active: active.length, planned: planned.length })}
         </p>
       </div>
 
@@ -184,7 +186,7 @@ export default function AgentsPage() {
           />
           <input
             type="text"
-            placeholder="Search agents…"
+            placeholder={t('agents.search_placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border outline-none focus:ring-2 focus:ring-primary-300"
@@ -215,7 +217,7 @@ export default function AgentsPage() {
 
       {filtered.length === 0 ? (
         <p className="text-sm text-center py-16" style={{ color: 'var(--text-muted)' }}>
-          No agents match your search.
+          {t('agents.no_match')}
         </p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
