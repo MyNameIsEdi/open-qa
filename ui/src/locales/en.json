@@ -216,6 +216,21 @@
     "status_active": "Active",
     "status_planned": "Planned"
   },
+  "guides": {
+    "title": "QA Automation Guides",
+    "subtitle": "Hands-on course — from zero to AI-powered QA.",
+    "lessons": "lessons",
+    "sections_label": "sections",
+    "completed_label": "completed",
+    "course_complete": "Course complete!",
+    "key_concepts": "Key Concepts",
+    "practice_task": "Practice Task",
+    "mark_complete": "Mark as complete",
+    "completed": "Completed",
+    "next": "Next →",
+    "prev": "← Previous",
+    "course_content": "Course content"
+  },
   "docs": {
     "title": "Documentation",
     "subtitle": "Integration guide, architecture overview, and contributor reference.",
