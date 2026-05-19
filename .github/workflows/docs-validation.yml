@@ -1,0 +1,38 @@
+name: Docs Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-docs:
+    name: Docs & Changelog Updated
+    runs-on: ubuntu-latest
+
+    steps:
+      # Full clone so merge-base calculation is accurate.
+      # fetch-depth 0 gives us the complete history; without it git merge-base fails.
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Make sure the base branch is available locally for the diff.
+      # On push to main GITHUB_BASE_REF is empty, so we fall back to origin/main.
+      - name: Fetch base branch
+        run: |
+          BASE="${GITHUB_BASE_REF:-main}"
+          echo "Fetching origin/${BASE}"
+          git fetch --no-tags origin "${BASE}" || true
+
+      - name: Run documentation check
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_DEFAULT_BRANCH: main
+        run: bash scripts/check-docs-updated.sh
