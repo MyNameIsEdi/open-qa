@@ -35,10 +35,10 @@ const COMMUNITY_ITEMS = [
 ]
 
 const COMMANDS = [
-  'npm run dev',
-  'npx playwright test --ui',
-  'npm run generate',
-  'npm test',
+  'open-qa start',
+  'open-qa explore https://example.com',
+  'open-qa heal',
+  'open-qa help',
 ]
 
 export default function HomePage() {
@@ -237,8 +237,8 @@ export default function HomePage() {
           className="text-xs font-mono p-4 rounded-xl overflow-auto leading-relaxed"
           style={{ backgroundColor: 'var(--bg-muted)', color: 'var(--text-main)' }}
         >
-{`git clone https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git
-cd intelligent-testing-toolkit
+{`git clone https://github.com/MyNameIsEdi/open-qa.git
+cd open-qa
 npm install
 npx playwright install chromium
 npm test
@@ -310,21 +310,21 @@ npm run dev       # starts UI + API server`}
               title: t('home.contribute_issues_title'),
               desc:  t('home.contribute_issues_desc'),
               cta:   t('home.contribute_issues_cta'),
-              href:  'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/issues',
+              href:  'https://github.com/MyNameIsEdi/open-qa/issues',
             },
             {
               icon: <ForumOutlinedIcon sx={{ fontSize: 20 }} style={{ color: '#8b5cf6' }} />,
               title: t('home.contribute_discussions_title'),
               desc:  t('home.contribute_discussions_desc'),
               cta:   t('home.contribute_discussions_cta'),
-              href:  'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/discussions',
+              href:  'https://github.com/MyNameIsEdi/open-qa/discussions',
             },
             {
               icon: <CallMergeOutlinedIcon sx={{ fontSize: 20 }} style={{ color: '#10b981' }} />,
               title: t('home.contribute_prs_title'),
               desc:  t('home.contribute_prs_desc'),
               cta:   t('home.contribute_prs_cta'),
-              href:  'https://github.com/MyNameIsEdi/intelligent-testing-toolkit/pulls',
+              href:  'https://github.com/MyNameIsEdi/open-qa/pulls',
             },
           ].map(({ icon, title, desc, cta, href }) => (
             <div
