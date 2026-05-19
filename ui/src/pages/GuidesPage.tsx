@@ -262,6 +262,7 @@ export default function GuidesPage() {
   const activeIdx = allLessons.findIndex(l => l.id === activeId)
 
   return (
+
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 56px)' }}>
 
       {/* ── Top progress bar ── */}
@@ -303,8 +304,8 @@ export default function GuidesPage() {
         {/* Sidebar */}
         <aside
           className={`border-e overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} shrink-0`}
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', maxHeight: 'calc(100vh - 112px)', position: 'sticky', top: '56px' }}
-        >
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', maxHeight: 'calc(100vh - 112px)', position: 'sticky', top: '0' }}
+
           {/* Course meta */}
           <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-main)' }}>
@@ -328,6 +329,7 @@ export default function GuidesPage() {
         </aside>
 
         {/* Main content */}
+
         <main className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 112px)' }}>
           {activeLesson && (
             <div className="max-w-3xl mx-auto px-6 py-8">
