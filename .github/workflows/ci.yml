@@ -1,4 +1,4 @@
-name: TypeScript CI
+name: Code Quality
 
 on:
   push:
@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  typecheck-lint:
-    name: Typecheck and lint
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +28,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TypeScript typecheck
-        run: npm run typecheck
+      - name: Typecheck root
+        run: npx tsc --noEmit
 
-      - name: Run ESLint
+      - name: Typecheck UI
+        run: npx tsc --project ui/tsconfig.json --noEmit
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
         run: npm run lint
+
+      - name: Prettier format check
+        run: npm run format:check

@@ -6,13 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: E2E Tests
     timeout-minutes: 15
     runs-on: ubuntu-latest
+
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       CI: true
+      # ANTHROPIC_API_KEY is optional — tests run in MOCK mode without it.
+      # Add the secret in repo Settings → Secrets to enable live Claude calls.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
     steps:
       - name: Checkout
@@ -33,12 +41,12 @@ jobs:
       - name: Run Playwright tests
         run: npm run test:ci
 
-      - name: Upload test results
+      - name: Upload test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ github.run_id }}
           path: |
             playwright-report/
             test-results/
-          retention-days: 7
+          retention-days: 14

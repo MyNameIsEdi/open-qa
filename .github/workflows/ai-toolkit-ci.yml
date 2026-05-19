@@ -1,55 +1,41 @@
-name: AI Toolkit Code Validation
+name: Build & Validate
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
-# הוספנו את המשתנה הזה כדי לאלץ את הפעולות של גיטהאב לרוץ על Node 24
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate-typescript:
+  build:
+    name: UI Build
     runs-on: ubuntu-latest
-    name: Type Check & Build Validation
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
+          cache: npm
 
-      # ==========================================
-      # 01 - Self Healing Tests
-      # ==========================================
-      - name: 🛠️ Setup & Validate Self-Healing
-        working-directory: ./01-Self-Healing-Tests
-        run: |
-          npm install
-          npx tsc --noEmit
+      - name: Install dependencies
+        run: npm ci
 
-      # ==========================================
-      # 02 - Smart Data Generation
-      # ==========================================
-      - name: 🛠️ Setup & Validate Smart Data Gen
-        working-directory: ./02-Smart-Data-Gen
-        run: |
-          npm install
-          npx tsc --noEmit
+      - name: Build UI
+        run: npm run ui:build
+        env:
+          GITHUB_ACTIONS: true
 
-      # ==========================================
-      # 03 - Automated Bug Report
-      # ==========================================
-      - name: 🛠️ Setup & Validate Bug Report
-        working-directory: ./03-Automated-Bug-Report
-        run: |
-          npm install
-          npx tsc --noEmit
-
-      - name: ✅ Pipeline Passed
-        run: echo "All TypeScript files compiled successfully without syntax errors!"
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-ui
+          path: dist-ui/
+          retention-days: 3
