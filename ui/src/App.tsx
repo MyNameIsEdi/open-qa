@@ -16,17 +16,14 @@ import GuidesPage from './pages/GuidesPage'
 import PlaywrightDashboard from './pages/PlaywrightDashboard'
 
 export default function App() {
-  // Mobile: open/closed drawer. Desktop: collapsed/expanded rail.
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
     <HashRouter>
       <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-body)' }}>
-        {/* Top bar */}
         <Navbar onMenuClick={() => setSidebarOpen(o => !o)} />
 
-        {/* Sidebar */}
         <Sidebar
           open={sidebarOpen}
           collapsed={sidebarCollapsed}
@@ -34,7 +31,6 @@ export default function App() {
           onToggleCollapse={() => setSidebarCollapsed(c => !c)}
         />
 
-        {/* Main content — shifts right to make room for sidebar on md+ */}
         <main
           className={`pt-14 transition-all duration-300 ease-in-out ${
             sidebarCollapsed ? 'md:pl-14' : 'md:pl-56'

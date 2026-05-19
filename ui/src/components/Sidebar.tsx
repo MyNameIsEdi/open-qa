@@ -5,8 +5,6 @@ import {
   X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
-// ─── Nav structure ────────────────────────────────────────────────────────────
-
 const GROUPS = [
   {
     label: 'Main',
@@ -36,7 +34,7 @@ const GROUPS = [
     label: 'Testing',
     items: [
       { to: '/playwright', label: 'PW Dashboard', Icon: Activity },
-      { to: '/docs',        label: 'Docs',         Icon: FileText },
+      { to: '/docs',       label: 'Docs',          Icon: FileText },
     ],
   },
   {
@@ -47,16 +45,12 @@ const GROUPS = [
   },
 ] as const
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface SidebarProps {
   open: boolean
   collapsed: boolean
   onClose: () => void
   onToggleCollapse: () => void
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: SidebarProps) {
   const location = useLocation()
@@ -96,7 +90,6 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-4">
           {GROUPS.map(({ label, items }) => (
             <div key={label}>
-              {/* Group heading — fades out when collapsed */}
               <div
                 className={`overflow-hidden transition-all duration-200 ${
                   collapsed ? 'max-h-0 opacity-0 mb-0' : 'max-h-8 opacity-100 mb-1'
@@ -123,15 +116,13 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
                         flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                         transition-all duration-150
                         ${collapsed ? 'justify-center' : ''}
-                        ${
-                          isActive
-                            ? 'bg-zinc-700 text-white font-semibold'
-                            : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                        ${isActive
+                          ? 'bg-zinc-700 text-white font-semibold'
+                          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                         }
                       `}
                     >
                       <Icon size={16} className="shrink-0" />
-                      {/* Label slides out smoothly on collapse */}
                       <span
                         className={`truncate transition-all duration-200 ${
                           collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
