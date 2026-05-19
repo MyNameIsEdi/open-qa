@@ -216,6 +216,21 @@
     "status_active": "פעיל",
     "status_planned": "מתוכנן"
   },
+  "guides": {
+    "title": "מדריכי אוטומציית QA",
+    "subtitle": "קורס מעשי — מאפס לאוטומציית בדיקות מבוססת AI.",
+    "lessons": "שיעורים",
+    "sections_label": "מקטעים",
+    "completed_label": "הושלמו",
+    "course_complete": "הקורס הושלם!",
+    "key_concepts": "מושגי מפתח",
+    "practice_task": "משימת תרגול",
+    "mark_complete": "סמן כהושלם",
+    "completed": "הושלם",
+    "next": "← הבא",
+    "prev": "הקודם →",
+    "course_content": "תוכן הקורס"
+  },
   "docs": {
     "title": "תיעוד",
     "subtitle": "מדריך שילוב, סקירת ארכיטקטורה, ומסמך תרומה.",
