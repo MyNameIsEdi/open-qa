@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "description": "AI-Powered Open QA — Intelligent testing toolkit with OpenHuman-style UI",
   "type": "module",
+  "bin": {
+    "open-qa": "./src/cli/index.ts"
+  },
   "scripts": {
     "test:healing": "npx playwright test tests/healing.spec.ts",
     "test": "npx playwright test",
     "test:ci": "npx playwright test",
+    "heal": "npx tsx src/agents/self-healing/index.ts",
+    "explore": "npx tsx src/agents/explore/index.ts",
     "run:healing": "npx tsx src/agents/self-healing/index.ts",
     "run:datagen": "npx tsx src/skills/data-gen/index.ts",
     "test:data-gen": "npx tsx src/skills/data-gen/index.ts",
