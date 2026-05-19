@@ -1,1 +1,0 @@
-export default function isEventHandler(key: string, value: unknown): boolean;

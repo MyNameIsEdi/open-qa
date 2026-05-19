@@ -1,4 +1,0 @@
-import { UseSliderParameters, UseSliderReturnValue } from "./useSlider.types.mjs";
-export declare function valueToPercent(value: number, min: number, max: number): number;
-export declare const Identity: (x: number) => number;
-export declare function useSlider(parameters: UseSliderParameters): UseSliderReturnValue;

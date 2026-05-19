@@ -1,1 +1,0 @@
-export default function areEqualValues(a: unknown, b: unknown): boolean;
