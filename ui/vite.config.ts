@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   root: '.',
-  base: process.env.GITHUB_ACTIONS ? '/intelligent-testing-toolkit/' : '/',
+  base: process.env.GITHUB_ACTIONS ? '/open-qa/' : '/',
   plugins: [react()],
   resolve: {
     dedupe: ['react', 'react-dom'],

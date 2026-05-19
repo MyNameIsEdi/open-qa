@@ -10,9 +10,9 @@
 [![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg?style=flat-square)](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg?style=flat-square)](https://mynameisedi.github.io/open-qa/#/)
 
-🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)**
+🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/open-qa/#/)**
 
 
 <img src="screenshots/home.jpeg" width="900" alt="open-qa home page" />
@@ -124,8 +124,8 @@ One-click copy reference with **10 collapsible sections** — all your go-to pat
 ### 1. Clone & install
 
 ```bash
-git clone [https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git](https://github.com/MyNameIsEdi/intelligent-testing-toolkit.git)
-cd intelligent-testing-toolkit
+git clone https://github.com/MyNameIsEdi/open-qa.git
+cd open-qa
 npm install
 npx playwright install chromium
 
@@ -247,7 +247,7 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 * [ ] GraphQL Fuzzer skill
 * [ ] K6 Load Profile Generator skill
 * [ ] JWT Attack Suite skill
-* [x] [GitHub Pages live demo](https://mynameisedi.github.io/intelligent-testing-toolkit/#/)
+* [x] [GitHub Pages live demo](https://mynameisedi.github.io/open-qa/#/)
 * [x] QA Automation Guides (12-chapter course)
 * [x] Submit an Agent page
 * [x] Skills-IL inspired warm-palette redesign
