@@ -23,10 +23,11 @@ import { LocatorsAnimation } from '../components/guides/LocatorsAnimation'
 import { PomAnimation } from '../components/guides/PomAnimation'
 import { ApiPlaywrightAnimation } from '../components/guides/ApiPlaywrightAnimation'
 import { ApiPostmanAnimation } from '../components/guides/ApiPostmanAnimation'
+import { LoadTypesAnimation } from '../components/guides/LoadTypesAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
-  'intro-qa':        PyramidAnimation,
-  'course-overview': ModuleMapAnimation,
+  'intro-qa':         PyramidAnimation,
+  'course-overview':  ModuleMapAnimation,
   'when-to-automate': WhenToAutomateAnimation,
   'setup-playwright': SetupPlaywrightAnimation,
   'first-test':       FirstTestAnimation,
@@ -34,6 +35,7 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'pom':              PomAnimation,
   'api-playwright':   ApiPlaywrightAnimation,
   'api-postman':      ApiPostmanAnimation,
+  'load-types':       LoadTypesAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
