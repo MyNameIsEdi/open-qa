@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Menu, Moon, Sun, Globe } from 'lucide-react'
 import GitHubIcon from '@mui/icons-material/GitHub'
 import i18n from '../i18n'
+import { useRtl } from '../hooks/useRtl'
 
 interface TopBarProps {
   onMenuClick: () => void   // opens mobile drawer OR triggers desktop collapse
@@ -9,7 +10,8 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
-  const isHe = i18n.language === 'he'
+  const isRtl = useRtl()
+  const isHe = isRtl
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)

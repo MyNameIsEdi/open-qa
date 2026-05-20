@@ -4,6 +4,7 @@ import {
   BookOpen, LayoutList, Activity, FileText, PlusCircle,
   X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+import { useRtl } from '../hooks/useRtl'
 
 const GROUPS = [
   {
@@ -54,6 +55,7 @@ interface SidebarProps {
 
 export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: SidebarProps) {
   const location = useLocation()
+  const isRtl = useRtl()
 
   return (
     <>
@@ -69,18 +71,18 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
       {/* Sidebar panel */}
       <aside
         className={`
-          fixed left-0 top-14 bottom-0 z-40
-          bg-zinc-900 border-r border-zinc-800
-          flex flex-col select-none
+          fixed top-14 bottom-0 z-40
+          bg-zinc-900 flex flex-col select-none
           transition-all duration-300 ease-in-out
+          ${isRtl ? 'right-0 border-l border-zinc-800' : 'left-0 border-r border-zinc-800'}
           ${collapsed ? 'w-14' : 'w-56'}
-          ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          ${open ? 'translate-x-0' : isRtl ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         {/* Mobile close button */}
         <button
           onClick={onClose}
-          className="md:hidden absolute top-3 right-3 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          className={`md:hidden absolute top-3 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ${isRtl ? 'left-3' : 'right-3'}`}
           aria-label="Close menu"
         >
           <X size={15} />
@@ -145,7 +147,10 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
             className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+            {collapsed
+              ? (isRtl ? <ChevronLeft size={15} /> : <ChevronRight size={15} />)
+              : (isRtl ? <ChevronRight size={15} /> : <ChevronLeft size={15} />)
+            }
           </button>
         </div>
       </aside>
