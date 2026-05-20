@@ -4,6 +4,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
   Circle, AlertTriangle, X, Settings, LayoutDashboard,
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
+  Search, Clock, TrendingUp,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -32,6 +33,13 @@ interface TestSuite {
 interface ArtifactModalState {
   testId: string
   testTitle: string
+}
+
+interface RunHistory {
+  label: string
+  passed: number
+  failed: number
+  skipped: number
 }
 
 // ─── Playwright Config Type ───────────────────────────────────────────────────
@@ -127,6 +135,100 @@ const INITIAL_SUITES: TestSuite[] = [
     ],
   },
 ]
+
+// ─── Run History ──────────────────────────────────────────────────────────────
+
+const MOCK_HISTORY: RunHistory[] = [
+  { label: 'May 14', passed: 17, failed: 4, skipped: 1 },
+  { label: 'May 15', passed: 18, failed: 3, skipped: 1 },
+  { label: 'May 16', passed: 19, failed: 2, skipped: 1 },
+  { label: 'May 17', passed: 20, failed: 1, skipped: 1 },
+  { label: 'May 18', passed: 18, failed: 3, skipped: 1 },
+  { label: 'May 19', passed: 19, failed: 2, skipped: 1 },
+  { label: 'May 20', passed: 16, failed: 2, skipped: 2 },
+]
+
+const CHART_H = 56
+
+function HistoryChart({ history }: { history: RunHistory[] }) {
+  const maxTotal = Math.max(...history.map(h => h.passed + h.failed + h.skipped), 1)
+
+  return (
+    <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+        <div className="flex items-center gap-2">
+          <TrendingUp size={13} style={{ color: '#3b82f6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· last 7 runs</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {([
+            ['#10b981', 'Passed'],
+            ['#ef4444', 'Failed'],
+            ['#fbbf24', 'Skipped'],
+          ] as const).map(([color, label]) => (
+            <span key={label} className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <span className="w-2 h-2 rounded-sm inline-block shrink-0" style={{ backgroundColor: color }} />
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Bars */}
+      <div className="px-5 py-3">
+        <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
+          {history.map((run, i) => {
+            const passH = Math.round((run.passed  / maxTotal) * CHART_H)
+            const failH = Math.round((run.failed  / maxTotal) * CHART_H)
+            const skipH = Math.round((run.skipped / maxTotal) * CHART_H)
+            const isLast = i === history.length - 1
+
+            return (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                {/* Bar column — grows from bottom using absolute positioning */}
+                <div style={{ flex: 1, width: '100%', position: 'relative' }}>
+                  {passH > 0 && (
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      height: passH,
+                      backgroundColor: isLast ? '#10b981' : '#6ee7b7',
+                      borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0',
+                    }} />
+                  )}
+                  {failH > 0 && (
+                    <div style={{
+                      position: 'absolute', bottom: passH, left: 0, right: 0,
+                      height: failH,
+                      backgroundColor: isLast ? '#ef4444' : '#fca5a5',
+                      borderRadius: skipH === 0 ? '3px 3px 0 0' : '0',
+                    }} />
+                  )}
+                  {skipH > 0 && (
+                    <div style={{
+                      position: 'absolute', bottom: passH + failH, left: 0, right: 0,
+                      height: skipH,
+                      backgroundColor: isLast ? '#fbbf24' : '#fde68a',
+                      borderRadius: '3px 3px 0 0',
+                    }} />
+                  )}
+                </div>
+                {/* Date label */}
+                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, lineHeight: 1, fontWeight: isLast ? 700 : 400 }}>
+                  {run.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Config Generator ─────────────────────────────────────────────────────────
 
@@ -545,7 +647,8 @@ function FailedActions({
   }
 
   return (
-    <div className="flex items-center gap-1.5 px-5 py-2 border-t" style={{ borderColor: 'var(--border)', backgroundColor: '#fef9f9' }}>
+    <div className="flex items-center gap-1.5 px-5 py-2 border-t"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
       <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--text-muted)' }}>Actions:</span>
       <button
         onClick={exportJira}
@@ -577,6 +680,7 @@ export default function PlaywrightDashboard() {
   const [activeTab, setActiveTab]         = useState<FilterKey>('all')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
   const [config, setConfig]               = useState<PlaywrightConfig>(DEFAULT_CONFIG)
+  const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
   const [hoveredTest, setHoveredTest]     = useState<string | null>(null)
@@ -597,18 +701,35 @@ export default function PlaywrightDashboard() {
     return denominator > 0 ? Math.round((counts.passed / denominator) * 100) : 0
   }, [counts])
 
+  // ── Slowest tests (top 3) ───────────────────────────────────────────────────
+  const slowestTests = useMemo(() =>
+    [...allTests]
+      .filter(t => t.duration > 0)
+      .sort((a, b) => b.duration - a.duration)
+      .slice(0, 3),
+    [allTests]
+  )
+
   // ── Filtered suites ─────────────────────────────────────────────────────────
   const filteredSuites = useMemo(() =>
     suites
-      .map(s => ({ ...s, tests: activeTab === 'all' ? s.tests : s.tests.filter(t => t.status === activeTab) }))
+      .map(s => ({
+        ...s,
+        tests: s.tests.filter(t => {
+          const matchesTab    = activeTab === 'all' || t.status === activeTab
+          const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
+          return matchesTab && matchesSearch
+        }),
+      }))
       .filter(s => s.tests.length > 0),
-    [suites, activeTab]
+    [suites, activeTab, searchQuery]
   )
 
   // ── Run simulation ──────────────────────────────────────────────────────────
   const runTests = useCallback(async () => {
     setRunning(true)
     setExpandedErrors({})
+    setSearchQuery('')
     setSuites(INITIAL_SUITES.map(s => ({
       ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })),
     })))
@@ -629,7 +750,7 @@ export default function PlaywrightDashboard() {
     setRunning(false)
   }, [])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}) }
+  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery('') }
 
   const exportReport = () => {
     const report = {
@@ -746,19 +867,20 @@ export default function PlaywrightDashboard() {
         {/* ── Dashboard view ──────────────────────────────────────────────────── */}
         {activeView === 'dashboard' && (
           <>
-            {/* Metric cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+            {/* Metric cards — 6 cards */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
               {([
-                { label: 'Total',     value: counts.total,   color: 'var(--text-main)' },
-                { label: 'Passed',    value: counts.passed,  color: '#059669' },
-                { label: 'Failed',    value: counts.failed,  color: '#ef4444' },
-                { label: 'Skipped',   value: counts.skipped, color: '#d97706' },
-                { label: 'Pass Rate', value: `${passRate}%`, color: passRate >= 80 ? '#059669' : '#ef4444' },
+                { label: 'Total',     value: counts.total,            color: 'var(--text-main)' },
+                { label: 'Passed',    value: counts.passed,           color: '#059669' },
+                { label: 'Failed',    value: counts.failed,           color: '#ef4444' },
+                { label: 'Skipped',   value: counts.skipped,          color: '#d97706' },
+                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444' },
+                { label: 'Duration',  value: formatMs(totalDuration), color: 'var(--text-main)' },
               ] as const).map(({ label, value, color }) => (
                 <div key={label} className="p-4 rounded-2xl border text-center shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                  <p className="text-2xl font-black" style={{ color }}>{value}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  <p className="text-2xl font-black leading-none" style={{ color }}>{value}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
                 </div>
               ))}
             </div>
@@ -771,34 +893,64 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex items-center gap-1.5 mb-5 flex-wrap">
-              {([
-                { key: 'all',     label: `All (${counts.total})` },
-                { key: 'passed',  label: `Passed (${counts.passed})` },
-                { key: 'failed',  label: `Failed (${counts.failed})` },
-                { key: 'skipped', label: `Skipped (${counts.skipped})` },
-              ] as const).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border"
-                  style={activeTab === key
-                    ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
-                    : { background: 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
-                  }
-                >
-                  {label}
-                </button>
-              ))}
+            {/* Run history chart */}
+            <HistoryChart history={MOCK_HISTORY} />
+
+            {/* Search + Filter tabs */}
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
+              {/* Search */}
+              <div className="relative flex-1 min-w-44">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search tests…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                  >
+                    <X size={12} style={{ color: 'var(--text-muted)' }} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {([
+                  { key: 'all',     label: `All (${counts.total})` },
+                  { key: 'passed',  label: `Passed (${counts.passed})` },
+                  { key: 'failed',  label: `Failed (${counts.failed})` },
+                  { key: 'skipped', label: `Skipped (${counts.skipped})` },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border"
+                    style={activeTab === key
+                      ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
+                      : { background: 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Test suite accordion */}
             <div className="flex flex-col gap-3">
               {filteredSuites.map(suite => {
-                const passed = suite.tests.filter(t => t.status === 'passed').length
-                const status = suiteStatus(suite)
-                const isOpen = expandedSuites[suite.id]
+                const passed        = suite.tests.filter(t => t.status === 'passed').length
+                const status        = suiteStatus(suite)
+                const isOpen        = expandedSuites[suite.id]
+                const suiteDuration = suite.tests.reduce((a, t) => a + t.duration, 0)
+                const maxDuration   = Math.max(...suite.tests.map(t => t.duration), 1)
 
                 return (
                   <div key={suite.id} className="rounded-2xl border shadow-sm overflow-hidden"
@@ -817,6 +969,11 @@ export default function PlaywrightDashboard() {
                         <span className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>{suite.title}</span>
                         <span className="ml-2 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{suite.file}</span>
                       </span>
+                      {suiteDuration > 0 && (
+                        <span className="text-xs font-mono shrink-0 hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+                          {formatMs(suiteDuration)}
+                        </span>
+                      )}
                       <span className="text-xs shrink-0 font-medium" style={{ color: 'var(--text-muted)' }}>
                         {passed}/{suite.tests.length} passed
                       </span>
@@ -837,7 +994,7 @@ export default function PlaywrightDashboard() {
                             <div key={test.id} className={i > 0 ? 'border-t' : ''} style={{ borderColor: 'var(--border)' }}>
                               <div
                                 className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${isFailed ? 'cursor-pointer' : ''}`}
-                                style={{ backgroundColor: isFailed && (hoveredTest === test.id) ? '#fff5f5' : undefined }}
+                                style={{ backgroundColor: isFailed && hoveredTest === test.id ? 'rgba(239,68,68,0.05)' : undefined }}
                                 onMouseEnter={() => isFailed && setHoveredTest(test.id)}
                                 onMouseLeave={() => setHoveredTest(null)}
                                 onClick={() => isFailed && toggleError(test.id)}
@@ -849,6 +1006,21 @@ export default function PlaywrightDashboard() {
                                   <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
                                     <AlertTriangle size={10} /> {test.retries} retry
                                   </span>
+                                )}
+
+                                {/* Duration bar */}
+                                {test.duration > 0 && (
+                                  <div className="w-14 h-1 rounded-full overflow-hidden shrink-0 hidden sm:block"
+                                    style={{ backgroundColor: 'var(--border)' }}>
+                                    <div
+                                      className="h-full rounded-full transition-all duration-300"
+                                      style={{
+                                        width: `${(test.duration / maxDuration) * 100}%`,
+                                        backgroundColor: test.status === 'failed' ? '#ef4444'
+                                          : test.status === 'passed' ? '#10b981' : '#fbbf24',
+                                      }}
+                                    />
+                                  </div>
                                 )}
 
                                 <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>
@@ -868,7 +1040,7 @@ export default function PlaywrightDashboard() {
                               {isFailed && errorOpen && (
                                 <div
                                   className="mx-4 mb-3 p-3 rounded-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap border-l-2 border-red-400"
-                                  style={{ backgroundColor: '#fff5f5', color: '#dc2626' }}
+                                  style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626' }}
                                 >
                                   {test.error}
                                 </div>
@@ -885,10 +1057,66 @@ export default function PlaywrightDashboard() {
               {filteredSuites.length === 0 && (
                 <div className="text-center py-16 rounded-2xl border shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No tests match the current filter.</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {searchQuery
+                      ? `No tests match "${searchQuery}"`
+                      : 'No tests match the current filter.'}
+                  </p>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="mt-2 text-xs text-blue-500 hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Slowest tests */}
+            {slowestTests.length > 0 && !searchQuery && (
+              <div className="mt-4 rounded-2xl border shadow-sm overflow-hidden"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                <div className="flex items-center gap-2 px-4 py-3 border-b"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                  <Clock size={13} style={{ color: '#f59e0b' }} />
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Slowest Tests</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                    style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                    top 3
+                  </span>
+                </div>
+                <div>
+                  {slowestTests.map((test, i) => {
+                    const maxSlow = slowestTests[0].duration
+                    return (
+                      <div
+                        key={test.id}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`}
+                        style={{ borderColor: 'var(--border)' }}
+                      >
+                        <span className="text-xs font-bold w-5 shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>
+                          #{i + 1}
+                        </span>
+                        <StatusIcon status={test.status} size={13} />
+                        <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
+                        <div className="w-24 h-1.5 rounded-full overflow-hidden shrink-0 hidden sm:block"
+                          style={{ backgroundColor: 'var(--border)' }}>
+                          <div
+                            className="h-full rounded-full bg-amber-400"
+                            style={{ width: `${(test.duration / maxSlow) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono font-semibold shrink-0" style={{ color: '#d97706' }}>
+                          {formatMs(test.duration)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </>
         )}
 
