@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useRtl } from '../hooks/useRtl'
 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
@@ -35,6 +36,8 @@ import { SqlQaQueriesAnimation } from '../components/guides/SqlQaQueriesAnimatio
 import { AiTestingAnimation } from '../components/guides/AiTestingAnimation'
 import { DevOpsQaAnimation } from '../components/guides/DevOpsQaAnimation'
 import { SecurityTestingAnimation } from '../components/guides/SecurityTestingAnimation'
+import { InterviewTipsAnimation } from '../components/guides/InterviewTipsAnimation'
+import { LearningSummaryAnimation } from '../components/guides/LearningSummaryAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':         PyramidAnimation,
@@ -57,7 +60,9 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'sql-qa-queries':   SqlQaQueriesAnimation,
   'ai-testing':       AiTestingAnimation,
   'devops-qa':        DevOpsQaAnimation,
-  'security-testing': SecurityTestingAnimation,
+  'security-testing':  SecurityTestingAnimation,
+  'interview-tips':    InterviewTipsAnimation,
+  'learning-summary':  LearningSummaryAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
@@ -348,7 +353,7 @@ function SectionRow({ section, completed, active, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${
+      className={`w-full flex items-start gap-3 px-4 py-3 text-start transition-colors ${
         active ? 'bg-primary-50' : 'hover:bg-sand-400'
       }`}
     >
@@ -387,7 +392,7 @@ function ModuleGroup({ module, completed, activeId, onSelect }: {
     <div className="border-b" style={{ borderColor: 'var(--border)' }}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-sand-400 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-3 text-start hover:bg-sand-400 transition-colors"
       >
         <span className="text-base shrink-0">{module.icon}</span>
         <span className="flex-1 min-w-0">
@@ -417,7 +422,8 @@ function ModuleGroup({ module, completed, activeId, onSelect }: {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function GuidesPage() {
-  const isHe = i18n.language === 'he'
+  const isRtl = useRtl()
+  const isHe = isRtl
   const { completed, toggle } = useCompleted()
 
   const allSections = MODULES.flatMap(m => m.sections)
@@ -545,7 +551,7 @@ export default function GuidesPage() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:bg-sand-400 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: 'var(--text-main)', border: '1px solid var(--border)' }}
                 >
-                  {isHe ? '→ הקודם' : '← Previous'}
+                  {isHe ? '← הקודם' : '← Previous'}
                 </button>
 
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -557,7 +563,7 @@ export default function GuidesPage() {
                   disabled={activeIdx === total - 1}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  {isHe ? '← הבא' : 'Next →'}
+                  {isHe ? 'הבא →' : 'Next →'}
                 </button>
               </div>
             </div>

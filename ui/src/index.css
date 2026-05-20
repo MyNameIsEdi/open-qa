@@ -39,6 +39,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+[dir="rtl"] body,
+[dir="rtl"] button,
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  font-family: 'Heebo', 'Inter', -apple-system, sans-serif;
+}
+
+/* Flip physical margin/padding helpers under RTL */
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+
 code, pre, .font-mono {
   font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 }
