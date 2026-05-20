@@ -24,6 +24,17 @@ import { PomAnimation } from '../components/guides/PomAnimation'
 import { ApiPlaywrightAnimation } from '../components/guides/ApiPlaywrightAnimation'
 import { ApiPostmanAnimation } from '../components/guides/ApiPostmanAnimation'
 import { LoadTypesAnimation } from '../components/guides/LoadTypesAnimation'
+import { IotIntroAnimation } from '../components/guides/IotIntroAnimation'
+import { SqlIntroAnimation } from '../components/guides/SqlIntroAnimation'
+import { DbFundamentalsAnimation } from '../components/guides/DbFundamentalsAnimation'
+import { SelectWhereAnimation } from '../components/guides/SelectWhereAnimation'
+import { AndOrOrderAnimation } from '../components/guides/AndOrOrderAnimation'
+import { GroupHavingAnimation } from '../components/guides/GroupHavingAnimation'
+import { JoinsAnimation } from '../components/guides/JoinsAnimation'
+import { SqlQaQueriesAnimation } from '../components/guides/SqlQaQueriesAnimation'
+import { AiTestingAnimation } from '../components/guides/AiTestingAnimation'
+import { DevOpsQaAnimation } from '../components/guides/DevOpsQaAnimation'
+import { SecurityTestingAnimation } from '../components/guides/SecurityTestingAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':         PyramidAnimation,
@@ -36,6 +47,17 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'api-playwright':   ApiPlaywrightAnimation,
   'api-postman':      ApiPostmanAnimation,
   'load-types':       LoadTypesAnimation,
+  'iot-intro':        IotIntroAnimation,
+  'sql-intro':        SqlIntroAnimation,
+  'db-fundamentals':  DbFundamentalsAnimation,
+  'select-where':     SelectWhereAnimation,
+  'and-or-order':     AndOrOrderAnimation,
+  'group-having':     GroupHavingAnimation,
+  'joins':            JoinsAnimation,
+  'sql-qa-queries':   SqlQaQueriesAnimation,
+  'ai-testing':       AiTestingAnimation,
+  'devops-qa':        DevOpsQaAnimation,
+  'security-testing': SecurityTestingAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
