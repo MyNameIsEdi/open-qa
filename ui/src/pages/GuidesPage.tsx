@@ -21,6 +21,8 @@ import { SetupPlaywrightAnimation } from '../components/guides/SetupPlaywrightAn
 import { FirstTestAnimation } from '../components/guides/FirstTestAnimation'
 import { LocatorsAnimation } from '../components/guides/LocatorsAnimation'
 import { PomAnimation } from '../components/guides/PomAnimation'
+import { ApiPlaywrightAnimation } from '../components/guides/ApiPlaywrightAnimation'
+import { ApiPostmanAnimation } from '../components/guides/ApiPostmanAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':        PyramidAnimation,
@@ -30,6 +32,8 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'first-test':       FirstTestAnimation,
   'locators':         LocatorsAnimation,
   'pom':              PomAnimation,
+  'api-playwright':   ApiPlaywrightAnimation,
+  'api-postman':      ApiPostmanAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
