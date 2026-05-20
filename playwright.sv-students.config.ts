@@ -12,7 +12,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   workers: 1,
   timeout: 20000,                // 20 s per test (Render cold-start can be slow)
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report/sv-students' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: 'playwright-report/sv-students' }],
+    ['json', { outputFile: 'test-results/pw-results.json' }],
+  ],
 
   use: {
     baseURL: 'https://sv-students-recommend.onrender.com',
