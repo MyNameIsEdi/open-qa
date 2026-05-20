@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
+import { useRtl } from './hooks/useRtl'
 import HomePage from './pages/HomePage'
 import AgentsPage from './pages/AgentsPage'
 import SkillsPage from './pages/SkillsPage'
@@ -18,6 +19,7 @@ import PlaywrightDashboard from './pages/PlaywrightDashboard'
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const isRtl = useRtl()
 
   return (
     <HashRouter>
@@ -33,7 +35,9 @@ export default function App() {
 
         <main
           className={`pt-14 transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? 'md:pl-14' : 'md:pl-56'
+            isRtl
+              ? sidebarCollapsed ? 'md:pr-14' : 'md:pr-56'
+              : sidebarCollapsed ? 'md:pl-14' : 'md:pl-56'
           }`}
         >
           <Routes>

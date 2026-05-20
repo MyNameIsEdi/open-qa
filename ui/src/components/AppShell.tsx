@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
+import { useRtl } from '../hooks/useRtl'
 
 interface AppShellProps {
   children: React.ReactNode
 }
 
 export default function AppShell({ children }: AppShellProps) {
+  const isRtl = useRtl()
   // Desktop: icon-only collapsed state (persisted)
   const [collapsed, setCollapsed] = useState(() =>
     localStorage.getItem('sidebar_collapsed') === 'true'
@@ -44,7 +46,11 @@ export default function AppShell({ children }: AppShellProps) {
       />
 
       {/* ── Right column: topbar + content ── */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className={`flex flex-col flex-1 min-w-0 overflow-hidden transition-[padding] duration-300 ${
+        isRtl
+          ? collapsed ? 'md:pr-14' : 'md:pr-56'
+          : collapsed ? 'md:pl-14' : 'md:pl-56'
+      }`}>
         <TopBar onMenuClick={handleMenuClick} />
 
         {/* Scrollable page content */}
