@@ -1,15 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import SearchIcon from '@mui/icons-material/Search'
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 import CodeSnippet from '../components/CodeSnippet'
 
-interface Section {
-  title: string
-  snippets: { label: string; code: string; language: string }[]
+interface Snippet { label: string; code: string; language: string }
+interface Section { title: string; snippets: Snippet[] }
+
+// ─── Section metadata ─────────────────────────────────────────────────────────
+const SECTION_META: Record<string, { icon: string; color: string; category: string }> = {
+  'Playwright Locators':            { icon: '🎯', color: '#3b82f6', category: 'Selectors' },
+  'Common Assertions (expect)':     { icon: '✅', color: '#22c55e', category: 'Assertions' },
+  'Network Intercept Patterns':     { icon: '🌐', color: '#8b5cf6', category: 'Network' },
+  'Page Object Model':              { icon: '📦', color: '#f59e0b', category: 'Architecture' },
+  'playwright.config.ts Templates': { icon: '⚙️', color: '#6b7280', category: 'Config' },
+  'GitHub Actions CI':              { icon: '🔄', color: '#ec4899', category: 'CI/CD' },
+  'API Testing (APIRequestContext)':{ icon: '🔌', color: '#14b8a6', category: 'API' },
+  'Accessibility Testing':          { icon: '♿', color: '#f97316', category: 'A11y' },
+  'Mobile & Responsive':            { icon: '📱', color: '#06b6d4', category: 'Mobile' },
+  'Test Data with Faker.js':        { icon: '🎲', color: '#84cc16', category: 'Data' },
 }
 
+// ─── All sections data ────────────────────────────────────────────────────────
 const sections: Section[] = [
   {
     title: 'Playwright Locators',
@@ -574,66 +590,294 @@ for (const user of testUsers) {
   },
 ]
 
-function CheatSection({ section }: { section: Section }) {
+// ─── All unique categories for filter chips ───────────────────────────────────
+const ALL_CATEGORIES = ['All', ...Array.from(new Set(sections.map(s => SECTION_META[s.title]?.category ?? 'Other')))]
+
+// ─── Section component ────────────────────────────────────────────────────────
+function CheatSection({
+  section,
+  open,
+  onToggle,
+  query,
+}: {
+  section: Section
+  open: boolean
+  onToggle: () => void
+  query: string
+}) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(true)
+  const meta = SECTION_META[section.title]
+
+  // Filter snippets by search query
+  const visibleSnippets = query
+    ? section.snippets.filter(s =>
+        s.label.toLowerCase().includes(query.toLowerCase()) ||
+        s.code.toLowerCase().includes(query.toLowerCase())
+      )
+    : section.snippets
+
+  if (query && visibleSnippets.length === 0) return null
+
+  const sectionTitle = t(`cheatsheet.${section.title}`, { defaultValue: section.title })
 
   return (
     <div
       className="rounded-2xl border overflow-hidden"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
     >
+      {/* Section header */}
       <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-neutral-50 transition-colors text-left"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-5 py-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+        style={{
+          borderInlineStart: `3px solid ${meta?.color ?? '#6b7280'}`,
+          backgroundColor: 'var(--bg-card)',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+        aria-expanded={open}
       >
-        <h2 className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>
-          {t(`cheatsheet.${section.title}`, { defaultValue: section.title })}
-          <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-            {t('cheatsheet.snippets', { count: section.snippets.length })}
+        {/* Icon */}
+        {meta && (
+          <span
+            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-base"
+            style={{ background: `${meta.color}18`, border: `1px solid ${meta.color}30` }}
+          >
+            {meta.icon}
           </span>
-        </h2>
-        {open ? (
-          <ExpandLessIcon sx={{ fontSize: 18 }} style={{ color: 'var(--text-muted)' }} />
-        ) : (
-          <ExpandMoreIcon sx={{ fontSize: 18 }} style={{ color: 'var(--text-muted)' }} />
         )}
+
+        {/* Title + category */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm leading-snug" style={{ color: 'var(--text-main)' }}>
+            {sectionTitle}
+          </p>
+          {meta && (
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {meta.category}
+            </p>
+          )}
+        </div>
+
+        {/* Snippet count badge */}
+        <span
+          className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums"
+          style={{
+            background: open ? `${meta?.color ?? '#6b7280'}15` : 'var(--bg-body)',
+            color: open ? (meta?.color ?? 'var(--text-muted)') : 'var(--text-muted)',
+            border: `1px solid ${open ? (meta?.color ?? 'var(--border)') + '40' : 'var(--border)'}`,
+          }}
+        >
+          {t('cheatsheet.snippets', { count: visibleSnippets.length })}
+        </span>
+
+        {/* Chevron — always up/down, correct in both LTR and RTL */}
+        <span className="shrink-0 transition-transform duration-200" style={{ color: 'var(--text-muted)' }}>
+          {open
+            ? <ExpandLessIcon sx={{ fontSize: 18 }} />
+            : <ExpandMoreIcon sx={{ fontSize: 18 }} />}
+        </span>
       </button>
 
+      {/* Expanded snippet grid */}
       {open && (
-        <div className="px-5 pb-5 grid sm:grid-cols-2 gap-4">
-          {section.snippets.map((s) => (
-            <div key={s.label} className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                {t(`cheatsheet.${s.label}`, { defaultValue: s.label })}
-              </p>
-              <CodeSnippet code={s.code} language={s.language} />
-            </div>
-          ))}
+        <div
+          className="px-5 pb-5 pt-1 grid gap-4"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' }}
+        >
+          {visibleSnippets.map((s) => {
+            const label = t(`cheatsheet.${s.label}`, { defaultValue: s.label })
+            return (
+              <div key={s.label} className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: meta?.color ?? '#6b7280' }}
+                  />
+                  <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
+                    {label}
+                  </p>
+                </div>
+                <CodeSnippet code={s.code} language={s.language} />
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function CheatsheetPage() {
   const { t } = useTranslation()
+  const [query, setQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(sections.map(s => [s.title, true]))
+  )
+
+  const allOpen = Object.values(openSections).every(Boolean)
+
+  const toggleSection = (title: string) =>
+    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }))
+
+  const toggleAll = () => {
+    const next = !allOpen
+    setOpenSections(Object.fromEntries(sections.map(s => [s.title, next])))
+  }
+
+  // Filter sections by category chip and search query
+  const visibleSections = useMemo(() => {
+    return sections.filter(section => {
+      const meta = SECTION_META[section.title]
+      const categoryMatch = activeCategory === 'All' || meta?.category === activeCategory
+      if (!categoryMatch) return false
+      if (!query) return true
+      // Section title matches OR at least one snippet matches
+      const titleMatch = section.title.toLowerCase().includes(query.toLowerCase())
+      const snippetMatch = section.snippets.some(
+        s =>
+          s.label.toLowerCase().includes(query.toLowerCase()) ||
+          s.code.toLowerCase().includes(query.toLowerCase())
+      )
+      return titleMatch || snippetMatch
+    })
+  }, [query, activeCategory])
+
+  const totalSnippets = visibleSections.reduce((acc, s) => {
+    if (!query) return acc + s.snippets.length
+    return acc + s.snippets.filter(
+      sn => sn.label.toLowerCase().includes(query.toLowerCase()) || sn.code.toLowerCase().includes(query.toLowerCase())
+    ).length
+  }, 0)
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-          <MenuBookOutlinedIcon className="text-primary-500" sx={{ fontSize: 24 }} />
-          {t('cheatsheet.title')}
-        </h1>
+    <div className="max-w-5xl mx-auto px-4 py-10 animate-fade-up">
+
+      {/* ── Page header ── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <MenuBookOutlinedIcon sx={{ fontSize: 22 }} style={{ color: 'var(--primary, #1a3a8f)' }} />
+          <h1 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>
+            {t('cheatsheet.title')}
+          </h1>
+        </div>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
           {t('cheatsheet.subtitle')}
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
-        {sections.map((section) => (
-          <CheatSection key={section.title} section={section} />
-        ))}
+      {/* ── Controls row: search + expand-all ── */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+
+        {/* Search input */}
+        <div className="relative flex-1 min-w-[200px]">
+          <SearchIcon
+            sx={{ fontSize: 16 }}
+            className="absolute top-1/2 -translate-y-1/2"
+            style={{
+              insetInlineStart: 12,
+              color: 'var(--text-muted)',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={`${t('agents.search_placeholder', { defaultValue: 'Search snippets…' })}`}
+            className="w-full rounded-xl border text-sm py-2 transition-colors focus:outline-none focus:ring-2"
+            style={{
+              paddingInlineStart: 36,
+              paddingInlineEnd: 12,
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+            }}
+          />
+        </div>
+
+        {/* Expand / Collapse all */}
+        <button
+          onClick={toggleAll}
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors hover:bg-sand-400"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+        >
+          {allOpen
+            ? <><UnfoldLessIcon sx={{ fontSize: 15 }} /> {t('common.done', { defaultValue: 'Collapse all' })}</>
+            : <><UnfoldMoreIcon sx={{ fontSize: 15 }} /> {t('common.run', { defaultValue: 'Expand all' })}</>}
+        </button>
+      </div>
+
+      {/* ── Category filter chips ── */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {ALL_CATEGORIES.map(cat => {
+          const isActive = cat === activeCategory
+          // Find the color for this category
+          const sectionForCat = sections.find(s => SECTION_META[s.title]?.category === cat)
+          const catColor = sectionForCat ? SECTION_META[sectionForCat.title]?.color : '#6b7280'
+          return (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-all"
+              style={isActive
+                ? {
+                    background: cat === 'All' ? '#1a3a8f' : catColor,
+                    color: '#fff',
+                    borderColor: 'transparent',
+                    boxShadow: `0 2px 8px ${cat === 'All' ? '#1a3a8f' : catColor}40`,
+                  }
+                : {
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-muted)',
+                    borderColor: 'var(--border)',
+                  }
+              }
+            >
+              {cat === 'All' ? (t('common.active', { defaultValue: 'All' })) : cat}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Result count when filtering ── */}
+      {(query || activeCategory !== 'All') && (
+        <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+          {visibleSections.length === 0
+            ? t('agents.no_match', { defaultValue: 'No results found.' })
+            : `${visibleSections.length} ${visibleSections.length === 1 ? 'section' : 'sections'} · ${totalSnippets} snippets`}
+        </p>
+      )}
+
+      {/* ── Section list ── */}
+      <div className="flex flex-col gap-3">
+        {visibleSections.length === 0 ? (
+          <div className="text-center py-16 rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+            <p className="text-3xl mb-3">🔍</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
+              {t('agents.no_match', { defaultValue: 'No snippets match your search.' })}
+            </p>
+            <button
+              onClick={() => { setQuery(''); setActiveCategory('All') }}
+              className="mt-3 text-xs underline"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          visibleSections.map(section => (
+            <CheatSection
+              key={section.title}
+              section={section}
+              open={openSections[section.title] ?? true}
+              onToggle={() => toggleSection(section.title)}
+              query={query}
+            />
+          ))
+        )}
       </div>
     </div>
   )
