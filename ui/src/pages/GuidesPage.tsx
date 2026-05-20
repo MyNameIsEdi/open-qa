@@ -13,6 +13,11 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined'
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
+import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined'
+import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import i18n from '../i18n'
 import CodeSnippet from '../components/CodeSnippet'
 import { MODULES, type GuideSection, type GuideModule } from '../data/guidesData'
@@ -148,7 +153,8 @@ function DownloadCards({ sectionId, isHe }: { sectionId: string; isHe: boolean }
                 <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{card.size}</span>
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all hover:-translate-y-0.5"
                   style={{ background: '#1a3a8f' }}>
-                  ⬇ {isHe ? 'הורד' : 'Download'}
+                  <DownloadOutlinedIcon sx={{ fontSize: 12 }} />
+                  {isHe ? 'הורד' : 'Download'}
                 </button>
               </div>
             </div>
@@ -283,15 +289,29 @@ const ANIMATION_LABELS: Record<string, [string, string]> = {
   'learning-summary': ['Full course map — everything covered', 'מפת הקורס המלאה — כל מה שנלמד'],
 }
 
-function AnimationLabel({ sectionId, isHe }: { sectionId: string; isHe: boolean }) {
+function AnimationFigure({ sectionId, isHe, Animation }: {
+  sectionId: string; isHe: boolean; Animation: React.ComponentType
+}) {
   const label = ANIMATION_LABELS[sectionId]
-  if (!label) return null
   return (
-    <div className="flex items-center gap-2 text-[11px] font-medium px-1 mb-1"
-      style={{ color: 'var(--text-muted)' }}>
-      <span className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ background: '#22c55e' }} />
-      {isHe ? label[1] : label[0]}
-    </div>
+    <figure className="m-0 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+      <div dir="ltr">
+        <Animation />
+      </div>
+      <figcaption
+        className="flex items-center gap-2 px-3 py-2 border-t text-[11px]"
+        style={{ backgroundColor: 'var(--bg-body)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+      >
+        <PlayCircleOutlinedIcon sx={{ fontSize: 13, color: '#22c55e', flexShrink: 0 }} />
+        <span className="flex-1 min-w-0 truncate">
+          {label ? (isHe ? label[1] : label[0]) : ''}
+        </span>
+        <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+          style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+          {isHe ? 'הדגמה חיה' : 'Live'}
+        </span>
+      </figcaption>
+    </figure>
   )
 }
 
@@ -573,6 +593,13 @@ function LessonContent({ section, completed, onToggle, isHe }: {
   const Animation = SECTION_ANIMATIONS[section.id]
   const callouts  = SECTION_CALLOUTS[section.id] ?? []
 
+  // Split body into paragraphs so the animation appears contextually inline
+  // after the first paragraph (which introduces the concept), not as a header
+  const paragraphs = body ? body.split('\n\n') : []
+  const splitAt    = 1 // one intro paragraph before the animation
+  const parasBefore = paragraphs.slice(0, splitAt)
+  const parasAfter  = paragraphs.slice(splitAt)
+
   return (
     <div className="flex flex-col gap-5">
 
@@ -593,35 +620,40 @@ function LessonContent({ section, completed, onToggle, isHe }: {
         </p>
       )}
 
-      {/* Callout boxes — appear before animation, framing what the learner is about to see */}
+      {/* Callout boxes */}
       {callouts.map((c, i) => <CalloutBox key={i} callout={c} isHe={isHe} />)}
 
-      {/* Animation — with placement label explaining contextual position */}
-      {Animation && (
-        <div className="flex flex-col gap-1">
-          <AnimationLabel sectionId={section.id} isHe={isHe} />
-          <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-            <Animation />
-          </div>
-        </div>
-      )}
-
-      {/* Bug lifecycle — only for intro-qa, placed after pyramid to complete the QA mental model */}
-      {section.id === 'intro-qa' && <BugLifecycle isHe={isHe} />}
-
-      {/* Decision matrix — only for when-to-automate, placed after analogy text */}
-      {section.id === 'when-to-automate' && <DecisionMatrix isHe={isHe} />}
-
-      {/* Body paragraphs */}
-      {body && (
-        <div className="flex flex-col gap-3.5 rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          {body.split('\n\n').map((para, i) => (
+      {/* First body paragraph — introduces the concept the animation will visualise */}
+      {parasBefore.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {parasBefore.map((para, i) => (
             <p key={i} className="text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{para}</p>
           ))}
         </div>
       )}
 
-      {/* Key concepts — styled pill tags instead of plain bullets */}
+      {/* Animation — inline figure, anchored right after the intro paragraph.
+          dir="ltr" prevents RTL mode from flipping terminal text / SVG annotations. */}
+      {Animation && (
+        <AnimationFigure sectionId={section.id} isHe={isHe} Animation={Animation} />
+      )}
+
+      {/* Bug lifecycle — only for intro-qa, placed after pyramid animation */}
+      {section.id === 'intro-qa' && <BugLifecycle isHe={isHe} />}
+
+      {/* Decision matrix — only for when-to-automate, placed after animation */}
+      {section.id === 'when-to-automate' && <DecisionMatrix isHe={isHe} />}
+
+      {/* Remaining body paragraphs — detailed elaboration after the visual */}
+      {parasAfter.length > 0 && (
+        <div className="flex flex-col gap-3.5 rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          {parasAfter.map((para, i) => (
+            <p key={i} className="text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{para}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Key concepts — numbered list for scannability */}
       {concepts && concepts.length > 0 && (
         <div className="rounded-xl p-4" style={{ background: 'var(--bg-body)', border: '1px solid var(--border)' }}>
           <p className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"
@@ -629,24 +661,28 @@ function LessonContent({ section, completed, onToggle, isHe }: {
             <EmojiObjectsOutlinedIcon sx={{ fontSize: 13 }} />
             {isHe ? 'מושגי מפתח' : 'Key Concepts'}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <ul className="flex flex-col gap-2">
             {concepts.map((c, i) => {
               const t = TAG_COLORS[i % TAG_COLORS.length]
               return (
-                <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium"
-                  style={{ background: t.bg, color: t.color, border: `1px solid ${t.border}` }}>
-                  {c}
-                </span>
+                <li key={i} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                  <span className="shrink-0 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5"
+                    style={{ background: t.bg, color: t.color, border: `1px solid ${t.border}` }}>
+                    {i + 1}
+                  </span>
+                  <span style={{ color: 'var(--text-main)' }}>{c}</span>
+                </li>
               )
             })}
-          </div>
+          </ul>
         </div>
       )}
 
       {/* Code snippets */}
       {snippets.map((s, i) => (
         <div key={i}>
-          <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>
+          <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+            <CodeOutlinedIcon sx={{ fontSize: 13 }} />
             {isHe ? s.labelHe : s.label}
           </p>
           <CodeSnippet code={s.code} language={s.language} />
@@ -763,7 +799,8 @@ export default function GuidesPage() {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   const [activeId, setActiveId] = useState(() => allSections[0]?.id ?? '')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Default: open on desktop, closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768)
 
   const activeSection = allSections.find(s => s.id === activeId) ?? allSections[0]
   const activeModule  = MODULES.find(m => m.sections.some(s => s.id === activeId))
@@ -780,60 +817,108 @@ export default function GuidesPage() {
   return (
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 56px)' }}>
 
-      {/* ── Top progress bar ── */}
-      <div className="border-b px-4 py-3 flex items-center gap-4 flex-wrap"
+      {/* ── Top progress header ── */}
+      <div className="border-b px-4 py-2.5 flex items-center gap-3"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-        <div className="flex items-center gap-2 shrink-0">
-          <MenuBookOutlinedIcon sx={{ fontSize: 18 }} className="text-primary-600" />
-          <span className="font-black text-sm" style={{ color: 'var(--text-main)' }}>
+
+        {/* Mobile menu toggle */}
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border transition-colors hover:bg-sand-400 md:hidden"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          aria-label={isHe ? 'תוכן הקורס' : 'Course content'}
+        >
+          <MenuBookOutlinedIcon sx={{ fontSize: 16 }} />
+        </button>
+
+        {/* Course label — hidden on very small screens to save space */}
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          <MenuBookOutlinedIcon sx={{ fontSize: 16 }} style={{ color: 'var(--primary, #1a3a8f)' }} />
+          <span className="font-bold text-xs" style={{ color: 'var(--text-main)' }}>
             {isHe ? 'קורס QA אוטומציה' : 'QA Automation Course'}
           </span>
         </div>
-        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-body)' }}>
-            <div className="h-full rounded-full bg-primary-600 transition-all duration-500"
-              style={{ width: `${pct}%` }} />
+
+        {/* Progress bar — flex-1 fills remaining space */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-body)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #1a3a8f, #3b6fd4)' }}
+            />
           </div>
-          <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
-            {done}/{total} {isHe ? 'הושלמו' : 'completed'} · {pct}%
+          <span className="text-[11px] shrink-0 tabular-nums font-medium" style={{ color: 'var(--text-muted)' }}>
+            {pct}%
           </span>
         </div>
+
+        {/* Completion badge */}
         {done === total && total > 0 && (
-          <span className="text-xs font-semibold text-sage-700 bg-sage-100 px-2 py-0.5 rounded-full shrink-0">
-            🎉 {isHe ? 'קורס הושלם!' : 'Course complete!'}
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0"
+            style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+            🎉 {isHe ? 'הושלם!' : 'Done!'}
           </span>
         )}
+
+        {/* Desktop sidebar toggle — moved here, cleaner than a side strip */}
         <button
           onClick={() => setSidebarOpen(o => !o)}
-          className="shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-sand-400 md:hidden"
+          className="hidden md:flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-sand-400 shrink-0"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
         >
-          {isHe ? 'תוכן הקורס' : 'Course content'}
+          {sidebarOpen
+            ? <><span>{isHe ? '▶' : '◀'}</span> {isHe ? 'סגור' : 'Hide'}</>
+            : <><span>{isHe ? '◀' : '▶'}</span> {isHe ? 'פתח' : 'Contents'}</>}
         </button>
       </div>
 
       {/* ── Body: sidebar + content ── */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative">
 
-        {/* Sidebar */}
+        {/* Mobile overlay backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-10 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar — on mobile: fixed overlay; on desktop: push layout */}
         <aside
-          className={`border-e overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} shrink-0`}
+          className={`
+            border-e overflow-y-auto transition-all duration-300 shrink-0
+            md:relative md:z-auto
+            fixed inset-y-0 z-20 md:inset-auto
+            ${isRtl ? 'right-0' : 'left-0'}
+            ${sidebarOpen ? 'w-72' : 'w-0 md:w-0'}
+          `}
           style={{
             borderColor: 'var(--border)',
             backgroundColor: 'var(--bg-card)',
-            maxHeight: 'calc(100vh - 112px)',
-            position: 'sticky',
-            top: '0',
+            top: 0,
+            maxHeight: '100vh',
           }}
         >
-          {/* Sidebar meta */}
-          <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-main)' }}>
-              {isHe ? 'תוכן הקורס' : 'Course Content'}
-            </p>
-            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              {total} {isHe ? 'סעיפים' : 'sections'} · {MODULES.length} {isHe ? 'מודולים' : 'modules'}
-            </p>
+          {/* Sidebar header */}
+          <div className="px-4 pt-4 pb-3 border-b flex items-center justify-between"
+            style={{ borderColor: 'var(--border)' }}>
+            <div>
+              <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                {isHe ? 'תוכן הקורס' : 'Course Content'}
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {done}/{total} {isHe ? 'הושלמו' : 'completed'} · {MODULES.length} {isHe ? 'מודולים' : 'modules'}
+              </p>
+            </div>
+            {/* Close button — visible on mobile */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden flex items-center justify-center w-7 h-7 rounded-lg hover:bg-sand-400 transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              aria-label="Close"
+            >
+              ✕
+            </button>
           </div>
 
           {/* Module list */}
@@ -849,9 +934,12 @@ export default function GuidesPage() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 112px)' }}>
+        <main
+          className="flex-1 overflow-y-auto"
+          style={{ maxHeight: 'calc(100vh - 98px)' }}
+        >
           {activeSection && (
-            <div className="max-w-3xl mx-auto px-6 py-8">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
 
               {/* Module hero — shown only on the first section of each module */}
               {activeModule && activeModule.sections[0]?.id === activeSection.id && (
@@ -866,16 +954,28 @@ export default function GuidesPage() {
                 />
               )}
 
-              {/* Breadcrumb */}
-              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              {/* Breadcrumb — pill style, easier to scan */}
+              <div className="flex items-center gap-1.5 flex-wrap mb-3">
                 {activeModule && (
-                  <>{activeModule.icon} {isHe ? activeModule.titleHe : activeModule.title} · </>
+                  <>
+                    <span className="text-[11px] px-2 py-0.5 rounded-md font-medium"
+                      style={{ background: 'var(--bg-body)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                      {activeModule.icon} {isHe ? activeModule.titleHe : activeModule.title}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>›</span>
+                  </>
                 )}
-                {typeLabel(activeSection.type, isHe)}
-              </p>
+                <span className="text-[11px] px-2 py-0.5 rounded-md font-medium"
+                  style={{ background: 'var(--primary-50, #eff6ff)', color: 'var(--primary-700, #1d4ed8)', border: '1px solid var(--primary-200, #bfdbfe)' }}>
+                  {typeLabel(activeSection.type, isHe)}
+                </span>
+                <span className="text-[11px] ms-auto tabular-nums" dir="ltr" style={{ color: 'var(--text-muted)' }}>
+                  {activeIdx + 1} / {total}
+                </span>
+              </div>
 
               {/* Section title */}
-              <h1 className="text-xl font-black mb-6" style={{ color: 'var(--text-main)' }}>
+              <h1 className="text-2xl font-black mb-6 leading-tight" style={{ color: 'var(--text-main)' }}>
                 {isHe ? activeSection.titleHe : activeSection.title}
               </h1>
 
@@ -887,44 +987,33 @@ export default function GuidesPage() {
               />
 
               {/* Navigation */}
-              <div className="flex items-center justify-between mt-10 pt-6 border-t"
+              <div className="flex items-center justify-between mt-10 pt-6 border-t gap-3"
                 style={{ borderColor: 'var(--border)' }}>
                 <button
                   onClick={goPrev}
                   disabled={activeIdx === 0}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:bg-sand-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-sand-400 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: 'var(--text-main)', border: '1px solid var(--border)' }}
                 >
-                  {isHe ? '← הקודם' : '← Previous'}
+                  {isHe
+                    ? <><ArrowForwardIcon sx={{ fontSize: 14 }} /> הקודם</>
+                    : <><ArrowBackIcon sx={{ fontSize: 14 }} /> Previous</>}
                 </button>
-
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {activeIdx + 1} / {total}
-                </span>
 
                 <button
                   onClick={() => { if (!completed.includes(activeSection.id)) toggle(activeSection.id); goNext() }}
                   disabled={activeIdx === total - 1}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{ background: '#1a3a8f', color: '#fff', boxShadow: '0 2px 8px rgba(26,58,143,.25)' }}
                 >
-                  {isHe ? 'הבא →' : 'Next →'}
+                  {isHe
+                    ? <>הבא <ArrowBackIcon sx={{ fontSize: 14 }} /></>
+                    : <>Next <ArrowForwardIcon sx={{ fontSize: 14 }} /></>}
                 </button>
               </div>
             </div>
           )}
         </main>
-
-        {/* Sidebar toggle desktop */}
-        <button
-          onClick={() => setSidebarOpen(o => !o)}
-          className="hidden md:flex items-center justify-center w-6 border-e self-stretch hover:bg-sand-400 transition-colors shrink-0"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          title={sidebarOpen ? (isHe ? 'סגור סרגל צד' : 'Collapse sidebar') : (isHe ? 'פתח סרגל צד' : 'Expand sidebar')}
-        >
-          {sidebarOpen
-            ? <span className="text-[10px]">{isHe ? '▶' : '◀'}</span>
-            : <span className="text-[10px]">{isHe ? '◀' : '▶'}</span>}
-        </button>
       </div>
     </div>
   )
