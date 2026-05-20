@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Play, Square, RotateCcw, Download, Bug, Eye, Camera,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
   Circle, AlertTriangle, X, Settings, LayoutDashboard,
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
-  Search, Clock, TrendingUp,
+  Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -46,6 +46,8 @@ interface RunHistory {
 
 interface PlaywrightConfig {
   baseUrl: string
+  testDir: string
+  outputDir: string
   timeout: number
   retries: number
   workers: number
@@ -61,6 +63,8 @@ interface PlaywrightConfig {
 
 const DEFAULT_CONFIG: PlaywrightConfig = {
   baseUrl: 'http://localhost:3000',
+  testDir: './tests',
+  outputDir: 'test-results',
   timeout: 30000,
   retries: 1,
   workers: 4,
@@ -73,6 +77,8 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   forbidOnly: true,
   fullyParallel: true,
 }
+
+const STORAGE_KEY = 'pw_dashboard_config_v1'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -156,8 +162,6 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
   return (
     <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
         <div className="flex items-center gap-2">
@@ -166,11 +170,7 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· last 7 runs</span>
         </div>
         <div className="flex items-center gap-4">
-          {([
-            ['#10b981', 'Passed'],
-            ['#ef4444', 'Failed'],
-            ['#fbbf24', 'Skipped'],
-          ] as const).map(([color, label]) => (
+          {([['#10b981', 'Passed'], ['#ef4444', 'Failed'], ['#fbbf24', 'Skipped']] as const).map(([color, label]) => (
             <span key={label} className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
               <span className="w-2 h-2 rounded-sm inline-block shrink-0" style={{ backgroundColor: color }} />
               {label}
@@ -178,49 +178,21 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
           ))}
         </div>
       </div>
-
-      {/* Bars */}
       <div className="px-5 py-3">
         <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
           {history.map((run, i) => {
-            const passH = Math.round((run.passed  / maxTotal) * CHART_H)
-            const failH = Math.round((run.failed  / maxTotal) * CHART_H)
-            const skipH = Math.round((run.skipped / maxTotal) * CHART_H)
+            const passH  = Math.round((run.passed  / maxTotal) * CHART_H)
+            const failH  = Math.round((run.failed  / maxTotal) * CHART_H)
+            const skipH  = Math.round((run.skipped / maxTotal) * CHART_H)
             const isLast = i === history.length - 1
-
             return (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                {/* Bar column — grows from bottom using absolute positioning */}
                 <div style={{ flex: 1, width: '100%', position: 'relative' }}>
-                  {passH > 0 && (
-                    <div style={{
-                      position: 'absolute', bottom: 0, left: 0, right: 0,
-                      height: passH,
-                      backgroundColor: isLast ? '#10b981' : '#6ee7b7',
-                      borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0',
-                    }} />
-                  )}
-                  {failH > 0 && (
-                    <div style={{
-                      position: 'absolute', bottom: passH, left: 0, right: 0,
-                      height: failH,
-                      backgroundColor: isLast ? '#ef4444' : '#fca5a5',
-                      borderRadius: skipH === 0 ? '3px 3px 0 0' : '0',
-                    }} />
-                  )}
-                  {skipH > 0 && (
-                    <div style={{
-                      position: 'absolute', bottom: passH + failH, left: 0, right: 0,
-                      height: skipH,
-                      backgroundColor: isLast ? '#fbbf24' : '#fde68a',
-                      borderRadius: '3px 3px 0 0',
-                    }} />
-                  )}
+                  {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: isLast ? '#10b981' : '#6ee7b7', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: isLast ? '#ef4444' : '#fca5a5', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: isLast ? '#fbbf24' : '#fde68a', borderRadius: '3px 3px 0 0' }} />}
                 </div>
-                {/* Date label */}
-                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, lineHeight: 1, fontWeight: isLast ? 700 : 400 }}>
-                  {run.label}
-                </span>
+                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, lineHeight: 1, fontWeight: isLast ? 700 : 400 }}>{run.label}</span>
               </div>
             )
           })}
@@ -246,7 +218,8 @@ function generateConfig(c: PlaywrightConfig): string {
   return `import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: '${c.testDir}',
+  outputDir: '${c.outputDir}',
   fullyParallel: ${c.fullyParallel},
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : ${c.retries},
@@ -335,6 +308,20 @@ function SelectControl({
   )
 }
 
+function TextInput({ value, onChange, mono = true, width = 'w-48' }: {
+  value: string; onChange: (v: string) => void; mono?: boolean; width?: string
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={`px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${mono ? 'font-mono' : ''} ${width}`}
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
+    />
+  )
+}
+
 function SettingRow({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-6 py-3 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
@@ -347,18 +334,24 @@ function SettingRow({ label, desc, children }: { label: string; desc?: string; c
   )
 }
 
-function SettingCard({ icon, title, subtitle, children }: {
-  icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode
+function SettingCard({ icon, title, subtitle, children, warning }: {
+  icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode; warning?: string
 }) {
   return (
-    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: warning ? '#fca5a5' : 'var(--border)' }}>
       <div className="flex items-center gap-2.5 px-4 py-3 border-b"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
-        <span style={{ color: '#3b82f6' }}>{icon}</span>
-        <div>
+        <span style={{ color: warning ? '#ef4444' : '#3b82f6' }}>{icon}</span>
+        <div className="flex-1 min-w-0">
           <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{title}</p>
           <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
         </div>
+        {warning && (
+          <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0"
+            style={{ background: '#fee2e2', color: '#b91c1c' }}>
+            <AlertTriangle size={10} /> {warning}
+          </span>
+        )}
       </div>
       <div className="px-4" style={{ backgroundColor: 'var(--bg-card)' }}>
         {children}
@@ -366,6 +359,61 @@ function SettingCard({ icon, title, subtitle, children }: {
     </div>
   )
 }
+
+// ─── Presets ──────────────────────────────────────────────────────────────────
+
+interface Preset {
+  label: string
+  icon: React.ReactNode
+  description: string
+  color: string
+  config: Partial<PlaywrightConfig>
+}
+
+const PRESETS: Preset[] = [
+  {
+    label: 'Local Dev',
+    icon: <Monitor size={13} />,
+    description: 'Headed, all artifacts on, fast feedback loop',
+    color: '#059669',
+    config: {
+      headed: true, retries: 0, workers: 2, timeout: 30000,
+      trace: 'on', screenshot: 'on', video: 'on', reporter: 'html',
+    },
+  },
+  {
+    label: 'CI / CD',
+    icon: <Zap size={13} />,
+    description: 'Headless, JUnit reporter, 2 retries, 1 worker',
+    color: '#2563eb',
+    config: {
+      headed: false, timeout: 60000, retries: 2, workers: 1,
+      forbidOnly: true, fullyParallel: true,
+      trace: 'on-first-retry', screenshot: 'only-on-failure',
+      video: 'retain-on-failure', reporter: 'junit',
+    },
+  },
+  {
+    label: 'Cross-Browser',
+    icon: <Globe size={13} />,
+    description: 'Chromium + Firefox + WebKit, 4 parallel workers',
+    color: '#7c3aed',
+    config: {
+      browsers: { chromium: true, firefox: true, webkit: true },
+      workers: 4, retries: 1, fullyParallel: true, reporter: 'html',
+    },
+  },
+  {
+    label: 'Mobile',
+    icon: <Smartphone size={13} />,
+    description: 'WebKit + Chromium for iOS & Android coverage',
+    color: '#d97706',
+    config: {
+      browsers: { chromium: true, firefox: false, webkit: true },
+      workers: 2, retries: 1, headed: false, reporter: 'html',
+    },
+  },
+]
 
 // ─── Settings View ────────────────────────────────────────────────────────────
 
@@ -378,8 +426,10 @@ const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
 }
 
 function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange: (c: PlaywrightConfig) => void }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied]     = useState(false)
+  const [downloaded, setDownloaded] = useState(false)
   const configCode = useMemo(() => generateConfig(config), [config])
+  const noBrowsers = !Object.values(config.browsers).some(Boolean)
 
   const set = <K extends keyof PlaywrightConfig>(key: K, value: PlaywrightConfig[K]) =>
     onChange({ ...config, [key]: value })
@@ -390,188 +440,272 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const downloadConfig = () => {
+    const blob = new Blob([configCode], { type: 'text/plain' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = 'playwright.config.ts'; a.click()
+    URL.revokeObjectURL(url)
+    setDownloaded(true)
+    setTimeout(() => setDownloaded(false), 2000)
+  }
+
+  const applyPreset = (preset: Preset) => onChange({ ...config, ...preset.config })
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+    <div className="flex flex-col gap-5">
 
-      {/* ── Left: Setting groups ── */}
-      <div className="lg:col-span-3 flex flex-col gap-4">
-
-        {/* General */}
-        <SettingCard icon={<Globe size={14} />} title="General" subtitle="Base URL, timeouts, parallelism and CI options">
-          <SettingRow label="Base URL" desc="Root URL used in page.goto('/path') calls">
-            <input
-              type="text"
-              value={config.baseUrl}
-              onChange={e => set('baseUrl', e.target.value)}
-              className="px-3 py-1.5 rounded-lg border text-xs font-mono w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
-            />
-          </SettingRow>
-          <SettingRow label="Timeout" desc="Default assertion + action timeout per test">
-            <SelectControl
-              value={String(config.timeout)}
-              onChange={v => set('timeout', Number(v))}
-              options={[
-                { value: '10000', label: '10 s' },
-                { value: '20000', label: '20 s' },
-                { value: '30000', label: '30 s' },
-                { value: '60000', label: '60 s' },
-                { value: '120000', label: '120 s' },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow label="Retries" desc="Automatically retry failing tests">
-            <SelectControl
-              value={String(config.retries)}
-              onChange={v => set('retries', Number(v))}
-              options={[
-                { value: '0', label: '0 — disabled' },
-                { value: '1', label: '1 retry' },
-                { value: '2', label: '2 retries' },
-                { value: '3', label: '3 retries' },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow label="Workers" desc="Parallel worker processes for test execution">
-            <SelectControl
-              value={String(config.workers)}
-              onChange={v => set('workers', Number(v))}
-              options={[
-                { value: '1', label: '1 (serial)' },
-                { value: '2', label: '2 workers' },
-                { value: '4', label: '4 workers' },
-                { value: '8', label: '8 workers' },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow label="Fully Parallel" desc="Each test file runs in its own worker process">
-            <ToggleSwitch checked={config.fullyParallel} onChange={v => set('fullyParallel', v)} />
-          </SettingRow>
-          <SettingRow label="Forbid .only" desc="Fail the run if test.only is accidentally committed">
-            <ToggleSwitch checked={config.forbidOnly} onChange={v => set('forbidOnly', v)} />
-          </SettingRow>
-          <SettingRow label="Headed mode" desc="Run tests with a visible browser window">
-            <ToggleSwitch checked={config.headed} onChange={v => set('headed', v)} />
-          </SettingRow>
-        </SettingCard>
-
-        {/* Browsers */}
-        <SettingCard icon={<Monitor size={14} />} title="Browsers" subtitle="Select which browser engines to run tests against">
-          {([
-            { key: 'chromium', label: 'Chromium', desc: 'Chrome & Edge — fastest, widest coverage' },
-            { key: 'firefox',  label: 'Firefox',  desc: 'Gecko engine — catches Firefox-specific bugs' },
-            { key: 'webkit',   label: 'WebKit',   desc: 'Safari engine — essential for macOS & iOS' },
-          ] as const).map(({ key, label, desc }) => (
-            <SettingRow key={key} label={label} desc={desc}>
-              <ToggleSwitch
-                checked={config.browsers[key]}
-                onChange={v => set('browsers', { ...config.browsers, [key]: v })}
-              />
-            </SettingRow>
-          ))}
-        </SettingCard>
-
-        {/* Artifacts */}
-        <SettingCard icon={<Film size={14} />} title="Artifacts" subtitle="Control when screenshots, videos and traces are saved">
-          <SettingRow label="Screenshots" desc="Capture a PNG snapshot of the page">
-            <SelectControl
-              value={config.screenshot}
-              onChange={v => set('screenshot', v as PlaywrightConfig['screenshot'])}
-              options={[
-                { value: 'off',              label: 'Off' },
-                { value: 'only-on-failure',  label: 'On failure only' },
-                { value: 'on',               label: 'Always' },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow label="Video" desc="Record a video of each test run">
-            <SelectControl
-              value={config.video}
-              onChange={v => set('video', v as PlaywrightConfig['video'])}
-              options={[
-                { value: 'off',                label: 'Off' },
-                { value: 'retain-on-failure',  label: 'Keep on failure' },
-                { value: 'on',                 label: 'Always' },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow label="Trace" desc="Playwright trace for time-travel debugging">
-            <SelectControl
-              value={config.trace}
-              onChange={v => set('trace', v as PlaywrightConfig['trace'])}
-              options={[
-                { value: 'off',                label: 'Off' },
-                { value: 'on-first-retry',     label: 'On first retry' },
-                { value: 'retain-on-failure',  label: 'Keep on failure' },
-                { value: 'on',                 label: 'Always' },
-              ]}
-            />
-          </SettingRow>
-        </SettingCard>
-
-        {/* Reporter */}
-        <SettingCard icon={<FileText size={14} />} title="Reporter" subtitle="How test results are formatted and output">
-          <div className="pt-3 pb-2">
-            <div className="grid grid-cols-5 gap-2 mb-3">
-              {(['html', 'json', 'junit', 'line', 'dot'] as const).map(r => (
-                <button
-                  key={r}
-                  onClick={() => set('reporter', r)}
-                  className="py-2 rounded-xl border text-xs font-bold transition-all"
-                  style={config.reporter === r
-                    ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
-                    : { background: 'var(--bg-body)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
-                  }
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              {REPORTER_DESCRIPTIONS[config.reporter]}
-            </p>
-          </div>
-        </SettingCard>
-
-      </div>
-
-      {/* ── Right: Generated playwright.config.ts ── */}
-      <div className="lg:col-span-2">
-        <div className="sticky top-4 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
-
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-            <div className="flex items-center gap-2">
-              <Code2 size={13} style={{ color: 'var(--text-muted)' }} />
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
-                playwright.config.ts
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
-                Live
-              </span>
-            </div>
+      {/* ── Quick Presets ── */}
+      <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+          <Zap size={13} style={{ color: '#8b5cf6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a battle-tested configuration</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+          {PRESETS.map(preset => (
             <button
-              onClick={copyConfig}
-              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors hover:opacity-70"
-              style={{ color: 'var(--text-muted)' }}
+              key={preset.label}
+              onClick={() => applyPreset(preset)}
+              className="flex flex-col items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = preset.color
+                e.currentTarget.style.backgroundColor = 'var(--bg-card)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.backgroundColor = 'var(--bg-body)'
+              }}
             >
-              {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-              {copied ? 'Copied!' : 'Copy'}
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: preset.color }}>{preset.icon}</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+              </div>
+              <span className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{preset.description}</span>
             </button>
-          </div>
-
-          {/* Code */}
-          <pre
-            className="text-[11px] font-mono p-4 overflow-auto leading-relaxed"
-            style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', maxHeight: '72vh' }}
-          >
-            {configCode}
-          </pre>
+          ))}
         </div>
       </div>
 
+      {/* ── Main grid: left settings + right preview ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+        {/* Left: Setting groups */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
+
+          {/* General */}
+          <SettingCard icon={<Globe size={14} />} title="General" subtitle="Base URL, timeouts, parallelism and CI options">
+            <SettingRow label="Base URL" desc="Root URL used in page.goto('/path') calls">
+              <TextInput value={config.baseUrl} onChange={v => set('baseUrl', v)} width="w-52" />
+            </SettingRow>
+            <SettingRow label="Timeout" desc="Default assertion + action timeout per test">
+              <SelectControl
+                value={String(config.timeout)}
+                onChange={v => set('timeout', Number(v))}
+                options={[
+                  { value: '10000', label: '10 s' },
+                  { value: '20000', label: '20 s' },
+                  { value: '30000', label: '30 s' },
+                  { value: '60000', label: '60 s' },
+                  { value: '120000', label: '120 s' },
+                ]}
+              />
+            </SettingRow>
+            <SettingRow label="Retries" desc="Automatically retry failing tests">
+              <SelectControl
+                value={String(config.retries)}
+                onChange={v => set('retries', Number(v))}
+                options={[
+                  { value: '0', label: '0 — disabled' },
+                  { value: '1', label: '1 retry' },
+                  { value: '2', label: '2 retries' },
+                  { value: '3', label: '3 retries' },
+                ]}
+              />
+            </SettingRow>
+            <SettingRow label="Workers" desc="Parallel worker processes for test execution">
+              <SelectControl
+                value={String(config.workers)}
+                onChange={v => set('workers', Number(v))}
+                options={[
+                  { value: '1', label: '1 (serial)' },
+                  { value: '2', label: '2 workers' },
+                  { value: '4', label: '4 workers' },
+                  { value: '8', label: '8 workers' },
+                ]}
+              />
+            </SettingRow>
+            <SettingRow label="Fully Parallel" desc="Each test file runs in its own worker process">
+              <ToggleSwitch checked={config.fullyParallel} onChange={v => set('fullyParallel', v)} />
+            </SettingRow>
+            <SettingRow label="Forbid .only" desc="Fail the run if test.only is accidentally committed">
+              <ToggleSwitch checked={config.forbidOnly} onChange={v => set('forbidOnly', v)} />
+            </SettingRow>
+            <SettingRow label="Headed mode" desc="Run tests with a visible browser window">
+              <ToggleSwitch checked={config.headed} onChange={v => set('headed', v)} />
+            </SettingRow>
+          </SettingCard>
+
+          {/* Test Paths */}
+          <SettingCard icon={<FolderOpen size={14} />} title="Test Paths" subtitle="Directories for specs and output artifacts">
+            <SettingRow label="Test directory" desc="Root folder Playwright scans for spec files">
+              <TextInput value={config.testDir} onChange={v => set('testDir', v)} width="w-44" />
+            </SettingRow>
+            <SettingRow label="Output directory" desc="Where screenshots, videos, and traces are saved">
+              <TextInput value={config.outputDir} onChange={v => set('outputDir', v)} width="w-44" />
+            </SettingRow>
+          </SettingCard>
+
+          {/* Browsers */}
+          <SettingCard
+            icon={<Monitor size={14} />}
+            title="Browsers"
+            subtitle="Select which browser engines to run tests against"
+            warning={noBrowsers ? 'None selected' : undefined}
+          >
+            {([
+              { key: 'chromium', label: 'Chromium', desc: 'Chrome & Edge — fastest, widest coverage' },
+              { key: 'firefox',  label: 'Firefox',  desc: 'Gecko engine — catches Firefox-specific bugs' },
+              { key: 'webkit',   label: 'WebKit',   desc: 'Safari engine — essential for macOS & iOS' },
+            ] as const).map(({ key, label, desc }) => (
+              <SettingRow key={key} label={label} desc={desc}>
+                <ToggleSwitch
+                  checked={config.browsers[key]}
+                  onChange={v => set('browsers', { ...config.browsers, [key]: v })}
+                />
+              </SettingRow>
+            ))}
+            {noBrowsers && (
+              <div className="flex items-center gap-2 py-2.5 text-[11px]" style={{ color: '#b91c1c' }}>
+                <AlertTriangle size={12} className="shrink-0" />
+                At least one browser must be enabled to run tests.
+              </div>
+            )}
+          </SettingCard>
+
+          {/* Artifacts */}
+          <SettingCard icon={<Film size={14} />} title="Artifacts" subtitle="Control when screenshots, videos and traces are saved">
+            <SettingRow label="Screenshots" desc="Capture a PNG snapshot of the page">
+              <SelectControl
+                value={config.screenshot}
+                onChange={v => set('screenshot', v as PlaywrightConfig['screenshot'])}
+                options={[
+                  { value: 'off',              label: 'Off' },
+                  { value: 'only-on-failure',  label: 'On failure only' },
+                  { value: 'on',               label: 'Always' },
+                ]}
+              />
+            </SettingRow>
+            <SettingRow label="Video" desc="Record a video of each test run">
+              <SelectControl
+                value={config.video}
+                onChange={v => set('video', v as PlaywrightConfig['video'])}
+                options={[
+                  { value: 'off',                label: 'Off' },
+                  { value: 'retain-on-failure',  label: 'Keep on failure' },
+                  { value: 'on',                 label: 'Always' },
+                ]}
+              />
+            </SettingRow>
+            <SettingRow label="Trace" desc="Playwright trace for time-travel debugging">
+              <SelectControl
+                value={config.trace}
+                onChange={v => set('trace', v as PlaywrightConfig['trace'])}
+                options={[
+                  { value: 'off',                label: 'Off' },
+                  { value: 'on-first-retry',     label: 'On first retry' },
+                  { value: 'retain-on-failure',  label: 'Keep on failure' },
+                  { value: 'on',                 label: 'Always' },
+                ]}
+              />
+            </SettingRow>
+          </SettingCard>
+
+          {/* Reporter */}
+          <SettingCard icon={<FileText size={14} />} title="Reporter" subtitle="How test results are formatted and output">
+            <div className="pt-3 pb-2">
+              <div className="grid grid-cols-5 gap-2 mb-3">
+                {(['html', 'json', 'junit', 'line', 'dot'] as const).map(r => (
+                  <button
+                    key={r}
+                    onClick={() => set('reporter', r)}
+                    className="py-2 rounded-xl border text-xs font-bold transition-all"
+                    style={config.reporter === r
+                      ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
+                      : { background: 'var(--bg-body)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
+                    }
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                {REPORTER_DESCRIPTIONS[config.reporter]}
+              </p>
+            </div>
+          </SettingCard>
+
+        </div>
+
+        {/* Right: Generated playwright.config.ts */}
+        <div className="lg:col-span-2">
+          <div className="sticky top-4 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+              <div className="flex items-center gap-2">
+                <Code2 size={13} style={{ color: 'var(--text-muted)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>playwright.config.ts</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                  style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                  Live
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={copyConfig}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors hover:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}
+                  title="Copy to clipboard"
+                >
+                  {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  onClick={downloadConfig}
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors hover:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}
+                  title="Download as playwright.config.ts"
+                >
+                  {downloaded ? <Check size={12} className="text-emerald-500" /> : <Download size={12} />}
+                  {downloaded ? 'Saved!' : '.ts'}
+                </button>
+              </div>
+            </div>
+
+            {/* Validation banner */}
+            {noBrowsers && (
+              <div className="flex items-center gap-2 px-4 py-2.5 text-[11px] font-medium border-b"
+                style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>
+                <AlertTriangle size={12} className="shrink-0" />
+                No browsers selected — the generated config will skip all projects.
+              </div>
+            )}
+
+            {/* Code */}
+            <pre
+              className="text-[11px] font-mono p-4 overflow-auto leading-relaxed"
+              style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', maxHeight: '68vh' }}
+            >
+              {configCode}
+            </pre>
+          </div>
+        </div>
+
+      </div>
     </div>
   )
 }
@@ -650,22 +784,13 @@ function FailedActions({
     <div className="flex items-center gap-1.5 px-5 py-2 border-t"
       style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
       <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--text-muted)' }}>Actions:</span>
-      <button
-        onClick={exportJira}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100"
-      >
+      <button onClick={exportJira} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100">
         <Bug size={11} /> Export to Jira
       </button>
-      <button
-        onClick={viewTrace}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors border border-violet-100"
-      >
+      <button onClick={viewTrace} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors border border-violet-100">
         <Eye size={11} /> View Trace
       </button>
-      <button
-        onClick={() => onViewArtifacts({ testId: test.id, testTitle: test.title })}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-colors border border-neutral-200"
-      >
+      <button onClick={() => onViewArtifacts({ testId: test.id, testTitle: test.title })} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-colors border border-neutral-200">
         <Camera size={11} /> View Artifacts
       </button>
     </div>
@@ -680,6 +805,9 @@ export default function PlaywrightDashboard() {
   const [activeTab, setActiveTab]         = useState<FilterKey>('all')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
   const [config, setConfig]               = useState<PlaywrightConfig>(DEFAULT_CONFIG)
+  const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
+  const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
+  const [justSaved, setJustSaved]         = useState(false)
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
@@ -701,12 +829,63 @@ export default function PlaywrightDashboard() {
     return denominator > 0 ? Math.round((counts.passed / denominator) * 100) : 0
   }, [counts])
 
+  // ── Changed settings count (vs defaults) ───────────────────────────────────
+  const changedCount = useMemo(() => {
+    const d = DEFAULT_CONFIG
+    let n = 0
+    if (config.baseUrl       !== d.baseUrl)                    n++
+    if (config.testDir       !== d.testDir)                    n++
+    if (config.outputDir     !== d.outputDir)                  n++
+    if (config.timeout       !== d.timeout)                    n++
+    if (config.retries       !== d.retries)                    n++
+    if (config.workers       !== d.workers)                    n++
+    if (config.fullyParallel !== d.fullyParallel)              n++
+    if (config.forbidOnly    !== d.forbidOnly)                 n++
+    if (config.headed        !== d.headed)                     n++
+    if (config.browsers.chromium !== d.browsers.chromium)      n++
+    if (config.browsers.firefox  !== d.browsers.firefox)       n++
+    if (config.browsers.webkit   !== d.browsers.webkit)        n++
+    if (config.screenshot    !== d.screenshot)                 n++
+    if (config.video         !== d.video)                      n++
+    if (config.trace         !== d.trace)                      n++
+    if (config.reporter      !== d.reporter)                   n++
+    return n
+  }, [config])
+
+  // ── localStorage: load on mount ────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { config: PlaywrightConfig; savedAt: string }
+        setConfig(parsed.config)
+        setSavedConfig(parsed.config)
+        setLastSavedAt(parsed.savedAt)
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [])
+
+  // ── isSaved: true when current config matches what's persisted ──────────────
+  const isSaved = useMemo(() =>
+    savedConfig !== null && JSON.stringify(config) === JSON.stringify(savedConfig),
+    [config, savedConfig]
+  )
+
+  // ── saveConfig ──────────────────────────────────────────────────────────────
+  const saveConfig = useCallback(() => {
+    const savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, savedAt }))
+    setSavedConfig(config)
+    setLastSavedAt(savedAt)
+    setJustSaved(true)
+    setTimeout(() => setJustSaved(false), 2000)
+  }, [config])
+
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
-    [...allTests]
-      .filter(t => t.duration > 0)
-      .sort((a, b) => b.duration - a.duration)
-      .slice(0, 3),
+    [...allTests].filter(t => t.duration > 0).sort((a, b) => b.duration - a.duration).slice(0, 3),
     [allTests]
   )
 
@@ -730,22 +909,13 @@ export default function PlaywrightDashboard() {
     setRunning(true)
     setExpandedErrors({})
     setSearchQuery('')
-    setSuites(INITIAL_SUITES.map(s => ({
-      ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })),
-    })))
+    setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
     setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
-
     const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
     for (const { suiteId, test } of flat) {
-      setSuites(prev => prev.map(s => s.id !== suiteId ? s : {
-        ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }),
-      }))
+      setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
       await new Promise(r => setTimeout(r, 150 + Math.random() * 250))
-      setSuites(prev => prev.map(s => s.id !== suiteId ? s : {
-        ...s, tests: s.tests.map(t => t.id !== test.id ? t : {
-          ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries,
-        }),
-      }))
+      setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
     }
     setRunning(false)
   }, [])
@@ -756,10 +926,7 @@ export default function PlaywrightDashboard() {
     const report = {
       generated: new Date().toISOString(),
       summary: { ...counts, passRate: `${passRate}%`, totalDuration: formatMs(totalDuration) },
-      suites: suites.map(s => ({
-        title: s.title, file: s.file,
-        tests: s.tests.map(t => ({ title: t.title, status: t.status, duration: formatMs(t.duration), retries: t.retries ?? 0 })),
-      })),
+      suites: suites.map(s => ({ title: s.title, file: s.file, tests: s.tests.map(t => ({ title: t.title, status: t.status, duration: formatMs(t.duration), retries: t.retries ?? 0 })) })),
     }
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
@@ -786,9 +953,7 @@ export default function PlaywrightDashboard() {
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-              Playwright Dashboard
-            </h1>
+            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Playwright Dashboard</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
               {INITIAL_SUITES.length} suites · {counts.total} tests · {formatMs(totalDuration)}
             </p>
@@ -799,9 +964,9 @@ export default function PlaywrightDashboard() {
             <div className="flex items-center gap-0.5 p-1 rounded-xl border"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
               {([
-                { key: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
-                { key: 'settings',  label: 'Settings',  icon: <Settings size={12} /> },
-              ] as const).map(({ key, label, icon }) => (
+                { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
+                { key: 'settings'  as const, label: 'Settings',  icon: <Settings size={12} /> },
+              ]).map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveView(key)}
@@ -811,63 +976,79 @@ export default function PlaywrightDashboard() {
                     : { color: 'var(--text-muted)' }
                   }
                 >
-                  {icon}{label}
+                  {icon}
+                  {label}
+                  {key === 'settings' && changedCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">
+                      {changedCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            {/* Action buttons — only on dashboard */}
+            {/* Dashboard actions */}
             {activeView === 'dashboard' && (
               <>
-                <button
-                  onClick={exportReport}
+                <button onClick={exportReport}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                   <Download size={13} /> Export
                 </button>
-                <button
-                  onClick={reset}
-                  disabled={running}
+                <button onClick={reset} disabled={running}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                   <RotateCcw size={13} /> Reset
                 </button>
                 <button
                   onClick={running ? () => setRunning(false) : runTests}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${
-                    running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   {running ? <><Square size={14} /> Stop</> : <><Play size={14} /> Run Tests</>}
                 </button>
               </>
             )}
 
-            {/* Reset config button — only on settings */}
+            {/* Settings actions */}
             {activeView === 'settings' && (
-              <button
-                onClick={() => setConfig(DEFAULT_CONFIG)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
-                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-              >
-                <RotateCcw size={13} /> Reset to defaults
-              </button>
+              <>
+                <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
+                  <RotateCcw size={13} /> Reset to defaults
+                </button>
+                <button
+                  onClick={saveConfig}
+                  disabled={isSaved}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={justSaved
+                    ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                    : isSaved
+                      ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                      : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                  }
+                >
+                  {justSaved
+                    ? <><Check size={13} /> Saved!</>
+                    : isSaved
+                      ? <><Check size={13} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</>
+                      : <><Save size={13} /> Save</>
+                  }
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {/* ── Dashboard view ──────────────────────────────────────────────────── */}
+        {/* ── Dashboard view ───────────────────────────────────────────────────── */}
         {activeView === 'dashboard' && (
           <>
-            {/* Metric cards — 6 cards */}
+            {/* Metric cards */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
               {([
                 { label: 'Total',     value: counts.total,            color: 'var(--text-main)' },
@@ -885,7 +1066,7 @@ export default function PlaywrightDashboard() {
               ))}
             </div>
 
-            {/* Segmented progress bar */}
+            {/* Progress bar */}
             <div className="mb-6 h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--border)' }}>
               {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
               {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
@@ -893,15 +1074,13 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* Run history chart */}
+            {/* History chart */}
             <HistoryChart history={MOCK_HISTORY} />
 
             {/* Search + Filter tabs */}
             <div className="flex items-center gap-3 mb-5 flex-wrap">
-              {/* Search */}
               <div className="relative flex-1 min-w-44">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: 'var(--text-muted)' }} />
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   placeholder="Search tests…"
@@ -911,32 +1090,24 @@ export default function PlaywrightDashboard() {
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                 />
                 {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
-                  >
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity">
                     <X size={12} style={{ color: 'var(--text-muted)' }} />
                   </button>
                 )}
               </div>
-
-              {/* Filter tabs */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 {([
-                  { key: 'all',     label: `All (${counts.total})` },
-                  { key: 'passed',  label: `Passed (${counts.passed})` },
-                  { key: 'failed',  label: `Failed (${counts.failed})` },
-                  { key: 'skipped', label: `Skipped (${counts.skipped})` },
-                ] as const).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setActiveTab(key)}
+                  { key: 'all' as const,     label: `All (${counts.total})` },
+                  { key: 'passed' as const,  label: `Passed (${counts.passed})` },
+                  { key: 'failed' as const,  label: `Failed (${counts.failed})` },
+                  { key: 'skipped' as const, label: `Skipped (${counts.skipped})` },
+                ]).map(({ key, label }) => (
+                  <button key={key} onClick={() => setActiveTab(key)}
                     className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border"
                     style={activeTab === key
                       ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
                       : { background: 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
-                    }
-                  >
+                    }>
                     {label}
                   </button>
                 ))}
@@ -955,41 +1126,28 @@ export default function PlaywrightDashboard() {
                 return (
                   <div key={suite.id} className="rounded-2xl border shadow-sm overflow-hidden"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-
-                    {/* Suite row */}
                     <button
                       onClick={() => toggleSuite(suite.id)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors"
                       style={{ backgroundColor: 'var(--bg-card)' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
-                    >
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                       <StatusIcon status={status} size={16} />
                       <span className="flex-1 min-w-0">
                         <span className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>{suite.title}</span>
                         <span className="ml-2 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{suite.file}</span>
                       </span>
-                      {suiteDuration > 0 && (
-                        <span className="text-xs font-mono shrink-0 hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
-                          {formatMs(suiteDuration)}
-                        </span>
-                      )}
-                      <span className="text-xs shrink-0 font-medium" style={{ color: 'var(--text-muted)' }}>
-                        {passed}/{suite.tests.length} passed
-                      </span>
-                      {isOpen
-                        ? <ChevronUp   size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-                        : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />}
+                      {suiteDuration > 0 && <span className="text-xs font-mono shrink-0 hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{formatMs(suiteDuration)}</span>}
+                      <span className="text-xs shrink-0 font-medium" style={{ color: 'var(--text-muted)' }}>{passed}/{suite.tests.length} passed</span>
+                      {isOpen ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />}
                     </button>
 
-                    {/* Test rows */}
                     {isOpen && (
                       <div className="border-t" style={{ borderColor: 'var(--border)' }}>
                         {suite.tests.map((test, i) => {
                           const isFailed    = test.status === 'failed'
                           const showActions = isFailed && (hoveredTest === test.id || expandedErrors[test.id])
                           const errorOpen   = expandedErrors[test.id]
-
                           return (
                             <div key={test.id} className={i > 0 ? 'border-t' : ''} style={{ borderColor: 'var(--border)' }}>
                               <div
@@ -1001,47 +1159,25 @@ export default function PlaywrightDashboard() {
                               >
                                 <StatusIcon status={test.status} />
                                 <span className="flex-1 text-xs" style={{ color: 'var(--text-main)' }}>{test.title}</span>
-
                                 {test.retries !== undefined && test.retries > 0 && (
                                   <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
                                     <AlertTriangle size={10} /> {test.retries} retry
                                   </span>
                                 )}
-
-                                {/* Duration bar */}
                                 {test.duration > 0 && (
-                                  <div className="w-14 h-1 rounded-full overflow-hidden shrink-0 hidden sm:block"
-                                    style={{ backgroundColor: 'var(--border)' }}>
-                                    <div
-                                      className="h-full rounded-full transition-all duration-300"
-                                      style={{
-                                        width: `${(test.duration / maxDuration) * 100}%`,
-                                        backgroundColor: test.status === 'failed' ? '#ef4444'
-                                          : test.status === 'passed' ? '#10b981' : '#fbbf24',
-                                      }}
-                                    />
+                                  <div className="w-14 h-1 rounded-full overflow-hidden shrink-0 hidden sm:block" style={{ backgroundColor: 'var(--border)' }}>
+                                    <div className="h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${(test.duration / maxDuration) * 100}%`, backgroundColor: test.status === 'failed' ? '#ef4444' : test.status === 'passed' ? '#10b981' : '#fbbf24' }} />
                                   </div>
                                 )}
-
-                                <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>
-                                  {formatMs(test.duration)}
-                                </span>
+                                <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>{formatMs(test.duration)}</span>
                                 <StatusBadge status={test.status} />
-                                {isFailed && (errorOpen
-                                  ? <ChevronUp   size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-                                  : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
-                                )}
+                                {isFailed && (errorOpen ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />)}
                               </div>
-
-                              {showActions && (
-                                <FailedActions test={test} suiteFile={suite.file} onViewArtifacts={setArtifactModal} />
-                              )}
-
+                              {showActions && <FailedActions test={test} suiteFile={suite.file} onViewArtifacts={setArtifactModal} />}
                               {isFailed && errorOpen && (
-                                <div
-                                  className="mx-4 mb-3 p-3 rounded-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap border-l-2 border-red-400"
-                                  style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626' }}
-                                >
+                                <div className="mx-4 mb-3 p-3 rounded-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap border-l-2 border-red-400"
+                                  style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626' }}>
                                   {test.error}
                                 </div>
                               )}
@@ -1058,62 +1194,33 @@ export default function PlaywrightDashboard() {
                 <div className="text-center py-16 rounded-2xl border shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    {searchQuery
-                      ? `No tests match "${searchQuery}"`
-                      : 'No tests match the current filter.'}
+                    {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
                   </p>
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="mt-2 text-xs text-blue-500 hover:underline"
-                    >
-                      Clear search
-                    </button>
-                  )}
+                  {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
                 </div>
               )}
             </div>
 
             {/* Slowest tests */}
             {slowestTests.length > 0 && !searchQuery && (
-              <div className="mt-4 rounded-2xl border shadow-sm overflow-hidden"
-                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                <div className="flex items-center gap-2 px-4 py-3 border-b"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <div className="mt-4 rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
                   <Clock size={13} style={{ color: '#f59e0b' }} />
                   <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Slowest Tests</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                    style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                    top 3
-                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>top 3</span>
                 </div>
                 <div>
-                  {slowestTests.map((test, i) => {
-                    const maxSlow = slowestTests[0].duration
-                    return (
-                      <div
-                        key={test.id}
-                        className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`}
-                        style={{ borderColor: 'var(--border)' }}
-                      >
-                        <span className="text-xs font-bold w-5 shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>
-                          #{i + 1}
-                        </span>
-                        <StatusIcon status={test.status} size={13} />
-                        <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
-                        <div className="w-24 h-1.5 rounded-full overflow-hidden shrink-0 hidden sm:block"
-                          style={{ backgroundColor: 'var(--border)' }}>
-                          <div
-                            className="h-full rounded-full bg-amber-400"
-                            style={{ width: `${(test.duration / maxSlow) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-mono font-semibold shrink-0" style={{ color: '#d97706' }}>
-                          {formatMs(test.duration)}
-                        </span>
+                  {slowestTests.map((test, i) => (
+                    <div key={test.id} className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`} style={{ borderColor: 'var(--border)' }}>
+                      <span className="text-xs font-bold w-5 shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>#{i + 1}</span>
+                      <StatusIcon status={test.status} size={13} />
+                      <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
+                      <div className="w-24 h-1.5 rounded-full overflow-hidden shrink-0 hidden sm:block" style={{ backgroundColor: 'var(--border)' }}>
+                        <div className="h-full rounded-full bg-amber-400" style={{ width: `${(test.duration / slowestTests[0].duration) * 100}%` }} />
                       </div>
-                    )
-                  })}
+                      <span className="text-xs font-mono font-semibold shrink-0" style={{ color: '#d97706' }}>{formatMs(test.duration)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1127,10 +1234,7 @@ export default function PlaywrightDashboard() {
 
       </div>
 
-      {/* Artifact Modal */}
-      {artifactModal && (
-        <ArtifactModal state={artifactModal} onClose={() => setArtifactModal(null)} />
-      )}
+      {artifactModal && <ArtifactModal state={artifactModal} onClose={() => setArtifactModal(null)} />}
     </div>
   )
 }
