@@ -13,6 +13,11 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import QuizOutlinedIcon from '@mui/icons-material/QuizOutlined'
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
+import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined'
+import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import i18n from '../i18n'
 import CodeSnippet from '../components/CodeSnippet'
 import { MODULES, type GuideSection, type GuideModule } from '../data/guidesData'
@@ -148,7 +153,8 @@ function DownloadCards({ sectionId, isHe }: { sectionId: string; isHe: boolean }
                 <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{card.size}</span>
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all hover:-translate-y-0.5"
                   style={{ background: '#1a3a8f' }}>
-                  ⬇ {isHe ? 'הורד' : 'Download'}
+                  <DownloadOutlinedIcon sx={{ fontSize: 12 }} />
+                  {isHe ? 'הורד' : 'Download'}
                 </button>
               </div>
             </div>
@@ -283,15 +289,29 @@ const ANIMATION_LABELS: Record<string, [string, string]> = {
   'learning-summary': ['Full course map — everything covered', 'מפת הקורס המלאה — כל מה שנלמד'],
 }
 
-function AnimationLabel({ sectionId, isHe }: { sectionId: string; isHe: boolean }) {
+function AnimationFigure({ sectionId, isHe, Animation }: {
+  sectionId: string; isHe: boolean; Animation: React.ComponentType
+}) {
   const label = ANIMATION_LABELS[sectionId]
-  if (!label) return null
   return (
-    <div className="flex items-center gap-2 text-[11px] font-medium px-1 mb-1"
-      style={{ color: 'var(--text-muted)' }}>
-      <span className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ background: '#22c55e' }} />
-      {isHe ? label[1] : label[0]}
-    </div>
+    <figure className="m-0 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+      <div dir="ltr">
+        <Animation />
+      </div>
+      <figcaption
+        className="flex items-center gap-2 px-3 py-2 border-t text-[11px]"
+        style={{ backgroundColor: 'var(--bg-body)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+      >
+        <PlayCircleOutlinedIcon sx={{ fontSize: 13, color: '#22c55e', flexShrink: 0 }} />
+        <span className="flex-1 min-w-0 truncate">
+          {label ? (isHe ? label[1] : label[0]) : ''}
+        </span>
+        <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+          style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+          {isHe ? 'הדגמה חיה' : 'Live'}
+        </span>
+      </figcaption>
+    </figure>
   )
 }
 
@@ -573,6 +593,13 @@ function LessonContent({ section, completed, onToggle, isHe }: {
   const Animation = SECTION_ANIMATIONS[section.id]
   const callouts  = SECTION_CALLOUTS[section.id] ?? []
 
+  // Split body into paragraphs so the animation appears contextually inline
+  // after the first paragraph (which introduces the concept), not as a header
+  const paragraphs = body ? body.split('\n\n') : []
+  const splitAt    = 1 // one intro paragraph before the animation
+  const parasBefore = paragraphs.slice(0, splitAt)
+  const parasAfter  = paragraphs.slice(splitAt)
+
   return (
     <div className="flex flex-col gap-5">
 
@@ -593,29 +620,34 @@ function LessonContent({ section, completed, onToggle, isHe }: {
         </p>
       )}
 
-      {/* Callout boxes — appear before animation, framing what the learner is about to see */}
+      {/* Callout boxes */}
       {callouts.map((c, i) => <CalloutBox key={i} callout={c} isHe={isHe} />)}
 
-      {/* Animation — dir="ltr" prevents RTL mode from flipping terminal text / SVG annotations */}
-      {Animation && (
-        <div className="flex flex-col gap-1">
-          <AnimationLabel sectionId={section.id} isHe={isHe} />
-          <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }} dir="ltr">
-            <Animation />
-          </div>
+      {/* First body paragraph — introduces the concept the animation will visualise */}
+      {parasBefore.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {parasBefore.map((para, i) => (
+            <p key={i} className="text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{para}</p>
+          ))}
         </div>
       )}
 
-      {/* Bug lifecycle — only for intro-qa, placed after pyramid to complete the QA mental model */}
+      {/* Animation — inline figure, anchored right after the intro paragraph.
+          dir="ltr" prevents RTL mode from flipping terminal text / SVG annotations. */}
+      {Animation && (
+        <AnimationFigure sectionId={section.id} isHe={isHe} Animation={Animation} />
+      )}
+
+      {/* Bug lifecycle — only for intro-qa, placed after pyramid animation */}
       {section.id === 'intro-qa' && <BugLifecycle isHe={isHe} />}
 
-      {/* Decision matrix — only for when-to-automate, placed after analogy text */}
+      {/* Decision matrix — only for when-to-automate, placed after animation */}
       {section.id === 'when-to-automate' && <DecisionMatrix isHe={isHe} />}
 
-      {/* Body paragraphs */}
-      {body && (
+      {/* Remaining body paragraphs — detailed elaboration after the visual */}
+      {parasAfter.length > 0 && (
         <div className="flex flex-col gap-3.5 rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          {body.split('\n\n').map((para, i) => (
+          {parasAfter.map((para, i) => (
             <p key={i} className="text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{para}</p>
           ))}
         </div>
@@ -649,7 +681,8 @@ function LessonContent({ section, completed, onToggle, isHe }: {
       {/* Code snippets */}
       {snippets.map((s, i) => (
         <div key={i}>
-          <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>
+          <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+            <CodeOutlinedIcon sx={{ fontSize: 13 }} />
             {isHe ? s.labelHe : s.label}
           </p>
           <CodeSnippet code={s.code} language={s.language} />
@@ -962,7 +995,9 @@ export default function GuidesPage() {
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-sand-400 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: 'var(--text-main)', border: '1px solid var(--border)' }}
                 >
-                  {isHe ? '→ הקודם' : '← Previous'}
+                  {isHe
+                    ? <><ArrowForwardIcon sx={{ fontSize: 14 }} /> הקודם</>
+                    : <><ArrowBackIcon sx={{ fontSize: 14 }} /> Previous</>}
                 </button>
 
                 <button
@@ -971,7 +1006,9 @@ export default function GuidesPage() {
                   className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   style={{ background: '#1a3a8f', color: '#fff', boxShadow: '0 2px 8px rgba(26,58,143,.25)' }}
                 >
-                  {isHe ? '← הבא' : 'Next →'}
+                  {isHe
+                    ? <>הבא <ArrowBackIcon sx={{ fontSize: 14 }} /></>
+                    : <>Next <ArrowForwardIcon sx={{ fontSize: 14 }} /></>}
                 </button>
               </div>
             </div>
