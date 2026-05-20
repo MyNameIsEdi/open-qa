@@ -16,10 +16,20 @@ import CodeSnippet from '../components/CodeSnippet'
 import { MODULES, type GuideSection, type GuideModule } from '../data/guidesData'
 import { PyramidAnimation } from '../components/guides/PyramidAnimation'
 import { ModuleMapAnimation } from '../components/guides/ModuleMapAnimation'
+import { WhenToAutomateAnimation } from '../components/guides/WhenToAutomateAnimation'
+import { SetupPlaywrightAnimation } from '../components/guides/SetupPlaywrightAnimation'
+import { FirstTestAnimation } from '../components/guides/FirstTestAnimation'
+import { LocatorsAnimation } from '../components/guides/LocatorsAnimation'
+import { PomAnimation } from '../components/guides/PomAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':        PyramidAnimation,
   'course-overview': ModuleMapAnimation,
+  'when-to-automate': WhenToAutomateAnimation,
+  'setup-playwright': SetupPlaywrightAnimation,
+  'first-test':       FirstTestAnimation,
+  'locators':         LocatorsAnimation,
+  'pom':              PomAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
