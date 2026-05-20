@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Play, Square, RotateCcw, Download, Bug, Eye, Camera,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
@@ -6,23 +6,41 @@ import {
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
-  ExternalLink, ChevronRight, Hash,
+  ExternalLink, ChevronRight, Hash, Grid3x3, List, Tag,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Status    = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
-type FilterKey = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey   = 'dashboard' | 'settings' | 'docs'
+type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
+type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
+type ViewKey      = 'dashboard' | 'settings' | 'docs'
+type DashboardMode = 'list' | 'matrix'
+type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
+type ErrorType    = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
+
+interface BrowserResult {
+  browser: BrowserKey
+  status: Status
+  duration: number
+}
+
+interface TestStep {
+  title: string
+  duration: number
+  status: 'passed' | 'failed'
+}
 
 interface TestCase {
   id: string
   title: string
   status: Status
   duration: number
-  browser: 'chromium' | 'firefox' | 'webkit'
+  browser: BrowserKey
   error?: string
   retries?: number
+  tags?: string[]
+  browserResults?: BrowserResult[]
+  steps?: TestStep[]
 }
 
 interface TestSuite {
@@ -90,12 +108,65 @@ const INITIAL_SUITES: TestSuite[] = [
     file: 'tests/login.spec.ts',
     title: 'Login flow',
     tests: [
-      { id: 'l1', title: 'successful login redirects to dashboard',  status: 'passed', duration: 1240, browser: 'chromium' },
-      { id: 'l2', title: 'wrong password shows error message',        status: 'passed', duration: 890,  browser: 'chromium' },
-      { id: 'l3', title: 'empty fields show validation errors',       status: 'failed', duration: 2100, browser: 'chromium', retries: 1,
-        error: "Error: Timeout 5000ms exceeded.\nExpected element to be visible: getByTestId('email-error')\nReceived: hidden\n  at tests/login.spec.ts:42:18" },
-      { id: 'l4', title: 'remember me checkbox persists session',     status: 'passed', duration: 1560, browser: 'chromium' },
-      { id: 'l5', title: 'logout clears session and redirects',       status: 'passed', duration: 730,  browser: 'chromium' },
+      {
+        id: 'l1', title: 'successful login redirects to dashboard', status: 'passed', duration: 1240, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 1240 },
+          { browser: 'firefox',  status: 'passed', duration: 1480 },
+          { browser: 'webkit',   status: 'passed', duration: 1190 },
+        ],
+        steps: [
+          { title: 'page.goto("/login")',                    duration: 340, status: 'passed' },
+          { title: 'getByLabel("Email").fill(…)',            duration: 85,  status: 'passed' },
+          { title: 'getByLabel("Password").fill(…)',         duration: 70,  status: 'passed' },
+          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 210, status: 'passed' },
+          { title: 'expect(page).toHaveURL("/dashboard")',   duration: 535, status: 'passed' },
+        ],
+      },
+      {
+        id: 'l2', title: 'wrong password shows error message', status: 'passed', duration: 890, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 890 },
+          { browser: 'firefox',  status: 'passed', duration: 970 },
+          { browser: 'webkit',   status: 'passed', duration: 850 },
+        ],
+      },
+      {
+        id: 'l3', title: 'empty fields show validation errors', status: 'failed', duration: 2100, browser: 'chromium', retries: 1,
+        tags: ['@regression'],
+        error: "Error: Timeout 5000ms exceeded.\nExpected element to be visible: getByTestId('email-error')\nReceived: hidden\n  at tests/login.spec.ts:42:18",
+        browserResults: [
+          { browser: 'chromium', status: 'failed', duration: 2100 },
+          { browser: 'firefox',  status: 'failed', duration: 2340 },
+          { browser: 'webkit',   status: 'passed', duration: 810 },
+        ],
+        steps: [
+          { title: 'page.goto("/login")',                         duration: 290, status: 'passed' },
+          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 105, status: 'passed' },
+          { title: 'expect(getByTestId("email-error")).toBeVisible()', duration: 5005, status: 'failed' },
+        ],
+      },
+      {
+        id: 'l4', title: 'remember me checkbox persists session', status: 'passed', duration: 1560, browser: 'chromium',
+        retries: 1,   // flaky — eventually passed
+        tags: ['@regression'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 1560 },
+          { browser: 'firefox',  status: 'passed', duration: 1740 },
+          { browser: 'webkit',   status: 'skipped', duration: 0 },
+        ],
+      },
+      {
+        id: 'l5', title: 'logout clears session and redirects', status: 'passed', duration: 730, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 730 },
+          { browser: 'firefox',  status: 'passed', duration: 820 },
+          { browser: 'webkit',   status: 'passed', duration: 700 },
+        ],
+      },
     ],
   },
   {
@@ -103,10 +174,41 @@ const INITIAL_SUITES: TestSuite[] = [
     file: 'tests/navigation.spec.ts',
     title: 'Navigation',
     tests: [
-      { id: 'n1', title: 'clicking logo navigates to home',           status: 'passed', duration: 410,  browser: 'chromium' },
-      { id: 'n2', title: 'all nav links are reachable',               status: 'passed', duration: 1820, browser: 'chromium' },
-      { id: 'n3', title: 'browser back / forward works correctly',    status: 'passed', duration: 590,  browser: 'chromium' },
-      { id: 'n4', title: 'deep link to /agents renders agents page',  status: 'skipped', duration: 0,   browser: 'chromium' },
+      {
+        id: 'n1', title: 'clicking logo navigates to home', status: 'passed', duration: 410, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 410 },
+          { browser: 'firefox',  status: 'passed', duration: 490 },
+          { browser: 'webkit',   status: 'passed', duration: 380 },
+        ],
+      },
+      {
+        id: 'n2', title: 'all nav links are reachable', status: 'passed', duration: 1820, browser: 'chromium',
+        retries: 1,   // flaky — passed on retry
+        tags: ['@regression'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 1820 },
+          { browser: 'firefox',  status: 'passed', duration: 2010 },
+          { browser: 'webkit',   status: 'passed', duration: 1750 },
+        ],
+      },
+      {
+        id: 'n3', title: 'browser back / forward works correctly', status: 'passed', duration: 590, browser: 'chromium',
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 590 },
+          { browser: 'firefox',  status: 'passed', duration: 640 },
+          { browser: 'webkit',   status: 'passed', duration: 560 },
+        ],
+      },
+      {
+        id: 'n4', title: 'deep link to /agents renders agents page', status: 'skipped', duration: 0, browser: 'chromium',
+        browserResults: [
+          { browser: 'chromium', status: 'skipped', duration: 0 },
+          { browser: 'firefox',  status: 'skipped', duration: 0 },
+          { browser: 'webkit',   status: 'skipped', duration: 0 },
+        ],
+      },
     ],
   },
   {
@@ -114,11 +216,47 @@ const INITIAL_SUITES: TestSuite[] = [
     file: 'tests/forms.spec.ts',
     title: 'Form validation',
     tests: [
-      { id: 'f1', title: 'required fields marked on empty submit',    status: 'passed', duration: 980,  browser: 'chromium' },
-      { id: 'f2', title: 'email format validated inline',             status: 'passed', duration: 760,  browser: 'chromium' },
-      { id: 'f3', title: 'max-length enforced on text inputs',        status: 'failed', duration: 1350, browser: 'firefox',
-        error: "Error: expect(received).toHaveValue(expected)\nExpected: 'a'.repeat(255)\nReceived: 'a'.repeat(256)\n  at tests/forms.spec.ts:88:5" },
-      { id: 'f4', title: 'form submits with valid data',              status: 'passed', duration: 1140, browser: 'chromium' },
+      {
+        id: 'f1', title: 'required fields marked on empty submit', status: 'passed', duration: 980, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 980 },
+          { browser: 'firefox',  status: 'passed', duration: 1050 },
+          { browser: 'webkit',   status: 'passed', duration: 920 },
+        ],
+      },
+      {
+        id: 'f2', title: 'email format validated inline', status: 'passed', duration: 760, browser: 'chromium',
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 760 },
+          { browser: 'firefox',  status: 'passed', duration: 800 },
+          { browser: 'webkit',   status: 'passed', duration: 730 },
+        ],
+      },
+      {
+        id: 'f3', title: 'max-length enforced on text inputs', status: 'failed', duration: 1350, browser: 'firefox',
+        tags: ['@regression'],
+        error: "Error: expect(received).toHaveValue(expected)\nExpected: 'a'.repeat(255)\nReceived: 'a'.repeat(256)\n  at tests/forms.spec.ts:88:5",
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 890 },
+          { browser: 'firefox',  status: 'failed', duration: 1350 },  // ← Firefox-only bug!
+          { browser: 'webkit',   status: 'passed', duration: 870 },
+        ],
+        steps: [
+          { title: 'page.goto("/signup")',                           duration: 310, status: 'passed' },
+          { title: 'getByLabel("Username").fill("a".repeat(300))',   duration: 195, status: 'passed' },
+          { title: 'expect(input).toHaveValue("a".repeat(255))',     duration: 845, status: 'failed' },
+        ],
+      },
+      {
+        id: 'f4', title: 'form submits with valid data', status: 'passed', duration: 1140, browser: 'chromium',
+        tags: ['@smoke'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 1140 },
+          { browser: 'firefox',  status: 'passed', duration: 1230 },
+          { browser: 'webkit',   status: 'passed', duration: 1090 },
+        ],
+      },
     ],
   },
   {
@@ -126,10 +264,10 @@ const INITIAL_SUITES: TestSuite[] = [
     file: 'tests/api.spec.ts',
     title: 'API endpoints',
     tests: [
-      { id: 'a1', title: 'GET /api/agents returns 200 with array',    status: 'passed', duration: 210,  browser: 'chromium' },
-      { id: 'a2', title: 'POST /api/run/:id executes agent',          status: 'passed', duration: 3400, browser: 'chromium' },
-      { id: 'a3', title: 'GET /api/health returns ok status',         status: 'passed', duration: 95,   browser: 'chromium' },
-      { id: 'a4', title: 'unknown route returns 404',                 status: 'passed', duration: 130,  browser: 'chromium' },
+      { id: 'a1', title: 'GET /api/agents returns 200 with array',  status: 'passed', duration: 210,  browser: 'chromium', tags: ['@smoke'] },
+      { id: 'a2', title: 'POST /api/run/:id executes agent',         status: 'passed', duration: 3400, browser: 'chromium', retries: 1, tags: ['@regression'] },
+      { id: 'a3', title: 'GET /api/health returns ok status',        status: 'passed', duration: 95,   browser: 'chromium', tags: ['@smoke'] },
+      { id: 'a4', title: 'unknown route returns 404',                status: 'passed', duration: 130,  browser: 'chromium' },
     ],
   },
   {
@@ -137,9 +275,25 @@ const INITIAL_SUITES: TestSuite[] = [
     file: 'tests/accessibility.spec.ts',
     title: 'Accessibility (axe-core)',
     tests: [
-      { id: 'ax1', title: 'home page has no critical WCAG violations', status: 'passed', duration: 2200, browser: 'chromium' },
-      { id: 'ax2', title: 'agents page passes WCAG AA',                status: 'passed', duration: 1980, browser: 'chromium' },
-      { id: 'ax3', title: 'modal dialogs trap focus correctly',        status: 'skipped', duration: 0,   browser: 'chromium' },
+      {
+        id: 'ax1', title: 'home page has no critical WCAG violations', status: 'passed', duration: 2200, browser: 'chromium',
+        tags: ['@a11y'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 2200 },
+          { browser: 'firefox',  status: 'passed', duration: 2450 },
+          { browser: 'webkit',   status: 'passed', duration: 2100 },
+        ],
+      },
+      {
+        id: 'ax2', title: 'agents page passes WCAG AA', status: 'passed', duration: 1980, browser: 'chromium',
+        tags: ['@a11y'],
+        browserResults: [
+          { browser: 'chromium', status: 'passed', duration: 1980 },
+          { browser: 'firefox',  status: 'passed', duration: 2180 },
+          { browser: 'webkit',   status: 'passed', duration: 1900 },
+        ],
+      },
+      { id: 'ax3', title: 'modal dialogs trap focus correctly', status: 'skipped', duration: 0, browser: 'chromium', tags: ['@a11y'] },
     ],
   },
 ]
@@ -712,6 +866,234 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
   )
 }
 
+// ─── Playwright-specific helpers ─────────────────────────────────────────────
+
+/** Parse a Playwright error string and return a human-readable category */
+function parseErrorType(error: string): ErrorType {
+  if (/timeout/i.test(error))               return 'Timeout'
+  if (/toHave|toBe|toContain|expect/i.test(error)) return 'Assertion'
+  if (/locator|strict mode|resolved to/i.test(error)) return 'Locator'
+  if (/net::|ERR_|fetch|request/i.test(error)) return 'Network'
+  return 'Error'
+}
+
+const ERROR_TYPE_STYLES: Record<ErrorType, { bg: string; color: string; border: string }> = {
+  Timeout:   { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  Assertion: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca' },
+  Locator:   { bg: '#ede9fe', color: '#5b21b6', border: '#ddd6fe' },
+  Network:   { bg: '#e0f2fe', color: '#0c4a6e', border: '#bae6fd' },
+  Error:     { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
+}
+
+const BROWSER_META: Record<BrowserKey, { label: string; color: string; emoji: string }> = {
+  chromium: { label: 'Chromium', color: '#4285f4', emoji: '🔵' },
+  firefox:  { label: 'Firefox',  color: '#ff6611', emoji: '🦊' },
+  webkit:   { label: 'WebKit',   color: '#999999', emoji: '🧡' },
+}
+
+function BrowserChip({ browser, status, duration }: { browser: BrowserKey; status: Status; duration: number }) {
+  const meta = BROWSER_META[browser]
+  const color =
+    status === 'passed'  ? '#10b981' :
+    status === 'failed'  ? '#ef4444' :
+    status === 'skipped' ? '#f59e0b' : 'var(--text-muted)'
+
+  return (
+    <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border min-w-[60px]"
+      style={{ borderColor: `${color}40`, backgroundColor: `${color}10` }}>
+      <span className="text-[11px]">{meta.emoji}</span>
+      <StatusIcon status={status} size={12} />
+      {duration > 0 && <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{formatMs(duration)}</span>}
+    </div>
+  )
+}
+
+// ─── Browser Matrix View ──────────────────────────────────────────────────────
+
+function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
+  const allTests = suites.flatMap(s => s.tests.map(t => ({ ...t, suiteTitle: s.title })))
+  const testsWithCross = allTests.filter(t => t.browserResults && t.browserResults.length > 0)
+  const browsers: BrowserKey[] = ['chromium', 'firefox', 'webkit']
+
+  if (testsWithCross.length === 0) {
+    return (
+      <div className="text-center py-16 rounded-2xl border" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No cross-browser data — add <code className="font-mono text-xs">browserResults</code> to your tests.</p>
+      </div>
+    )
+  }
+
+  function cellStatus(test: typeof testsWithCross[number], browser: BrowserKey): Status | null {
+    if (!test.browserResults) return null
+    return test.browserResults.find(r => r.browser === browser)?.status ?? null
+  }
+
+  const StatusCell = ({ status }: { status: Status | null }) => {
+    if (!status) return <td className="px-3 py-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>—</td>
+    const bgMap: Record<Status, string> = {
+      passed:  'rgba(16,185,129,0.1)',
+      failed:  'rgba(239,68,68,0.1)',
+      skipped: 'rgba(251,191,36,0.1)',
+      pending: 'rgba(148,163,184,0.08)',
+      running: 'rgba(59,130,246,0.1)',
+    }
+    return (
+      <td className="px-3 py-2 text-center" style={{ backgroundColor: bgMap[status] }}>
+        <div className="flex justify-center"><StatusIcon status={status} size={13} /></div>
+      </td>
+    )
+  }
+
+  // Group tests by suite
+  const bysuite = suites.map(s => ({
+    ...s,
+    tests: s.tests.filter(t => t.browserResults && t.browserResults.length > 0),
+  })).filter(s => s.tests.length > 0)
+
+  return (
+    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+        <Globe size={13} style={{ color: '#7c3aed' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Browser Matrix</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— test results per browser project</span>
+        <div className="ml-auto flex items-center gap-3">
+          {browsers.map(b => (
+            <span key={b} className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <span>{BROWSER_META[b].emoji}</span> {BROWSER_META[b].label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <th className="text-left px-4 py-2 font-semibold w-full" style={{ color: 'var(--text-muted)' }}>Test</th>
+              {browsers.map(b => (
+                <th key={b} className="px-4 py-2 font-bold text-center whitespace-nowrap" style={{ color: BROWSER_META[b].color }}>
+                  {BROWSER_META[b].emoji} {BROWSER_META[b].label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bysuite.map(suite => (
+              <React.Fragment key={suite.id}>
+                <tr>
+                  <td colSpan={4} className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest"
+                    style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border)' }}>
+                    {suite.title}
+                  </td>
+                </tr>
+                {suite.tests.map((test, i) => (
+                  <tr key={test.id}
+                    style={{ borderBottom: i < suite.tests.length - 1 ? '1px solid var(--border)' : undefined, backgroundColor: 'var(--bg-card)' }}>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <StatusIcon status={test.status} size={13} />
+                        <span className="truncate max-w-xs" style={{ color: 'var(--text-main)' }}>{test.title}</span>
+                        {test.retries && test.status === 'passed' && (
+                          <span className="text-[9px] font-bold px-1.5 py-px rounded-full bg-amber-100 text-amber-700 shrink-0">FLAKY</span>
+                        )}
+                        {(test.tags ?? []).map(tag => (
+                          <span key={tag} className="text-[9px] font-mono px-1.5 py-px rounded border shrink-0"
+                            style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>{tag}</span>
+                        ))}
+                      </div>
+                    </td>
+                    {browsers.map(b => <StatusCell key={b} status={cellStatus(test, b)} />)}
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Flaky Test Panel ─────────────────────────────────────────────────────────
+
+function FlakyPanel({ suites }: { suites: TestSuite[] }) {
+  const flakyTests = suites.flatMap(s =>
+    s.tests
+      .filter(t => (t.retries ?? 0) > 0 && t.status === 'passed')
+      .map(t => ({ ...t, suiteFile: s.file, suiteTitle: s.title }))
+  )
+
+  if (flakyTests.length === 0) return null
+
+  return (
+    <div className="mt-4 rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#fbbf24', backgroundColor: 'var(--bg-card)' }}>
+      <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: '#fde68a', backgroundColor: '#fffbeb' }}>
+        <AlertTriangle size={13} style={{ color: '#d97706' }} />
+        <span className="text-xs font-bold" style={{ color: '#92400e' }}>Flaky Tests</span>
+        <span className="text-[11px]" style={{ color: '#b45309' }}>— passed only after retrying</span>
+        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+          {flakyTests.length} test{flakyTests.length > 1 ? 's' : ''}
+        </span>
+      </div>
+      <div>
+        {flakyTests.map((test, i) => (
+          <div key={test.id} className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`}
+            style={{ borderColor: 'var(--border)' }}>
+            <AlertTriangle size={13} style={{ color: '#f59e0b' }} className="shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</p>
+              <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{test.suiteFile}</p>
+            </div>
+            {(test.tags ?? []).map(tag => (
+              <span key={tag} className="text-[9px] font-mono px-1.5 py-px rounded border shrink-0"
+                style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>{tag}</span>
+            ))}
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+              {test.retries} retry
+            </span>
+            <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>{formatMs(test.duration)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-2.5 border-t text-[11px]" style={{ borderColor: '#fde68a', backgroundColor: '#fffbeb', color: '#b45309' }}>
+        💡 Flaky tests destabilise CI. Investigate network dependencies, race conditions, or use <code className="font-mono">test.setTimeout()</code> to isolate the root cause.
+      </div>
+    </div>
+  )
+}
+
+// ─── Test Step Timeline ───────────────────────────────────────────────────────
+
+function StepTimeline({ steps }: { steps: TestStep[] }) {
+  const maxDur = Math.max(...steps.map(s => s.duration), 1)
+  return (
+    <div className="mx-4 mb-3 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+      <div className="px-3 py-1.5 border-b text-[10px] font-bold uppercase tracking-widest"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-muted)' }}>
+        Steps
+      </div>
+      {steps.map((step, i) => (
+        <div key={i} className={`flex items-center gap-3 px-3 py-2 ${i > 0 ? 'border-t' : ''}`}
+          style={{ borderColor: 'var(--border)', backgroundColor: step.status === 'failed' ? 'rgba(239,68,68,0.05)' : undefined }}>
+          <StatusIcon status={step.status} size={11} />
+          <span className="flex-1 text-[11px] font-mono truncate"
+            style={{ color: step.status === 'failed' ? '#dc2626' : 'var(--text-main)' }}>{step.title}</span>
+          <div className="w-24 h-1 rounded-full overflow-hidden shrink-0" style={{ backgroundColor: 'var(--border)' }}>
+            <div className="h-full rounded-full" style={{
+              width: `${(step.duration / maxDur) * 100}%`,
+              backgroundColor: step.status === 'failed' ? '#ef4444' : '#10b981',
+            }} />
+          </div>
+          <span className="text-[10px] font-mono w-14 text-right shrink-0" style={{ color: 'var(--text-muted)' }}>{formatMs(step.duration)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Docs View ────────────────────────────────────────────────────────────────
 
 /** Syntax-highlighted code block (Catppuccin-dark theme matching the config preview) */
@@ -1266,6 +1648,7 @@ export default function PlaywrightDashboard() {
   const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
   const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
   const [justSaved, setJustSaved]         = useState(false)
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
@@ -1536,7 +1919,7 @@ export default function PlaywrightDashboard() {
             {/* History chart */}
             <HistoryChart history={MOCK_HISTORY} />
 
-            {/* Search + Filter tabs */}
+            {/* Search + Filter + Mode toggle */}
             <div className="flex items-center gap-3 mb-5 flex-wrap">
               <div className="relative flex-1 min-w-44">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
@@ -1571,10 +1954,31 @@ export default function PlaywrightDashboard() {
                   </button>
                 ))}
               </div>
+
+              {/* List / Matrix toggle */}
+              <div className="flex items-center gap-0.5 p-0.5 rounded-lg border ml-auto"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                {([
+                  { mode: 'list'   as const, icon: <List size={12} />,    label: 'List' },
+                  { mode: 'matrix' as const, icon: <Grid3x3 size={12} />, label: 'Matrix' },
+                ]).map(({ mode, icon, label }) => (
+                  <button key={mode} onClick={() => setDashboardMode(mode)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+                    style={dashboardMode === mode
+                      ? { backgroundColor: 'var(--bg-body)', color: '#2563eb', boxShadow: '0 1px 3px rgba(0,0,0,.08)' }
+                      : { color: 'var(--text-muted)' }
+                    }>
+                    {icon} {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Test suite accordion */}
-            <div className="flex flex-col gap-3">
+            {/* Matrix view */}
+            {dashboardMode === 'matrix' && <BrowserMatrixView suites={filteredSuites} />}
+
+            {/* List view — Test suite accordion */}
+            {dashboardMode === 'list' && <div className="flex flex-col gap-3">
               {filteredSuites.map(suite => {
                 const passed        = suite.tests.filter(t => t.status === 'passed').length
                 const status        = suiteStatus(suite)
@@ -1605,8 +2009,11 @@ export default function PlaywrightDashboard() {
                       <div className="border-t" style={{ borderColor: 'var(--border)' }}>
                         {suite.tests.map((test, i) => {
                           const isFailed    = test.status === 'failed'
+                          const isFlaky     = (test.retries ?? 0) > 0 && test.status === 'passed'
                           const showActions = isFailed && (hoveredTest === test.id || expandedErrors[test.id])
                           const errorOpen   = expandedErrors[test.id]
+                          const errType     = isFailed && test.error ? parseErrorType(test.error) : null
+                          const errStyle    = errType ? ERROR_TYPE_STYLES[errType] : null
                           return (
                             <div key={test.id} className={i > 0 ? 'border-t' : ''} style={{ borderColor: 'var(--border)' }}>
                               <div
@@ -1617,8 +2024,35 @@ export default function PlaywrightDashboard() {
                                 onClick={() => isFailed && toggleError(test.id)}
                               >
                                 <StatusIcon status={test.status} />
-                                <span className="flex-1 text-xs" style={{ color: 'var(--text-main)' }}>{test.title}</span>
-                                {test.retries !== undefined && test.retries > 0 && (
+                                <span className="flex-1 min-w-0">
+                                  <span className="text-xs block truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
+                                  {/* Tags */}
+                                  {(test.tags ?? []).length > 0 && (
+                                    <span className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                      {(test.tags ?? []).map(tag => (
+                                        <span key={tag} className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-px rounded border"
+                                          style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+                                          <Tag size={8} />{tag}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  )}
+                                </span>
+                                {/* Error type badge */}
+                                {errType && errStyle && (
+                                  <span className="text-[10px] font-bold px-1.5 py-px rounded shrink-0"
+                                    style={{ background: errStyle.bg, color: errStyle.color, border: `1px solid ${errStyle.border}` }}>
+                                    {errType}
+                                  </span>
+                                )}
+                                {/* Flaky badge */}
+                                {isFlaky && (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-px rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                                    <AlertTriangle size={9} /> FLAKY
+                                  </span>
+                                )}
+                                {/* Retry badge (for still-failed tests) */}
+                                {!isFlaky && (test.retries ?? 0) > 0 && (
                                   <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
                                     <AlertTriangle size={10} /> {test.retries} retry
                                   </span>
@@ -1634,6 +2068,9 @@ export default function PlaywrightDashboard() {
                                 {isFailed && (errorOpen ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />)}
                               </div>
                               {showActions && <FailedActions test={test} suiteFile={suite.file} onViewArtifacts={setArtifactModal} />}
+                              {isFailed && errorOpen && test.steps && test.steps.length > 0 && (
+                                <StepTimeline steps={test.steps} />
+                              )}
                               {isFailed && errorOpen && (
                                 <div className="mx-4 mb-3 p-3 rounded-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap border-l-2 border-red-400"
                                   style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626' }}>
@@ -1658,7 +2095,7 @@ export default function PlaywrightDashboard() {
                   {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Slowest tests */}
             {slowestTests.length > 0 && !searchQuery && (
@@ -1683,6 +2120,9 @@ export default function PlaywrightDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Flaky test panel */}
+            <FlakyPanel suites={suites} />
           </>
         )}
 
