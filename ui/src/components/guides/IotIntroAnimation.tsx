@@ -91,7 +91,6 @@ export function IotIntroAnimation() {
         padding: '7px 13px', borderRadius: 9,
         background: '#fef9c3', border: '1px solid #fde047',
         fontSize: 10.5, color: '#854d0e',
-        animation2: 'qa-pulse 2s ease 2.5s infinite',
       }}>
         ⏰ <strong>Watchdog timer</strong> — if firmware hangs, the device resets itself. QA must test this failsafe.
       </div>
