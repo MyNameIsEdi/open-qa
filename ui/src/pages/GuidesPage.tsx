@@ -32,6 +32,9 @@ import { AndOrOrderAnimation } from '../components/guides/AndOrOrderAnimation'
 import { GroupHavingAnimation } from '../components/guides/GroupHavingAnimation'
 import { JoinsAnimation } from '../components/guides/JoinsAnimation'
 import { SqlQaQueriesAnimation } from '../components/guides/SqlQaQueriesAnimation'
+import { AiTestingAnimation } from '../components/guides/AiTestingAnimation'
+import { DevOpsQaAnimation } from '../components/guides/DevOpsQaAnimation'
+import { SecurityTestingAnimation } from '../components/guides/SecurityTestingAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':         PyramidAnimation,
@@ -52,6 +55,9 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'group-having':     GroupHavingAnimation,
   'joins':            JoinsAnimation,
   'sql-qa-queries':   SqlQaQueriesAnimation,
+  'ai-testing':       AiTestingAnimation,
+  'devops-qa':        DevOpsQaAnimation,
+  'security-testing': SecurityTestingAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
