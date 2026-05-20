@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRtl } from '../hooks/useRtl'
+import ModuleHero from '../components/guides/ModuleHero'
 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
@@ -66,6 +67,97 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
+
+// ─── Download cards data ───────────────────────────────────────────────────────
+type DownloadCard = { name: string; nameHe: string; desc: string; descHe: string; type: 'PDF' | 'XLSX' | 'MD'; size: string }
+const SECTION_DOWNLOADS: Record<string, DownloadCard[]> = {
+  'intro-qa': [
+    { name: 'QA Fundamentals Checklist', nameHe: 'רשימת תיוג יסודות QA', desc: 'All core concepts — pyramid, bug lifecycle, test types', descHe: 'כל מושגי הבסיס — פירמידה, מחזור חיי באג, סוגי בדיקות', type: 'PDF', size: '1.2 MB' },
+    { name: 'Testing Pyramid Cheat Sheet', nameHe: 'דף רמאות — פירמידת הבדיקות', desc: 'One-page Unit / Integration / E2E comparison table', descHe: 'טבלת השוואה חד-עמודית Unit / Integration / E2E', type: 'MD', size: '0.3 MB' },
+  ],
+  'when-to-automate': [
+    { name: 'Automation ROI Calculator', nameHe: 'מחשבון ROI לאוטומציה', desc: 'Excel file — enter run frequency, get ROI decision', descHe: 'קובץ Excel — הכנס תדירות ריצה, קבל החלטת ROI', type: 'XLSX', size: '0.8 MB' },
+    { name: 'Decision Matrix Template', nameHe: 'תבנית מטריצת החלטות', desc: 'Ready-to-fill template for planning sessions', descHe: 'תבנית מוכנה למילוי לפגישות תכנון', type: 'PDF', size: '0.5 MB' },
+  ],
+  'setup-playwright': [
+    { name: 'Playwright Setup Guide', nameHe: 'מדריך הגדרת Playwright', desc: 'Windows, Mac & Linux setup with troubleshooting tips', descHe: 'מדריך התקנה ל-Windows, Mac ו-Linux עם פתרון בעיות', type: 'PDF', size: '2.1 MB' },
+    { name: 'Playwright Commands Cheat Sheet', nameHe: 'דף רמאות — פקודות Playwright', desc: 'Most-used commands on a single A4 sheet', descHe: 'הפקודות הכי שימושיות בגיליון A4 אחד', type: 'PDF', size: '0.9 MB' },
+  ],
+  'locators': [
+    { name: 'Locator Strategy Guide', nameHe: 'מדריך אסטרטגיית Locators', desc: 'Priority order and when to use each locator type', descHe: 'סדר עדיפויות ומתי להשתמש בכל סוג locator', type: 'PDF', size: '0.7 MB' },
+  ],
+  'pom': [
+    { name: 'POM Starter Template', nameHe: 'תבנית התחלה לPOM', desc: 'Ready-to-use TypeScript POM with LoginPage example', descHe: 'תבנית TypeScript מוכנה לשימוש עם דוגמת LoginPage', type: 'MD', size: '0.2 MB' },
+  ],
+  'api-playwright': [
+    { name: 'REST API Test Recipes', nameHe: 'מתכוני בדיקת REST API', desc: 'GET, POST, auth, error handling patterns', descHe: 'דפוסי GET, POST, auth וטיפול בשגיאות', type: 'PDF', size: '0.6 MB' },
+  ],
+  'api-postman': [
+    { name: 'Postman Collection Template', nameHe: 'תבנית Collection לPostman', desc: 'Importable collection with env variables wired up', descHe: 'קולקשן מוכן לייבוא עם משתני סביבה מוגדרים', type: 'MD', size: '0.4 MB' },
+  ],
+  'load-types': [
+    { name: 'k6 Starter Script', nameHe: 'סקריפט k6 להתחלה', desc: 'Ready-to-run k6 script with 50 VUs, 1 min ramp-up', descHe: 'סקריפט k6 מוכן להרצה עם 50 VUs ורמפ-אפ של דקה', type: 'MD', size: '0.2 MB' },
+    { name: 'Load Test Results Template', nameHe: 'תבנית תוצאות בדיקת עומס', desc: 'P50/P95/P99 reporting template for stakeholders', descHe: 'תבנית דיווח P50/P95/P99 לבעלי עניין', type: 'XLSX', size: '0.5 MB' },
+  ],
+  'sql-qa-queries': [
+    { name: 'QA SQL Query Library', nameHe: 'ספריית שאילתות SQL ל-QA', desc: '20 battle-tested queries for data validation', descHe: '20 שאילתות נבדקות בשדה לאימות נתונים', type: 'MD', size: '0.3 MB' },
+  ],
+  'security-testing': [
+    { name: 'Security Test Checklist', nameHe: 'רשימת תיוג בדיקות אבטחה', desc: 'OWASP Top 10 checks every QA should run', descHe: 'בדיקות OWASP Top 10 שכל QA צריך להריץ', type: 'PDF', size: '0.8 MB' },
+  ],
+  'interview-tips': [
+    { name: 'QA Interview Prep Sheet', nameHe: 'גיליון הכנה לראיון QA', desc: 'Top 15 questions with model answers', descHe: '15 השאלות הנפוצות עם תשובות מודל', type: 'PDF', size: '1.1 MB' },
+  ],
+}
+
+const BADGE_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  PDF:  { bg: '#fef2f2', color: '#b91c1c', border: '#fca5a5' },
+  XLSX: { bg: '#f0fdf4', color: '#166534', border: '#86efac' },
+  MD:   { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' },
+}
+
+function DownloadCards({ sectionId, isHe }: { sectionId: string; isHe: boolean }) {
+  const cards = SECTION_DOWNLOADS[sectionId]
+  if (!cards?.length) return null
+
+  return (
+    <div className="rounded-xl p-4 mt-2"
+      style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #faf7ff 100%)', border: '1px solid #c7d2fe' }}>
+      <p className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#1a3a8f' }}>
+        📥 {isHe ? 'משאבים להורדה' : 'Downloadable Resources'}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {cards.map((card, i) => {
+          const badge = BADGE_STYLES[card.type]
+          return (
+            <div key={i} className="rounded-xl p-3.5 flex flex-col gap-2"
+              style={{ background: '#fff', border: '1px solid #dde6ff', boxShadow: '0 1px 3px rgba(0,0,0,.06)' }}>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-bold leading-tight" style={{ color: 'var(--text-main)' }}>
+                  {isHe ? card.nameHe : card.name}
+                </span>
+                <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold"
+                  style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>
+                  {card.type}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                {isHe ? card.descHe : card.desc}
+              </p>
+              <div className="flex items-center justify-between mt-auto">
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{card.size}</span>
+                <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all hover:-translate-y-0.5"
+                  style={{ background: '#1a3a8f' }}>
+                  ⬇ {isHe ? 'הורד' : 'Download'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function useCompleted() {
@@ -325,6 +417,9 @@ function LessonContent({ section, completed, onToggle, isHe }: {
         </div>
       ))}
 
+      {/* Downloadable resources */}
+      <DownloadCards sectionId={section.id} isHe={isHe} />
+
       <CompleteButton completed={completed} onToggle={onToggle} isHe={isHe} />
     </div>
   )
@@ -521,6 +616,19 @@ export default function GuidesPage() {
         <main className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 112px)' }}>
           {activeSection && (
             <div className="max-w-3xl mx-auto px-6 py-8">
+
+              {/* Module hero — shown only on the first section of each module */}
+              {activeModule && activeModule.sections[0]?.id === activeSection.id && (
+                <ModuleHero
+                  module={activeModule}
+                  totalSections={activeModule.sections.length}
+                  isHe={isHe}
+                  onStart={() => {
+                    const next = activeModule.sections[1]
+                    if (next) setActiveId(next.id)
+                  }}
+                />
+              )}
 
               {/* Breadcrumb */}
               <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
