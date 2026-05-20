@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Play, Square, RotateCcw, Download, Bug, Eye, Camera,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
   Circle, AlertTriangle, X, Settings, LayoutDashboard,
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
-  Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen,
+  Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -77,6 +77,8 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   forbidOnly: true,
   fullyParallel: true,
 }
+
+const STORAGE_KEY = 'pw_dashboard_config_v1'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -803,6 +805,9 @@ export default function PlaywrightDashboard() {
   const [activeTab, setActiveTab]         = useState<FilterKey>('all')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
   const [config, setConfig]               = useState<PlaywrightConfig>(DEFAULT_CONFIG)
+  const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
+  const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
+  const [justSaved, setJustSaved]         = useState(false)
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
@@ -845,6 +850,37 @@ export default function PlaywrightDashboard() {
     if (config.trace         !== d.trace)                      n++
     if (config.reporter      !== d.reporter)                   n++
     return n
+  }, [config])
+
+  // ── localStorage: load on mount ────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { config: PlaywrightConfig; savedAt: string }
+        setConfig(parsed.config)
+        setSavedConfig(parsed.config)
+        setLastSavedAt(parsed.savedAt)
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [])
+
+  // ── isSaved: true when current config matches what's persisted ──────────────
+  const isSaved = useMemo(() =>
+    savedConfig !== null && JSON.stringify(config) === JSON.stringify(savedConfig),
+    [config, savedConfig]
+  )
+
+  // ── saveConfig ──────────────────────────────────────────────────────────────
+  const saveConfig = useCallback(() => {
+    const savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, savedAt }))
+    setSavedConfig(config)
+    setLastSavedAt(savedAt)
+    setJustSaved(true)
+    setTimeout(() => setJustSaved(false), 2000)
   }, [config])
 
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
@@ -978,13 +1014,33 @@ export default function PlaywrightDashboard() {
 
             {/* Settings actions */}
             {activeView === 'settings' && (
-              <button onClick={() => setConfig(DEFAULT_CONFIG)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
-                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
-                <RotateCcw size={13} /> Reset to defaults
-              </button>
+              <>
+                <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
+                  <RotateCcw size={13} /> Reset to defaults
+                </button>
+                <button
+                  onClick={saveConfig}
+                  disabled={isSaved}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={justSaved
+                    ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                    : isSaved
+                      ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                      : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                  }
+                >
+                  {justSaved
+                    ? <><Check size={13} /> Saved!</>
+                    : isSaved
+                      ? <><Check size={13} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</>
+                      : <><Save size={13} /> Save</>
+                  }
+                </button>
+              </>
             )}
           </div>
         </div>
