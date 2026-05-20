@@ -24,6 +24,7 @@ import { PomAnimation } from '../components/guides/PomAnimation'
 import { ApiPlaywrightAnimation } from '../components/guides/ApiPlaywrightAnimation'
 import { ApiPostmanAnimation } from '../components/guides/ApiPostmanAnimation'
 import { LoadTypesAnimation } from '../components/guides/LoadTypesAnimation'
+import { IotIntroAnimation } from '../components/guides/IotIntroAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':         PyramidAnimation,
@@ -36,6 +37,7 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'api-playwright':   ApiPlaywrightAnimation,
   'api-postman':      ApiPostmanAnimation,
   'load-types':       LoadTypesAnimation,
+  'iot-intro':        IotIntroAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
