@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
@@ -14,6 +14,13 @@ import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import i18n from '../i18n'
 import CodeSnippet from '../components/CodeSnippet'
 import { MODULES, type GuideSection, type GuideModule } from '../data/guidesData'
+import { PyramidAnimation } from '../components/guides/PyramidAnimation'
+import { ModuleMapAnimation } from '../components/guides/ModuleMapAnimation'
+
+const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
+  'intro-qa':        PyramidAnimation,
+  'course-overview': ModuleMapAnimation,
+}
 
 const STORAGE_KEY = 'guides_completed_v3'
 
@@ -213,6 +220,7 @@ function LessonContent({ section, completed, onToggle, isHe }: {
   const summary  = isHe ? section.summaryHe  : section.summary
   const concepts = isHe ? section.conceptsHe : section.concepts
   const snippets = section.snippets ?? []
+  const Animation = SECTION_ANIMATIONS[section.id]
 
   return (
     <div className="flex flex-col gap-5">
@@ -232,6 +240,9 @@ function LessonContent({ section, completed, onToggle, isHe }: {
           {summary}
         </p>
       )}
+
+      {/* Section illustration / animation */}
+      {Animation && <Animation />}
 
       {/* Body paragraphs */}
       {body && (
