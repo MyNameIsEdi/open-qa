@@ -35,6 +35,8 @@ import { SqlQaQueriesAnimation } from '../components/guides/SqlQaQueriesAnimatio
 import { AiTestingAnimation } from '../components/guides/AiTestingAnimation'
 import { DevOpsQaAnimation } from '../components/guides/DevOpsQaAnimation'
 import { SecurityTestingAnimation } from '../components/guides/SecurityTestingAnimation'
+import { InterviewTipsAnimation } from '../components/guides/InterviewTipsAnimation'
+import { LearningSummaryAnimation } from '../components/guides/LearningSummaryAnimation'
 
 const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'intro-qa':         PyramidAnimation,
@@ -57,7 +59,9 @@ const SECTION_ANIMATIONS: Record<string, React.ComponentType> = {
   'sql-qa-queries':   SqlQaQueriesAnimation,
   'ai-testing':       AiTestingAnimation,
   'devops-qa':        DevOpsQaAnimation,
-  'security-testing': SecurityTestingAnimation,
+  'security-testing':  SecurityTestingAnimation,
+  'interview-tips':    InterviewTipsAnimation,
+  'learning-summary':  LearningSummaryAnimation,
 }
 
 const STORAGE_KEY = 'guides_completed_v3'
