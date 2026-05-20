@@ -18,6 +18,12 @@ import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined'
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
+import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import i18n from '../i18n'
 import CodeSnippet from '../components/CodeSnippet'
 import { MODULES, type GuideSection, type GuideModule } from '../data/guidesData'
@@ -129,7 +135,8 @@ function DownloadCards({ sectionId, isHe }: { sectionId: string; isHe: boolean }
     <div className="rounded-xl p-4 mt-2"
       style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #faf7ff 100%)', border: '1px solid #c7d2fe' }}>
       <p className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#1a3a8f' }}>
-        📥 {isHe ? 'משאבים להורדה' : 'Downloadable Resources'}
+        <DownloadOutlinedIcon sx={{ fontSize: 14 }} />
+        {isHe ? 'משאבים להורדה' : 'Downloadable Resources'}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {cards.map((card, i) => {
@@ -169,10 +176,17 @@ function DownloadCards({ sectionId, isHe }: { sectionId: string; isHe: boolean }
 type CalloutType = 'info' | 'tip' | 'warning'
 type Callout = { type: CalloutType; title: string; titleHe: string; body: string; bodyHe: string }
 
-const CALLOUT_STYLES: Record<CalloutType, { bg: string; border: string; icon: string; titleColor: string }> = {
-  info:    { bg: '#eff6ff', border: '#3b82f6', icon: '💡', titleColor: '#1d4ed8' },
-  tip:     { bg: '#f0fdf4', border: '#22c55e', icon: '✨', titleColor: '#166534' },
-  warning: { bg: '#fff7ed', border: '#f97316', icon: '⚠️', titleColor: '#9a3412' },
+const CALLOUT_STYLES: Record<CalloutType, { bg: string; border: string; iconColor: string; titleColor: string }> = {
+  info:    { bg: '#eff6ff', border: '#3b82f6', iconColor: '#3b82f6', titleColor: '#1d4ed8' },
+  tip:     { bg: '#f0fdf4', border: '#22c55e', iconColor: '#16a34a', titleColor: '#166534' },
+  warning: { bg: '#fff7ed', border: '#f97316', iconColor: '#f97316', titleColor: '#9a3412' },
+}
+
+function CalloutIcon({ type, color }: { type: CalloutType; color: string }) {
+  const sx = { fontSize: 16, color, flexShrink: 0, marginTop: '1px' }
+  if (type === 'tip')     return <TipsAndUpdatesOutlinedIcon sx={sx} />
+  if (type === 'warning') return <WarningAmberOutlinedIcon sx={sx} />
+  return <InfoOutlinedIcon sx={sx} />
 }
 
 const SECTION_CALLOUTS: Record<string, Callout[]> = {
@@ -249,7 +263,7 @@ function CalloutBox({ callout, isHe }: { callout: Callout; isHe: boolean }) {
   return (
     <div className="flex gap-3 px-4 py-3.5 rounded-xl text-xs leading-relaxed"
       style={{ background: s.bg, borderInlineStart: `4px solid ${s.border}` }}>
-      <span className="text-base shrink-0 mt-0.5">{s.icon}</span>
+      <CalloutIcon type={callout.type} color={s.iconColor} />
       <div>
         <p className="font-bold mb-1" style={{ color: s.titleColor }}>
           {isHe ? callout.titleHe : callout.title}
@@ -328,8 +342,9 @@ const BUG_STAGES = [
 function BugLifecycle({ isHe }: { isHe: boolean }) {
   return (
     <div className="rounded-xl p-4" style={{ background: 'var(--bg-body)', border: '1px solid var(--border)' }}>
-      <p className="text-xs font-bold mb-3" style={{ color: 'var(--text-main)' }}>
-        🐛 {isHe ? 'מחזור חיי הבאג' : 'Bug Lifecycle'}
+      <p className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
+        <BugReportOutlinedIcon sx={{ fontSize: 14 }} />
+        {isHe ? 'מחזור חיי הבאג' : 'Bug Lifecycle'}
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         {BUG_STAGES.map((s, i) => (
@@ -625,7 +640,7 @@ function LessonContent({ section, completed, onToggle, isHe }: {
 
       {/* First body paragraph — introduces the concept the animation will visualise */}
       {parasBefore.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3.5 rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
           {parasBefore.map((para, i) => (
             <p key={i} className="text-sm leading-7" style={{ color: 'var(--text-muted)' }}>{para}</p>
           ))}
@@ -860,15 +875,15 @@ export default function GuidesPage() {
           </span>
         )}
 
-        {/* Desktop sidebar toggle — moved here, cleaner than a side strip */}
+        {/* Desktop sidebar toggle */}
         <button
           onClick={() => setSidebarOpen(o => !o)}
-          className="hidden md:flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-sand-400 shrink-0"
+          className="hidden md:flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-sand-400 shrink-0"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
         >
           {sidebarOpen
-            ? <><span>{isHe ? '▶' : '◀'}</span> {isHe ? 'סגור' : 'Hide'}</>
-            : <><span>{isHe ? '◀' : '▶'}</span> {isHe ? 'פתח' : 'Contents'}</>}
+            ? <>{isRtl ? <ChevronRightIcon sx={{ fontSize: 16 }} /> : <ChevronLeftIcon sx={{ fontSize: 16 }} />}{isHe ? 'סגור' : 'Hide'}</>
+            : <>{isRtl ? <ChevronLeftIcon sx={{ fontSize: 16 }} /> : <ChevronRightIcon sx={{ fontSize: 16 }} />}{isHe ? 'פתח' : 'Contents'}</>}
         </button>
       </div>
 
