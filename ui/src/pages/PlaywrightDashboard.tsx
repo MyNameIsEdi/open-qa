@@ -5,13 +5,15 @@ import {
   Circle, AlertTriangle, X, Settings, LayoutDashboard,
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
+  BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
+  ExternalLink, ChevronRight, Hash,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Status    = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
 type FilterKey = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey   = 'dashboard' | 'settings'
+type ViewKey   = 'dashboard' | 'settings' | 'docs'
 
 interface TestCase {
   id: string
@@ -710,6 +712,462 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
   )
 }
 
+// ─── Docs View ────────────────────────────────────────────────────────────────
+
+/** Syntax-highlighted code block (Catppuccin-dark theme matching the config preview) */
+function CodeBlock({ code, lang = 'ts' }: { code: string; lang?: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    await navigator.clipboard.writeText(code.trim())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="relative rounded-xl overflow-hidden border my-2" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <div className="flex items-center justify-between px-3 py-1.5"
+        style={{ backgroundColor: '#181825' }}>
+        <span className="text-[10px] font-mono font-semibold" style={{ color: '#6c7086' }}>{lang}</span>
+        <button onClick={copy} className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-opacity hover:opacity-70"
+          style={{ color: copied ? '#a6e3a1' : '#6c7086' }}>
+          {copied ? <Check size={10} /> : <Copy size={10} />}
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+      <pre className="text-[11.5px] font-mono px-4 py-3 overflow-x-auto leading-relaxed"
+        style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', margin: 0 }}>
+        {code.trim()}
+      </pre>
+    </div>
+  )
+}
+
+/** Section heading with icon and anchor */
+function DocSection({ id, icon, title, children }: {
+  id: string; icon: React.ReactNode; title: string; children: React.ReactNode
+}) {
+  return (
+    <section id={id} className="scroll-mt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span style={{ color: '#3b82f6' }}>{icon}</span>
+        <h2 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>{title}</h2>
+        <a href={`#${id}`} className="opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity ml-auto">
+          <Hash size={12} style={{ color: 'var(--text-muted)' }} />
+        </a>
+      </div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </section>
+  )
+}
+
+/** Pill table row for locator/assertion reference */
+function RefRow({ label, desc, badge, badgeColor = '#2563eb' }: {
+  label: string; desc: string; badge?: string; badgeColor?: string
+}) {
+  return (
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl border"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+      <code className="text-[11px] font-mono font-semibold shrink-0 mt-px" style={{ color: '#89b4fa' }}>{label}</code>
+      <span className="flex-1 text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{desc}</span>
+      {badge && (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 leading-none self-center"
+          style={{ backgroundColor: `${badgeColor}20`, color: badgeColor, border: `1px solid ${badgeColor}40` }}>
+          {badge}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** External docs link chip */
+function DocsLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-lg border transition-opacity hover:opacity-70"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: '#3b82f6' }}>
+      {label} <ExternalLink size={10} />
+    </a>
+  )
+}
+
+function DocsView() {
+  const tocItems = [
+    { id: 'quickstart',  label: 'Quick Start',          icon: <Terminal size={12} /> },
+    { id: 'locators',    label: 'Locator Strategies',    icon: <MousePointer2 size={12} /> },
+    { id: 'assertions',  label: 'Core Assertions',       icon: <FlaskConical size={12} /> },
+    { id: 'patterns',    label: 'Common Patterns',       icon: <Layers size={12} /> },
+    { id: 'cli',         label: 'CLI Reference',         icon: <Terminal size={12} /> },
+  ]
+
+  return (
+    <div className="flex gap-6 items-start">
+
+      {/* ── Sticky TOC sidebar ── */}
+      <aside className="hidden lg:flex flex-col gap-1 shrink-0 sticky top-4 w-44">
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>On this page</p>
+        {tocItems.map(({ id, label, icon }) => (
+          <a key={id} href={`#${id}`}
+            className="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-lg transition-colors hover:opacity-80"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+            {icon} {label}
+          </a>
+        ))}
+
+        <div className="mt-4 pt-4 border-t flex flex-col gap-2" style={{ borderColor: 'var(--border)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Official Docs</p>
+          <DocsLink href="https://playwright.dev/docs/intro" label="Playwright" />
+          <DocsLink href="https://playwright.dev/docs/locators" label="Locators" />
+          <DocsLink href="https://playwright.dev/docs/test-assertions" label="Assertions" />
+          <DocsLink href="https://playwright.dev/docs/api/class-page" label="Page API" />
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 min-w-0 flex flex-col gap-8">
+
+        {/* ── Quick Start ─────────────────────────────────── */}
+        <DocSection id="quickstart" icon={<Terminal size={14} />} title="Quick Start">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Install Playwright, generate your config, and run your first test in under 2 minutes.
+          </p>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>1 — Install</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="bash" code={`npm init playwright@latest`} />
+              <p className="text-[11px] mt-2" style={{ color: 'var(--text-muted)' }}>
+                The wizard creates <code className="font-mono">playwright.config.ts</code>, a <code className="font-mono">tests/</code> directory, and installs browser binaries.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>2 — Write your first test</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="typescript" code={`import { test, expect } from '@playwright/test'
+
+test('home page has correct title', async ({ page }) => {
+  await page.goto('https://example.com')
+
+  await expect(page).toHaveTitle(/Example Domain/)
+})`} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>3 — Run</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="bash" code={`npx playwright test              # headless, all browsers
+npx playwright test --headed    # see the browser
+npx playwright test --ui        # interactive UI mode
+npx playwright show-report      # open HTML report`} />
+            </div>
+          </div>
+        </DocSection>
+
+        {/* ── Locator Strategies ──────────────────────────── */}
+        <DocSection id="locators" icon={<MousePointer2 size={14} />} title="Locator Strategies">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Playwright recommends locators in this priority order — higher is more resilient to UI changes.
+          </p>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+            <div className="px-4 py-2 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Priority order</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— prefer top entries first</span>
+            </div>
+            <div className="p-3 flex flex-col gap-2">
+              <RefRow label="getByRole()" desc="Find by ARIA role + accessible name. Survives redesigns and works with screen readers." badge="★ Best" badgeColor="#059669" />
+              <RefRow label="getByLabel()" desc="Find form input by its associated <label> text. Ideal for all form controls." badge="★ Best" badgeColor="#059669" />
+              <RefRow label="getByPlaceholder()" desc="Find input by placeholder text. Use when no label is present." badge="Good" badgeColor="#2563eb" />
+              <RefRow label="getByText()" desc="Find any element by its visible text content. Use .exact for precision." badge="Good" badgeColor="#2563eb" />
+              <RefRow label="getByAltText()" desc="Find images by alt attribute. Essential for image-heavy UIs." badge="Good" badgeColor="#2563eb" />
+              <RefRow label="getByTestId()" desc='Find by data-testid attribute. Requires adding attrs to source code — but very stable.' badge="OK" badgeColor="#d97706" />
+              <RefRow label="locator('css')" desc="CSS selector fallback. Use only when semantic locators don't work." badge="Last resort" badgeColor="#ef4444" />
+              <RefRow label="locator('xpath')" desc="XPath selector. Brittle — avoid unless absolutely necessary." badge="Avoid" badgeColor="#ef4444" />
+            </div>
+          </div>
+
+          <CodeBlock lang="typescript" code={`// ✅ Preferred — role + name survives UI redesigns
+page.getByRole('button', { name: 'Submit' })
+page.getByRole('link', { name: /sign in/i })
+page.getByRole('heading', { level: 1 })
+
+// ✅ Form controls by label
+page.getByLabel('Email address')
+page.getByLabel(/password/i)
+
+// ✅ Text content
+page.getByText('Forgot password?')
+page.getByText('Confirm', { exact: true })
+
+// ⚠️ CSS — use as a fallback
+page.locator('[data-testid="submit-btn"]')
+page.locator('form.login-form input[type="email"]')
+
+// ❌ Avoid — breaks on any DOM restructure
+page.locator('div > div:nth-child(3) > span')`} />
+        </DocSection>
+
+        {/* ── Core Assertions ─────────────────────────────── */}
+        <DocSection id="assertions" icon={<FlaskConical size={14} />} title="Core Assertions">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            All Playwright assertions are <strong>auto-retrying</strong> — they keep checking until the condition is met or the timeout expires.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Visibility */}
+            <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Visibility</p>
+              </div>
+              <div className="p-3 flex flex-col gap-1.5" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <RefRow label="toBeVisible()" desc="Element is in DOM and not hidden." />
+                <RefRow label="toBeHidden()" desc="Element is absent or display:none." />
+                <RefRow label="toBeInViewport()" desc="Element is within the visible viewport." />
+              </div>
+            </div>
+
+            {/* State */}
+            <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Element State</p>
+              </div>
+              <div className="p-3 flex flex-col gap-1.5" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <RefRow label="toBeEnabled()" desc="Form control is not disabled." />
+                <RefRow label="toBeChecked()" desc="Checkbox or radio is checked." />
+                <RefRow label="toBeFocused()" desc="Element has keyboard focus." />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Content</p>
+              </div>
+              <div className="p-3 flex flex-col gap-1.5" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <RefRow label="toHaveText()" desc="Element's text content matches (string or regex)." />
+                <RefRow label="toContainText()" desc="Element's text contains the substring." />
+                <RefRow label="toHaveValue()" desc="Input / select has the expected value." />
+                <RefRow label="toHaveAttribute()" desc="Element has a specific attribute value." />
+              </div>
+            </div>
+
+            {/* Page */}
+            <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Page-level</p>
+              </div>
+              <div className="p-3 flex flex-col gap-1.5" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <RefRow label="toHaveTitle()" desc="Page <title> matches string or regex." />
+                <RefRow label="toHaveURL()" desc="Current URL matches string or regex." />
+                <RefRow label="toHaveScreenshot()" desc="Visual snapshot matches baseline PNG." />
+              </div>
+            </div>
+          </div>
+
+          <CodeBlock lang="typescript" code={`// Visibility
+await expect(page.getByRole('dialog')).toBeVisible()
+await expect(page.getByText('Loading…')).toBeHidden()
+
+// Content
+await expect(page.getByRole('heading')).toHaveText('Welcome back')
+await expect(page.getByLabel('Email')).toHaveValue('user@example.com')
+
+// Page
+await expect(page).toHaveTitle(/Dashboard/)
+await expect(page).toHaveURL('/dashboard')
+
+// Custom timeout (default 5 s)
+await expect(locator).toBeVisible({ timeout: 15_000 })
+
+// Soft assertions — continue on failure, report at end
+await expect.soft(page.getByTestId('badge')).toHaveText('Pro')`} />
+        </DocSection>
+
+        {/* ── Common Patterns ─────────────────────────────── */}
+        <DocSection id="patterns" icon={<Layers size={14} />} title="Common Patterns">
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Page Object Model (POM)</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one class per page, reusable across tests</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="typescript" code={`// pages/LoginPage.ts
+export class LoginPage {
+  constructor(private page: Page) {}
+
+  async goto() {
+    await this.page.goto('/login')
+  }
+
+  async login(email: string, password: string) {
+    await this.page.getByLabel('Email').fill(email)
+    await this.page.getByLabel('Password').fill(password)
+    await this.page.getByRole('button', { name: 'Sign In' }).click()
+  }
+
+  get errorMessage() {
+    return this.page.getByRole('alert')
+  }
+}
+
+// tests/login.spec.ts
+test('successful login', async ({ page }) => {
+  const loginPage = new LoginPage(page)
+  await loginPage.goto()
+  await loginPage.login('user@example.com', 'secret')
+  await expect(page).toHaveURL('/dashboard')
+})`} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Fixtures — shared setup across tests</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="typescript" code={`// fixtures.ts
+import { test as base } from '@playwright/test'
+import { LoginPage } from './pages/LoginPage'
+
+type MyFixtures = { loginPage: LoginPage; loggedIn: void }
+
+export const test = base.extend<MyFixtures>({
+  loginPage: async ({ page }, use) => {
+    await use(new LoginPage(page))
+  },
+  loggedIn: async ({ loginPage }, use) => {
+    await loginPage.goto()
+    await loginPage.login(process.env.TEST_EMAIL!, process.env.TEST_PASS!)
+    await use()
+  },
+})
+
+// tests/dashboard.spec.ts
+test('dashboard loads', async ({ page, loggedIn }) => {
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+})`} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>API request interception</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="typescript" code={`// Mock an API response to control test data
+await page.route('**/api/users', route =>
+  route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{ id: 1, name: 'Alice' }]),
+  })
+)
+
+// Assert the API call was made
+const [request] = await Promise.all([
+  page.waitForRequest('**/api/checkout'),
+  page.getByRole('button', { name: 'Buy Now' }).click(),
+])
+expect(request.method()).toBe('POST')`} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+            <div className="px-4 py-2.5 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Hooks — before / after</span>
+            </div>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <CodeBlock lang="typescript" code={`test.describe('Cart', () => {
+  // Runs once before all tests in this describe
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext()
+    await ctx.storageState({ path: 'auth.json' })
+  })
+
+  // Runs before each test
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/cart')
+  })
+
+  // Runs after each test — cleanup
+  test.afterEach(async ({ page }, testInfo) => {
+    if (testInfo.status !== 'passed') {
+      await page.screenshot({ path: \`screenshots/\${testInfo.title}.png\` })
+    }
+  })
+})`} />
+            </div>
+          </div>
+        </DocSection>
+
+        {/* ── CLI Reference ───────────────────────────────── */}
+        <DocSection id="cli" icon={<Terminal size={14} />} title="CLI Reference">
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+            <div className="px-4 py-2 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+              <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>npx playwright test [options]</p>
+            </div>
+            <div className="p-3 flex flex-col gap-1.5">
+              {[
+                { flag: '--headed',               desc: 'Run with a visible browser window' },
+                { flag: '--ui',                   desc: 'Open the interactive Playwright UI mode' },
+                { flag: '--debug',                desc: 'Run in debug mode — pauses before each action' },
+                { flag: '--project=chromium',     desc: 'Run only in the specified project/browser' },
+                { flag: '--grep "login"',         desc: 'Run only tests whose title matches the pattern' },
+                { flag: '--workers=4',            desc: 'Override number of parallel workers' },
+                { flag: '--retries=2',            desc: 'Override retry count' },
+                { flag: '--reporter=json',        desc: 'Override reporter (html | json | junit | line | dot)' },
+                { flag: '--timeout=60000',        desc: 'Override per-test timeout in ms' },
+                { flag: '--last-failed',          desc: 'Re-run only the tests that failed last time' },
+                { flag: '--config=pw.config.ts',  desc: 'Use a custom config file' },
+              ].map(({ flag, desc }) => (
+                <RefRow key={flag} label={`--${flag.replace(/^--/, '')}`} desc={desc} />
+              ))}
+            </div>
+          </div>
+
+          <CodeBlock lang="bash" code={`# Run a single spec file
+npx playwright test tests/login.spec.ts
+
+# Run only tests tagged @smoke
+npx playwright test --grep @smoke
+
+# Run on Firefox + WebKit only
+npx playwright test --project=firefox --project=webkit
+
+# Open the trace viewer for a recorded trace
+npx playwright show-trace test-results/trace.zip
+
+# Generate code by recording your actions in a browser
+npx playwright codegen https://example.com
+
+# Install / update browser binaries
+npx playwright install
+npx playwright install chromium`} />
+        </DocSection>
+
+      </div>
+    </div>
+  )
+}
+
 // ─── Artifact Modal ───────────────────────────────────────────────────────────
 
 function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose: () => void }) {
@@ -966,6 +1424,7 @@ export default function PlaywrightDashboard() {
               {([
                 { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
                 { key: 'settings'  as const, label: 'Settings',  icon: <Settings size={12} /> },
+                { key: 'docs'      as const, label: 'Docs',      icon: <BookOpen size={12} /> },
               ]).map(({ key, label, icon }) => (
                 <button
                   key={key}
@@ -1231,6 +1690,9 @@ export default function PlaywrightDashboard() {
         {activeView === 'settings' && (
           <SettingsView config={config} onChange={setConfig} />
         )}
+
+        {/* ── Docs view ────────────────────────────────────────────────────────── */}
+        {activeView === 'docs' && <DocsView />}
 
       </div>
 
