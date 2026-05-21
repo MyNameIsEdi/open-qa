@@ -47,6 +47,24 @@ Browse and run AI agents directly from the UI. Active agents have a **▶ Run** 
 
 ---
 
+### Testing Skills
+
+<img src="screenshots/skills.png" width="900" alt="Testing Skills page with searchable skill cards" />
+
+Composable QA utilities for data generation, fuzzing, load profiles, parsing, and security workflows.
+Active skills can be copied directly into Claude-compatible tool payloads.
+
+---
+
+### System Prompts Library
+
+<img src="screenshots/prompts.png" width="900" alt="System Prompts Library page" />
+
+Browse expert QA prompts for planning, security, analysis, BDD, review, and API contract checks.
+Each card can expand the full prompt and copy it in one click.
+
+---
+
 ### Prompt Playground
 
 <img src="screenshots/playground.png" width="900" alt="Prompt Playground" />
@@ -65,11 +83,15 @@ Select one of 6 expert QA system prompts, paste your PRD / spec / log / test cod
 
 ### Test Generator
 
+<img src="screenshots/generate.png" width="900" alt="Test Generator page" />
+
 Paste a user story or acceptance criteria and get a complete, production-ready Playwright `.spec.ts` file back — with options for Page Object Model output and authenticated tests. Includes a one-click download button.
 
 ---
 
 ### QA Automation Guides
+
+<img src="screenshots/docs.png" width="900" alt="Documentation page with architecture and setup sections" />
 
 **12 hands-on chapters** built into the app — a complete course from zero to AI-powered QA:
 
