@@ -16,6 +16,7 @@
   "common": {
     "copy": "העתק",
     "copied": "הועתק!",
+    "copy_failed": "ההעתקה נכשלה",
     "add_to_claude": "הוסף לקלוד",
     "active": "פעיל",
     "planned": "מתוכנן",
