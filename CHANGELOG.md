@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - Enterprise folder layout: `src/agents`, `src/skills`, `src/core`, `docs/` (GitHub Pages), root `output/`.
 
 ### Changed
+- Agents page run buttons now wait for the API health check before enabling, avoiding startup-time `/api/run/:id` requests while the server is still booting.
 - Migrated AI logic from numbered demo folders into `src/`; shared LLM client at `src/core/llm-client.ts`.
 - Moved marketplace HTML to `docs/` with `css/` and `js/` assets; updated all script paths and README links.
 

@@ -34,6 +34,7 @@ open-qa combines a Node.js AI agent core (self-healing tests, data generation, b
 <img src="screenshots/agents.png" width="900" alt="Agents page with search and category filters" />
 
 Browse and run AI agents directly from the UI. Active agents have a **▶ Run** button that executes the agent and streams output inline.
+Run buttons stay disabled until the local API health check succeeds, so the UI does not call `/api/run/:id` before the server is ready.
 
 | Agent | Status | What it does |
 |-------|--------|--------------|
