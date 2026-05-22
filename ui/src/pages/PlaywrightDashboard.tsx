@@ -558,14 +558,16 @@ const SV_CONFIG: Partial<PlaywrightConfig> = {
   reporter:      'html',
 }
 
+// Bare filenames — no path prefix — matching what /api/playwright/specs returns.
+// The server prepends 'tests/' when building the Playwright CLI args.
 const SV_ALL_SPECS = [
-  'tests/sv-login.spec.ts',
-  'tests/sv-register.spec.ts',
-  'tests/sv-home.spec.ts',
-  'tests/sv-api.spec.ts',
-  'tests/sv-docs.spec.ts',
-  'tests/sv-a11y.spec.ts',
-  'tests/sv-navigation.spec.ts',
+  'sv-login.spec.ts',
+  'sv-register.spec.ts',
+  'sv-home.spec.ts',
+  'sv-api.spec.ts',
+  'sv-docs.spec.ts',
+  'sv-a11y.spec.ts',
+  'sv-navigation.spec.ts',
 ]
 
 const PRESETS: Preset[] = [
@@ -604,7 +606,7 @@ const PRESETS: Preset[] = [
     icon: <Hash size={13} />,
     description: 'Login structure, validation, forgot-password & register',
     color: '#7c3aed',
-    specs: ['tests/sv-login.spec.ts', 'tests/sv-register.spec.ts'],
+    specs: ['sv-login.spec.ts', 'sv-register.spec.ts'],
     config: SV_CONFIG,
   },
   {
@@ -612,7 +614,7 @@ const PRESETS: Preset[] = [
     icon: <Layers size={13} />,
     description: 'Home feed — auth redirect, structure, filters, modals',
     color: '#d97706',
-    specs: ['tests/sv-home.spec.ts'],
+    specs: ['sv-home.spec.ts'],
     config: SV_CONFIG,
   },
   {
@@ -620,7 +622,7 @@ const PRESETS: Preset[] = [
     icon: <Globe size={13} />,
     description: 'Public & authenticated REST API endpoints',
     color: '#059669',
-    specs: ['tests/sv-api.spec.ts'],
+    specs: ['sv-api.spec.ts'],
     config: SV_CONFIG,
   },
   {
@@ -628,7 +630,7 @@ const PRESETS: Preset[] = [
     icon: <BookOpen size={13} />,
     description: 'Swagger UI rendering + Hebrew accessibility page',
     color: '#e11d48',
-    specs: ['tests/sv-docs.spec.ts', 'tests/sv-a11y.spec.ts'],
+    specs: ['sv-docs.spec.ts', 'sv-a11y.spec.ts'],
     config: SV_CONFIG,
   },
 ]

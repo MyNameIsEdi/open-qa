@@ -495,9 +495,14 @@ app.post('/api/playwright/run', (req, res) => {
 
   const args = ['playwright', 'test', '--reporter=list,json']
 
-  // Multi-spec support — push each spec as a positional argument
+  // Multi-spec support — push each spec as a positional argument.
+  // Bare filenames (no path separator) are resolved against TESTS_DIR so that
+  // 'sv-login.spec.ts' becomes 'tests/sv-login.spec.ts' in the CLI command.
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  for (const s of specList) args.push(s)
+  const resolvedSpecs = specList.map(s =>
+    (s.includes('/') || s.includes('\\')) ? s : `tests/${s}`
+  )
+  for (const s of resolvedSpecs) args.push(s)
 
   // Test-title filters — passed as CLI flags
   if (typeof config?.grep === 'string' && config.grep.trim())
@@ -510,14 +515,14 @@ app.post('/api/playwright/run', (req, res) => {
   if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
   send(`[INFO] npx ${args.join(' ')}`)
-  if (specList.length > 1)   send(`[INFO] running ${specList.length} spec files`)
-  if (config?.baseUrl)        send(`[INFO] baseUrl  → ${config.baseUrl}`)
-  if (config?.timeout)        send(`[INFO] timeout  → ${config.timeout}ms`)
-  if (config?.workers)        send(`[INFO] workers  → ${config.workers}`)
-  if (config?.grep)           send(`[INFO] grep     → ${config.grep}`)
+  if (resolvedSpecs.length > 1) send(`[INFO] running ${resolvedSpecs.length} spec files: ${resolvedSpecs.join(', ')}`)
+  if (config?.baseUrl)          send(`[INFO] baseUrl  → ${config.baseUrl}`)
+  if (config?.timeout)          send(`[INFO] timeout  → ${config.timeout}ms`)
+  if (config?.workers)          send(`[INFO] workers  → ${config.workers}`)
+  if (config?.grep)             send(`[INFO] grep     → ${config.grep}`)
 
-  // Archive key: join spec names for multi-run
-  const archiveSpec = specList.length === 1 ? specList[0] : (specList.length > 1 ? specList.join(',') : spec)
+  // Archive key: join resolved spec names for multi-run
+  const archiveSpec = resolvedSpecs.length === 1 ? resolvedSpecs[0] : (resolvedSpecs.length > 1 ? resolvedSpecs.join(',') : spec)
 
   const child = spawn('npx', args, {
     cwd: root,
