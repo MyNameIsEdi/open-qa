@@ -230,16 +230,19 @@ function RunsPanel({
   selectedId,
   onSelect,
   onLoadLatest,
+  onClearHistory,
   isDemo,
 }: {
   runs: RunRecord[]
   selectedId: string | null
   onSelect: (id: string) => void
   onLoadLatest: () => void
+  onClearHistory: () => void
   isDemo: boolean
 }) {
   // Open by default when there is real data
   const [open, setOpen] = useState(!isDemo && runs.length > 0)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   // Keep open state in sync when runs first arrive
   React.useEffect(() => {
@@ -281,6 +284,29 @@ function RunsPanel({
             >
               ← Latest
             </button>
+          )}
+          {!isDemo && !confirmClear && (
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmClear(true) }}
+              className="text-[11px] font-semibold hover:underline"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Clear history
+            </button>
+          )}
+          {!isDemo && confirmClear && (
+            <span className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Are you sure?</span>
+              <button
+                onClick={() => { setConfirmClear(false); onClearHistory() }}
+                className="text-[11px] font-bold text-red-500 hover:underline"
+              >Yes, clear</button>
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="text-[11px] font-semibold hover:underline"
+                style={{ color: 'var(--text-muted)' }}
+              >Cancel</button>
+            </span>
           )}
           {open
             ? <ChevronUp  size={13} style={{ color: 'var(--text-muted)' }} />
@@ -2227,6 +2253,16 @@ export default function PlaywrightDashboard() {
     }
   }, [])
 
+  const clearHistory = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE}/api/playwright/history`, { method: 'DELETE' })
+      setRunHistory([])
+      setSelectedRunId(null)
+      // Reload the latest pw-results.json (not a specific archived run)
+      fetchResults()
+    } catch { /* ignore network errors */ }
+  }, [fetchResults])
+
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/playwright/history`)
@@ -2775,6 +2811,7 @@ export default function PlaywrightDashboard() {
               selectedId={selectedRunId}
               onSelect={id => fetchResults(id)}
               onLoadLatest={() => fetchResults()}
+              onClearHistory={clearHistory}
               isDemo={false}
             />
 

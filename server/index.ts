@@ -456,6 +456,18 @@ app.get('/api/playwright/results/:runId', async (req, res) => {
   }
 })
 
+// DELETE /api/playwright/history — delete all archived run files
+app.delete('/api/playwright/history', async (_req, res) => {
+  try {
+    if (!existsSync(RUNS_DIR)) return res.json({ ok: true, deleted: 0 })
+    const files = (await fs.readdir(RUNS_DIR)).filter(f => /^run-.+\.json$/.test(f))
+    await Promise.all(files.map(f => fs.unlink(path.join(RUNS_DIR, f))))
+    res.json({ ok: true, deleted: files.length })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 // POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
 // ─── Artifacts endpoint — lists real screenshot/video/trace files from test-results/ ──
 app.get('/api/playwright/artifacts', (_req, res) => {
@@ -496,12 +508,17 @@ app.post('/api/playwright/run', (req, res) => {
   const args = ['playwright', 'test', '--reporter=list,json']
 
   // Multi-spec support — push each spec as a positional argument.
-  // Bare filenames (no path separator) are resolved against TESTS_DIR so that
-  // 'sv-login.spec.ts' becomes 'tests/sv-login.spec.ts' in the CLI command.
+  // Always resolve to an absolute path so Playwright finds the file
+  // regardless of testDir configuration or platform path separators.
+  //   • bare filename  → {TESTS_DIR}/sv-login.spec.ts (absolute)
+  //   • relative path  → resolved from project root (absolute)
+  //   • absolute path  → used as-is
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  const resolvedSpecs = specList.map(s =>
-    (s.includes('/') || s.includes('\\')) ? s : `tests/${s}`
-  )
+  const resolvedSpecs = specList.map(s => {
+    if (path.isAbsolute(s)) return s
+    if (s.includes('/') || s.includes('\\')) return path.resolve(root, s)
+    return path.join(TESTS_DIR, s)   // bare filename in tests/
+  })
   for (const s of resolvedSpecs) args.push(s)
 
   // Test-title filters — passed as CLI flags
