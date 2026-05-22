@@ -6,7 +6,7 @@ import {
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
-  ExternalLink, ChevronRight, Hash, Grid3x3, List, Tag,
+  ExternalLink, Hash, Grid3x3, List, Tag,
   PenLine, Plus, Trash2, RefreshCw, CheckSquare,
 } from 'lucide-react'
 
@@ -56,13 +56,6 @@ interface ArtifactModalState {
   testTitle: string
 }
 
-interface RunHistory {
-  label: string
-  passed: number
-  failed: number
-  skipped: number
-}
-
 /** A single archived run returned by GET /api/playwright/history */
 interface RunRecord {
   id: string
@@ -76,19 +69,6 @@ interface RunRecord {
   spec?: string | null
 }
 
-/** Fallback chart data shown when the server is offline / no real history yet */
-const MOCK_RUN_RECORDS: RunRecord[] = (() => {
-  const now = Date.now()
-  return [
-    { id: 'demo-1', runAt: new Date(now - 6 * 86_400_000).toISOString(), total: 22, passed: 17, failed: 4, skipped: 1, flaky: 1, duration: 62_000 },
-    { id: 'demo-2', runAt: new Date(now - 5 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 58_000 },
-    { id: 'demo-3', runAt: new Date(now - 4 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 1, skipped: 1, flaky: 1, duration: 55_000 },
-    { id: 'demo-4', runAt: new Date(now - 3 * 86_400_000).toISOString(), total: 22, passed: 18, failed: 3, skipped: 1, flaky: 0, duration: 61_000 },
-    { id: 'demo-5', runAt: new Date(now - 2 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 2, skipped: 0, flaky: 1, duration: 57_000 },
-    { id: 'demo-6', runAt: new Date(now - 1 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 59_000 },
-    { id: 'demo-7', runAt: new Date(now - 2 * 3_600_000).toISOString(),  total: 22, passed: 16, failed: 4, skipped: 2, flaky: 2, duration: 68_000 },
-  ]
-})()
 
 // ─── Playwright Config Type ───────────────────────────────────────────────────
 
@@ -133,204 +113,6 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
 
 const STORAGE_KEY = 'pw_dashboard_config_v1'
 const API_BASE    = 'http://localhost:3001'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const INITIAL_SUITES: TestSuite[] = [
-  {
-    id: 'login',
-    file: 'tests/login.spec.ts',
-    title: 'Login flow',
-    tests: [
-      {
-        id: 'l1', title: 'successful login redirects to dashboard', status: 'passed', duration: 1240, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1240 },
-          { browser: 'firefox',  status: 'passed', duration: 1480 },
-          { browser: 'webkit',   status: 'passed', duration: 1190 },
-        ],
-        steps: [
-          { title: 'page.goto("/login")',                    duration: 340, status: 'passed' },
-          { title: 'getByLabel("Email").fill(…)',            duration: 85,  status: 'passed' },
-          { title: 'getByLabel("Password").fill(…)',         duration: 70,  status: 'passed' },
-          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 210, status: 'passed' },
-          { title: 'expect(page).toHaveURL("/dashboard")',   duration: 535, status: 'passed' },
-        ],
-      },
-      {
-        id: 'l2', title: 'wrong password shows error message', status: 'passed', duration: 890, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 890 },
-          { browser: 'firefox',  status: 'passed', duration: 970 },
-          { browser: 'webkit',   status: 'passed', duration: 850 },
-        ],
-      },
-      {
-        id: 'l3', title: 'empty fields show validation errors', status: 'failed', duration: 2100, browser: 'chromium', retries: 1,
-        tags: ['@regression'],
-        error: "Error: Timeout 5000ms exceeded.\nExpected element to be visible: getByTestId('email-error')\nReceived: hidden\n  at tests/login.spec.ts:42:18",
-        browserResults: [
-          { browser: 'chromium', status: 'failed', duration: 2100 },
-          { browser: 'firefox',  status: 'failed', duration: 2340 },
-          { browser: 'webkit',   status: 'passed', duration: 810 },
-        ],
-        steps: [
-          { title: 'page.goto("/login")',                         duration: 290, status: 'passed' },
-          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 105, status: 'passed' },
-          { title: 'expect(getByTestId("email-error")).toBeVisible()', duration: 5005, status: 'failed' },
-        ],
-      },
-      {
-        id: 'l4', title: 'remember me checkbox persists session', status: 'passed', duration: 1560, browser: 'chromium',
-        retries: 1,   // flaky — eventually passed
-        tags: ['@regression'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1560 },
-          { browser: 'firefox',  status: 'passed', duration: 1740 },
-          { browser: 'webkit',   status: 'skipped', duration: 0 },
-        ],
-      },
-      {
-        id: 'l5', title: 'logout clears session and redirects', status: 'passed', duration: 730, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 730 },
-          { browser: 'firefox',  status: 'passed', duration: 820 },
-          { browser: 'webkit',   status: 'passed', duration: 700 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'nav',
-    file: 'tests/navigation.spec.ts',
-    title: 'Navigation',
-    tests: [
-      {
-        id: 'n1', title: 'clicking logo navigates to home', status: 'passed', duration: 410, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 410 },
-          { browser: 'firefox',  status: 'passed', duration: 490 },
-          { browser: 'webkit',   status: 'passed', duration: 380 },
-        ],
-      },
-      {
-        id: 'n2', title: 'all nav links are reachable', status: 'passed', duration: 1820, browser: 'chromium',
-        retries: 1,   // flaky — passed on retry
-        tags: ['@regression'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1820 },
-          { browser: 'firefox',  status: 'passed', duration: 2010 },
-          { browser: 'webkit',   status: 'passed', duration: 1750 },
-        ],
-      },
-      {
-        id: 'n3', title: 'browser back / forward works correctly', status: 'passed', duration: 590, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 590 },
-          { browser: 'firefox',  status: 'passed', duration: 640 },
-          { browser: 'webkit',   status: 'passed', duration: 560 },
-        ],
-      },
-      {
-        id: 'n4', title: 'deep link to /agents renders agents page', status: 'skipped', duration: 0, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'skipped', duration: 0 },
-          { browser: 'firefox',  status: 'skipped', duration: 0 },
-          { browser: 'webkit',   status: 'skipped', duration: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'forms',
-    file: 'tests/forms.spec.ts',
-    title: 'Form validation',
-    tests: [
-      {
-        id: 'f1', title: 'required fields marked on empty submit', status: 'passed', duration: 980, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 980 },
-          { browser: 'firefox',  status: 'passed', duration: 1050 },
-          { browser: 'webkit',   status: 'passed', duration: 920 },
-        ],
-      },
-      {
-        id: 'f2', title: 'email format validated inline', status: 'passed', duration: 760, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 760 },
-          { browser: 'firefox',  status: 'passed', duration: 800 },
-          { browser: 'webkit',   status: 'passed', duration: 730 },
-        ],
-      },
-      {
-        id: 'f3', title: 'max-length enforced on text inputs', status: 'failed', duration: 1350, browser: 'firefox',
-        tags: ['@regression'],
-        error: "Error: expect(received).toHaveValue(expected)\nExpected: 'a'.repeat(255)\nReceived: 'a'.repeat(256)\n  at tests/forms.spec.ts:88:5",
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 890 },
-          { browser: 'firefox',  status: 'failed', duration: 1350 },  // ← Firefox-only bug!
-          { browser: 'webkit',   status: 'passed', duration: 870 },
-        ],
-        steps: [
-          { title: 'page.goto("/signup")',                           duration: 310, status: 'passed' },
-          { title: 'getByLabel("Username").fill("a".repeat(300))',   duration: 195, status: 'passed' },
-          { title: 'expect(input).toHaveValue("a".repeat(255))',     duration: 845, status: 'failed' },
-        ],
-      },
-      {
-        id: 'f4', title: 'form submits with valid data', status: 'passed', duration: 1140, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1140 },
-          { browser: 'firefox',  status: 'passed', duration: 1230 },
-          { browser: 'webkit',   status: 'passed', duration: 1090 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'api',
-    file: 'tests/api.spec.ts',
-    title: 'API endpoints',
-    tests: [
-      { id: 'a1', title: 'GET /api/agents returns 200 with array',  status: 'passed', duration: 210,  browser: 'chromium', tags: ['@smoke'] },
-      { id: 'a2', title: 'POST /api/run/:id executes agent',         status: 'passed', duration: 3400, browser: 'chromium', retries: 1, tags: ['@regression'] },
-      { id: 'a3', title: 'GET /api/health returns ok status',        status: 'passed', duration: 95,   browser: 'chromium', tags: ['@smoke'] },
-      { id: 'a4', title: 'unknown route returns 404',                status: 'passed', duration: 130,  browser: 'chromium' },
-    ],
-  },
-  {
-    id: 'a11y',
-    file: 'tests/accessibility.spec.ts',
-    title: 'Accessibility (axe-core)',
-    tests: [
-      {
-        id: 'ax1', title: 'home page has no critical WCAG violations', status: 'passed', duration: 2200, browser: 'chromium',
-        tags: ['@a11y'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 2200 },
-          { browser: 'firefox',  status: 'passed', duration: 2450 },
-          { browser: 'webkit',   status: 'passed', duration: 2100 },
-        ],
-      },
-      {
-        id: 'ax2', title: 'agents page passes WCAG AA', status: 'passed', duration: 1980, browser: 'chromium',
-        tags: ['@a11y'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1980 },
-          { browser: 'firefox',  status: 'passed', duration: 2180 },
-          { browser: 'webkit',   status: 'passed', duration: 1900 },
-        ],
-      },
-      { id: 'ax3', title: 'modal dialogs trap focus correctly', status: 'skipped', duration: 0, browser: 'chromium', tags: ['@a11y'] },
-    ],
-  },
-]
 
 // ─── Run History ──────────────────────────────────────────────────────────────
 
@@ -1165,28 +947,10 @@ const BROWSER_META: Record<BrowserKey, { label: string; color: string; emoji: st
   webkit:   { label: 'WebKit',   color: '#999999', emoji: '🧡' },
 }
 
-function BrowserChip({ browser, status, duration }: { browser: BrowserKey; status: Status; duration: number }) {
-  const meta = BROWSER_META[browser]
-  const color =
-    status === 'passed'  ? '#10b981' :
-    status === 'failed'  ? '#ef4444' :
-    status === 'skipped' ? '#f59e0b' : 'var(--text-muted)'
-
-  return (
-    <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border min-w-[60px]"
-      style={{ borderColor: `${color}40`, backgroundColor: `${color}10` }}>
-      <span className="text-[11px]">{meta.emoji}</span>
-      <StatusIcon status={status} size={12} />
-      {duration > 0 && <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{formatMs(duration)}</span>}
-    </div>
-  )
-}
-
 // ─── Browser Matrix View ──────────────────────────────────────────────────────
 
 function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
-  const allTests = suites.flatMap(s => s.tests.map(t => ({ ...t, suiteTitle: s.title })))
-  const testsWithCross = allTests.filter(t => t.browserResults && t.browserResults.length > 0)
+  const testsWithCross = suites.flatMap(s => s.tests).filter(t => t.browserResults && t.browserResults.length > 0)
   const browsers: BrowserKey[] = ['chromium', 'firefox', 'webkit']
 
   if (testsWithCross.length === 0) {
@@ -1197,7 +961,7 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
     )
   }
 
-  function cellStatus(test: typeof testsWithCross[number], browser: BrowserKey): Status | null {
+  function cellStatus(test: TestCase, browser: BrowserKey): Status | null {
     if (!test.browserResults) return null
     return test.browserResults.find(r => r.browser === browser)?.status ?? null
   }
@@ -1826,7 +1590,35 @@ npx playwright install chromium`} />
 
 // ─── Artifact Modal ───────────────────────────────────────────────────────────
 
+interface ArtifactFile {
+  name: string
+  path: string
+  size: number
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024)         return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose: () => void }) {
+  const [artifacts, setArtifacts] = useState<ArtifactFile[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`${API_BASE}/api/playwright/artifacts`)
+      .then(r => r.json() as Promise<{ artifacts: ArtifactFile[] }>)
+      .then(data => { setArtifacts(data.artifacts); setLoading(false) })
+      .catch(() => { setArtifacts([]); setLoading(false) })
+  }, [state.testId])
+
+  const extType = (name: string) => {
+    const ext = name.split('.').pop()?.toUpperCase() ?? '?'
+    return ext
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -1842,29 +1634,35 @@ function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose:
           </button>
         </div>
         <p className="text-xs mb-4 font-mono truncate" style={{ color: 'var(--text-muted)' }}>{state.testTitle}</p>
-        <div className="flex flex-col gap-2">
-          {[
-            { label: 'screenshot-on-failure.png', size: '142 KB', type: 'PNG' },
-            { label: 'video-recording.webm',      size: '1.8 MB', type: 'WEBM' },
-            { label: 'trace.zip',                 size: '284 KB', type: 'ZIP' },
-          ].map(({ label, size, type }) => (
-            <div
-              key={label}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
-              onClick={() => alert(`[MOCK] Downloading ${label}`)}
-            >
-              <span className="font-mono" style={{ color: 'var(--text-main)' }}>{label}</span>
-              <div className="flex items-center gap-2">
-                <span style={{ color: 'var(--text-muted)' }}>{size}</span>
-                <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-semibold text-[10px]">{type}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[11px] mt-4 text-center" style={{ color: 'var(--text-muted)' }}>
-          Artifacts are simulated — connect Playwright CI to serve real files.
-        </p>
+
+        {loading ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>Loading artifacts…</p>
+        ) : artifacts.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
+            No artifacts found. Run tests with <code className="font-mono">screenshot: &apos;on&apos;</code> or <code className="font-mono">trace: &apos;on&apos;</code> to generate files.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            {artifacts.map(file => (
+              <a
+                key={file.path}
+                href={`${API_BASE}/test-results/${file.path}`}
+                download={file.name}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs hover:opacity-80 transition-opacity no-underline"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="font-mono truncate flex-1 mr-2" style={{ color: 'var(--text-main)' }}>{file.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span style={{ color: 'var(--text-muted)' }}>{formatBytes(file.size)}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-semibold text-[10px]">{extType(file.name)}</span>
+                  <Download size={11} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1879,6 +1677,8 @@ function FailedActions({
   suiteFile: string
   onViewArtifacts: (state: ArtifactModalState) => void
 }) {
+  const [jiraCopied, setJiraCopied] = useState(false)
+
   const exportJira = () => {
     const payload = {
       summary: `[QA] Test failure: ${test.title}`,
@@ -1886,12 +1686,17 @@ function FailedActions({
       labels: ['automated-test', 'playwright'],
       priority: 'High',
     }
-    console.log('[Jira Export Payload]', payload)
-    alert(`[MOCK] Jira issue payload logged to console.\n\nSummary: ${payload.summary}`)
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
+      setJiraCopied(true)
+      setTimeout(() => setJiraCopied(false), 2000)
+    }).catch(() => {
+      // Fallback: show the JSON in a small alert for browsers that block clipboard
+      prompt('Copy this Jira payload:', JSON.stringify(payload, null, 2))
+    })
   }
 
   const viewTrace = () => {
-    alert(`[MOCK] Opening Playwright Trace Viewer for:\n${suiteFile}\n\nIn production:\nnpx playwright show-trace trace.zip`)
+    window.open('http://localhost:3001/playwright-report/index.html', '_blank')
   }
 
   return (
@@ -1899,10 +1704,10 @@ function FailedActions({
       style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
       <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--text-muted)' }}>Actions:</span>
       <button onClick={exportJira} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100">
-        <Bug size={11} /> Export to Jira
+        {jiraCopied ? <><Check size={11} /> Copied!</> : <><Bug size={11} /> Copy Jira JSON</>}
       </button>
       <button onClick={viewTrace} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors border border-violet-100">
-        <Eye size={11} /> View Trace
+        <Eye size={11} /> View Report
       </button>
       <button onClick={() => onViewArtifacts({ testId: test.id, testTitle: test.title })} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-colors border border-neutral-200">
         <Camera size={11} /> View Artifacts
@@ -2213,7 +2018,7 @@ function EditorView({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
-  const [suites, setSuites]               = useState<TestSuite[]>(INITIAL_SUITES)
+  const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
   const [activeTab, setActiveTab]         = useState<FilterKey>('all')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
@@ -2224,7 +2029,7 @@ export default function PlaywrightDashboard() {
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
-  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
+  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({})
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
   const [hoveredTest, setHoveredTest]     = useState<string | null>(null)
   const [artifactModal, setArtifactModal] = useState<ArtifactModalState | null>(null)
@@ -2236,7 +2041,6 @@ export default function PlaywrightDashboard() {
   const [runLog, setRunLog]                 = useState<string[]>([])
   const [showLog, setShowLog]               = useState(false)
   const [availableSpecs, setAvailableSpecs]   = useState<string[]>([])
-  const [selectedSpec, setSelectedSpec]       = useState<string>('')
   const [selectedSpecs, setSelectedSpecs]     = useState<Set<string>>(new Set())
   const [specPickerOpen, setSpecPickerOpen]   = useState(false)
   const specPickerRef                         = useRef<HTMLDivElement>(null)
@@ -2382,6 +2186,23 @@ export default function PlaywrightDashboard() {
     fetchHistory()
   }, [fetchResults, fetchSpecs, fetchHistory])
 
+  // ── Auto-poll when server is offline — reconnects every 5 s ────────────────
+  useEffect(() => {
+    if (serverOnline !== false) return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/playwright/specs`)
+        if (res.ok) {
+          setServerOnline(true)
+          fetchResults()
+          fetchSpecs()
+          fetchHistory()
+        }
+      } catch { /* still offline */ }
+    }, 5_000)
+    return () => clearInterval(id)
+  }, [serverOnline, fetchResults, fetchSpecs, fetchHistory])
+
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
     [...allTests].filter(t => t.duration > 0).sort((a, b) => b.duration - a.duration).slice(0, 3),
@@ -2405,6 +2226,8 @@ export default function PlaywrightDashboard() {
 
   // ── Core SSE runner (shared by runTests + runSingleSpec) ───────────────────
   const runWithSSE = useCallback(async (body: Record<string, unknown>) => {
+    const controller = new AbortController()
+    const timeoutId  = setTimeout(() => controller.abort(), 10 * 60 * 1000) // 10-minute hard limit
     setRunning(true)
     setShowLog(true)
     setRunLog([])
@@ -2418,6 +2241,7 @@ export default function PlaywrightDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       })
       if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
       const reader = response.body.getReader()
@@ -2440,8 +2264,13 @@ export default function PlaywrightDashboard() {
       await fetchResults()
       await fetchHistory()
     } catch (err) {
-      setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setRunLog(prev => [...prev, '[TIMEOUT] Test run exceeded 10 minutes and was cancelled.'])
+      } else {
+        setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
+      }
     } finally {
+      clearTimeout(timeoutId)
       setRunning(false)
     }
   }, [fetchResults, fetchHistory])  // eslint-disable-line
@@ -2451,38 +2280,23 @@ export default function PlaywrightDashboard() {
     runWithSSE({ spec, config })
   }, [runWithSSE, config])
 
-  // ── Run tests (real SSE when server online, demo animation otherwise) ───────
+  // ── Run tests (real SSE when server online, show offline message otherwise) ─
   const runTests = useCallback(async () => {
     if (!serverOnline) {
-      // ── Demo animation ─────────────────────────────────────────────────────
-      setRunning(true)
       setShowLog(true)
-      setRunLog(['[DEMO] Server offline — running demo animation'])
-      setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
-      setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
-      const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
-      for (const { suiteId, test } of flat) {
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
-        await new Promise(r => setTimeout(r, 120 + Math.random() * 220))
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
-        setRunLog(prev => [...prev, `  ${test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '–'} ${test.title}`])
-      }
-      setRunLog(prev => [...prev, '[DONE] Demo run complete'])
-      setRunning(false)
+      setRunLog(['[OFFLINE] Server is not running. Start it with: npm run dev', '[OFFLINE] Waiting for server to come online…'])
       return
     }
 
     // ── Real run — delegate to runWithSSE ────────────────────────────────────
-    const specList = selectedSpecs.size > 0
-      ? Array.from(selectedSpecs)
-      : (selectedSpec ? [selectedSpec] : [])
+    const specList = selectedSpecs.size > 0 ? Array.from(selectedSpecs) : []
     const body: Record<string, unknown> = { config }
     if (specList.length === 1)     body.spec  = specList[0]
     else if (specList.length > 1)  body.specs = specList
     await runWithSSE(body)
-  }, [serverOnline, selectedSpec, selectedSpecs, config, runWithSSE])
+  }, [serverOnline, selectedSpecs, config, runWithSSE])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
+  const reset = () => { setSuites([]); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
   const exportReport = () => {
     const report = {
@@ -2643,7 +2457,7 @@ export default function PlaywrightDashboard() {
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                   <Download size={13} /> Export
                 </button>
-                <button onClick={fetchResults} disabled={running || isLoading}
+                <button onClick={() => fetchResults()} disabled={running || isLoading}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
@@ -2826,25 +2640,20 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* History chart — real data when available, mock fallback in demo mode */}
-            {(() => {
-              const chartRuns = runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []
-              return (
-                <HistoryChart
-                  runs={chartRuns}
-                  selectedId={selectedRunId}
-                  onSelect={id => !demoMode && fetchResults(id)}
-                />
-              )
-            })()}
+            {/* History chart — real run records only */}
+            <HistoryChart
+              runs={runHistory}
+              selectedId={selectedRunId}
+              onSelect={id => fetchResults(id)}
+            />
 
-            {/* Runs panel — real runs only (not demo mock rows) */}
+            {/* Runs panel */}
             <RunsPanel
-              runs={runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []}
+              runs={runHistory}
               selectedId={selectedRunId}
               onSelect={id => fetchResults(id)}
               onLoadLatest={() => fetchResults()}
-              isDemo={runHistory.length === 0 && demoMode}
+              isDemo={false}
             />
 
             {/* Search + Filter + Mode toggle */}
@@ -3017,10 +2826,24 @@ export default function PlaywrightDashboard() {
               {filteredSuites.length === 0 && (
                 <div className="text-center py-16 rounded-2xl border shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
-                  </p>
-                  {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                  {suites.length === 0 ? (
+                    <>
+                      <Play size={28} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
+                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-main)' }}>No test results yet</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {serverOnline === false
+                          ? 'Server is offline — start it with: npm run dev'
+                          : 'Click Run Tests to execute your Playwright specs.'}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
+                      </p>
+                      {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                    </>
+                  )}
                 </div>
               )}
             </div>}

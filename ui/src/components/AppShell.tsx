@@ -39,10 +39,10 @@ export default function AppShell({ children }: AppShellProps) {
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-body)' }}>
       {/* ── Sidebar ── */}
       <Sidebar
+        open={mobileOpen}
         collapsed={collapsed}
-        mobileOpen={mobileOpen}
-        onCollapse={() => setCollapsed(c => !c)}
-        onMobileClose={() => setMobileOpen(false)}
+        onClose={() => setMobileOpen(false)}
+        onToggleCollapse={() => setCollapsed(c => !c)}
       />
 
       {/* ── Right column: topbar + content ── */}

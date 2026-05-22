@@ -5,7 +5,7 @@ import { promisify } from 'util'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs/promises'
-import { existsSync, readdirSync } from 'fs'
+import { existsSync, readdirSync, statSync } from 'fs'
 import Anthropic from '@anthropic-ai/sdk'
 import * as dotenv from 'dotenv'
 
@@ -18,6 +18,10 @@ const root = path.resolve(__dirname, '..')
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// Static file serving — lets the browser download real test artifacts
+app.use('/test-results',    express.static(path.join(root, 'test-results')))
+app.use('/playwright-report', express.static(path.join(root, 'playwright-report')))
 
 const PORT = 3001
 const USE_MOCK = !process.env.ANTHROPIC_API_KEY
@@ -453,6 +457,29 @@ app.get('/api/playwright/results/:runId', async (req, res) => {
 })
 
 // POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
+// ─── Artifacts endpoint — lists real screenshot/video/trace files from test-results/ ──
+app.get('/api/playwright/artifacts', (_req, res) => {
+  const dir = path.join(root, 'test-results')
+  try {
+    const walk = (d: string, base: string): { name: string; path: string; size: number }[] => {
+      if (!existsSync(d)) return []
+      return readdirSync(d, { withFileTypes: true }).flatMap(entry => {
+        const full     = path.join(d, entry.name)
+        const relative = path.join(base, entry.name)
+        if (entry.isDirectory()) return walk(full, relative)
+        if (/\.(png|webm|zip)$/i.test(entry.name)) {
+          try { return [{ name: entry.name, path: relative.replace(/\\/g, '/'), size: statSync(full).size }] }
+          catch { return [] }
+        }
+        return []
+      })
+    }
+    res.json({ artifacts: walk(dir, '') })
+  } catch {
+    res.json({ artifacts: [] })
+  }
+})
+
 app.post('/api/playwright/run', (req, res) => {
   const { spec, specs, config } = req.body as {
     spec?: string
