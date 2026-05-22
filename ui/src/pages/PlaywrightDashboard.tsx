@@ -13,7 +13,7 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
-type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
+type FilterKey    = 'all' | 'active' | 'passed' | 'failed' | 'skipped'
 type ViewKey      = 'dashboard' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
@@ -2104,7 +2104,7 @@ function EditorView({
 export default function PlaywrightDashboard() {
   const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
-  const [activeTab, setActiveTab]         = useState<FilterKey>('all')
+  const [activeTab, setActiveTab]         = useState<FilterKey>('active')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
   const [config, setConfig]               = useState<PlaywrightConfig>(DEFAULT_CONFIG)
   const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
@@ -2310,7 +2310,10 @@ export default function PlaywrightDashboard() {
       .map(s => ({
         ...s,
         tests: s.tests.filter(t => {
-          const matchesTab    = activeTab === 'all' || t.status === activeTab
+          const matchesTab    =
+            activeTab === 'all'    ? true :
+            activeTab === 'active' ? (t.status === 'passed' || t.status === 'failed') :
+            t.status === activeTab
           const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
           return matchesTab && matchesSearch
         }),
@@ -2835,6 +2838,7 @@ export default function PlaywrightDashboard() {
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {([
+                  { key: 'active' as const,  label: `Active (${counts.passed + counts.failed})` },
                   { key: 'all' as const,     label: `All (${counts.total})` },
                   { key: 'passed' as const,  label: `Passed (${counts.passed})` },
                   { key: 'failed' as const,  label: `Failed (${counts.failed})` },

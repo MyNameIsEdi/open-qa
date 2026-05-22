@@ -503,14 +503,20 @@ app.post('/api/playwright/run', (req, res) => {
   // Multi-spec support — push each spec as a positional argument.
   // Playwright matches positional args as path-substring patterns against
   // the files it discovers in testDir.  Bare filenames work because
-  // 'sv-api.spec.ts' is a substring of 'tests/sv-api.spec.ts'.
-  // Absolute paths with Windows backslashes do NOT match (different
-  // path separator from Playwright's internal forward-slash paths).
+  // Bare filenames (e.g. 'sv-api.spec.ts') are resolved by prepending
+  // 'tests/' so Playwright receives a CWD-relative forward-slash path
+  // ('tests/sv-api.spec.ts'). This is the only approach that reliably
+  // works on Windows — absolute backslash paths fail because Playwright
+  // normalises its internal file list to forward slashes, so the match
+  // never hits and all tests run as fallback.
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  for (const s of specList) args.push(s)
+  const resolvedSpecs = specList.map(s =>
+    s.includes('/') || s.includes('\\') ? s : `tests/${s}`
+  )
+  for (const s of resolvedSpecs) args.push(s)
 
-  if (specList.length > 0) {
-    send(`[FILTER] spec(s): ${specList.join(', ')}`)
+  if (resolvedSpecs.length > 0) {
+    send(`[FILTER] spec(s): ${resolvedSpecs.join(', ')}`)
   }
 
   // Test-title filters — passed as CLI flags
@@ -530,7 +536,7 @@ app.post('/api/playwright/run', (req, res) => {
   if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
 
   // Archive key: join spec names for multi-run
-  const archiveSpec = specList.length === 1 ? specList[0] : (specList.length > 1 ? specList.join(',') : spec)
+  const archiveSpec = resolvedSpecs.length === 1 ? resolvedSpecs[0] : (resolvedSpecs.length > 1 ? resolvedSpecs.join(',') : spec)
 
   const child = spawn('npx', args, {
     cwd: root,
