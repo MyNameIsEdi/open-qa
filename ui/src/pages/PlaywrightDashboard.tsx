@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Play, Square, RotateCcw, Download, Bug, Eye, Camera,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
@@ -7,13 +7,14 @@ import {
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
   ExternalLink, ChevronRight, Hash, Grid3x3, List, Tag,
+  PenLine, Plus, Trash2, RefreshCw, CheckSquare, Square as SquareIcon,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
 type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey      = 'dashboard' | 'docs'
+type ViewKey      = 'dashboard' | 'editor' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
 type ErrorType    = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
@@ -1910,6 +1911,298 @@ function FailedActions({
   )
 }
 
+// ─── Editor View ─────────────────────────────────────────────────────────────
+
+const NEW_SPEC_STUB = `import { test, expect } from '@playwright/test'
+
+test.describe('My test suite', () => {
+  test('should do something', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveTitle(/.*/)
+  })
+})
+`
+
+function EditorView({
+  specs,
+  onReloadSpecs,
+  onRunSpec,
+}: {
+  specs: string[]
+  onReloadSpecs: () => void
+  onRunSpec: (spec: string) => void
+}) {
+  const [activeFile, setActiveFile]     = useState<string | null>(specs[0] ?? null)
+  const [content, setContent]           = useState('')
+  const [savedContent, setSavedContent] = useState('')
+  const [loading, setLoading]           = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [saveMsg, setSaveMsg]           = useState<string | null>(null)
+  const [newName, setNewName]           = useState('')
+  const [showNew, setShowNew]           = useState(false)
+  const [delConfirm, setDelConfirm]     = useState<string | null>(null)
+  const [error, setError]               = useState<string | null>(null)
+  const textareaRef                     = useRef<HTMLTextAreaElement>(null)
+
+  const isDirty = content !== savedContent
+
+  // Load file when activeFile changes
+  useEffect(() => {
+    if (!activeFile) return
+    setLoading(true)
+    setError(null)
+    fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(activeFile)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.content !== undefined) {
+          setContent(d.content)
+          setSavedContent(d.content)
+        } else {
+          setError(d.error ?? 'Failed to load')
+        }
+      })
+      .catch(() => setError('Server unreachable'))
+      .finally(() => setLoading(false))
+  }, [activeFile])
+
+  const saveFile = useCallback(async () => {
+    if (!activeFile) return
+    setSaving(true)
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: activeFile, content }),
+      })
+      const d = await r.json()
+      if (d.ok) { setSavedContent(content); setSaveMsg('Saved!'); setTimeout(() => setSaveMsg(null), 2000) }
+      else setError(d.error ?? 'Save failed')
+    } catch { setError('Server unreachable') }
+    finally { setSaving(false) }
+  }, [activeFile, content])
+
+  const createFile = useCallback(async () => {
+    const name = newName.trim().replace(/\.spec\.(ts|js)$/, '') + '.spec.ts'
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content: NEW_SPEC_STUB }),
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setShowNew(false); setNewName('')
+        onReloadSpecs()
+        // Small delay so specs list refreshes before we select
+        setTimeout(() => setActiveFile(name), 200)
+      } else setError(d.error ?? 'Create failed')
+    } catch { setError('Server unreachable') }
+  }, [newName, onReloadSpecs])
+
+  const deleteFile = useCallback(async (name: string) => {
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(name)}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (d.ok) {
+        setDelConfirm(null)
+        if (activeFile === name) { setActiveFile(null); setContent(''); setSavedContent('') }
+        onReloadSpecs()
+      } else setError(d.error ?? 'Delete failed')
+    } catch { setError('Server unreachable') }
+  }, [activeFile, onReloadSpecs])
+
+  // Tab → insert 2 spaces
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const el  = e.currentTarget
+      const s   = el.selectionStart
+      const end = el.selectionEnd
+      const next = content.slice(0, s) + '  ' + content.slice(end)
+      setContent(next)
+      requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2 })
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault()
+      saveFile()
+    }
+  }
+
+  const lineCount = content.split('\n').length
+
+  return (
+    <div className="flex gap-0 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', minHeight: '72vh' }}>
+
+      {/* ── Left sidebar: file list ── */}
+      <div className="w-52 shrink-0 flex flex-col border-r" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <div className="flex items-center justify-between px-3 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Tests</span>
+          <div className="flex items-center gap-1">
+            <button onClick={onReloadSpecs} title="Refresh" className="p-1 rounded hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+              <RefreshCw size={11} />
+            </button>
+            <button onClick={() => setShowNew(v => !v)} title="New spec file"
+              className="p-1 rounded transition-colors"
+              style={showNew ? { color: '#2563eb' } : { color: 'var(--text-muted)' }}>
+              <Plus size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* New file input */}
+        {showNew && (
+          <div className="px-2 py-2 border-b flex flex-col gap-1.5" style={{ borderColor: 'var(--border)' }}>
+            <input
+              autoFocus
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') createFile(); if (e.key === 'Escape') { setShowNew(false); setNewName('') } }}
+              placeholder="my-test"
+              className="w-full px-2 py-1 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
+            />
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>.spec.ts will be appended</p>
+            <button onClick={createFile} disabled={!newName.trim()}
+              className="w-full py-1 rounded-lg text-xs font-semibold disabled:opacity-40"
+              style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+              Create
+            </button>
+          </div>
+        )}
+
+        {/* File list */}
+        <div className="flex-1 overflow-y-auto py-1">
+          {specs.length === 0 && (
+            <p className="px-3 py-4 text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>No spec files found</p>
+          )}
+          {specs.map(s => (
+            <div
+              key={s}
+              className="group flex items-center justify-between px-3 py-2 cursor-pointer transition-colors"
+              style={activeFile === s
+                ? { backgroundColor: 'rgba(37,99,235,0.08)', borderLeft: '2px solid #2563eb' }
+                : { borderLeft: '2px solid transparent' }}
+              onClick={() => setActiveFile(s)}
+              onMouseEnter={e => { if (activeFile !== s) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
+              onMouseLeave={e => { if (activeFile !== s) (e.currentTarget as HTMLElement).style.backgroundColor = '' }}
+            >
+              <span className="text-[11px] font-mono truncate" style={{ color: activeFile === s ? '#2563eb' : 'var(--text-main)' }}>
+                {s.replace(/\.spec\.(ts|js)$/, '')}
+                <span className="opacity-40">.spec.ts</span>
+              </span>
+              {delConfirm === s ? (
+                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => deleteFile(s)} className="text-[10px] font-bold text-red-500 hover:underline">del</button>
+                  <button onClick={() => setDelConfirm(null)} className="text-[10px]" style={{ color: 'var(--text-muted)' }}>✕</button>
+                </div>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); setDelConfirm(s) }}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
+                  style={{ color: '#ef4444' }}
+                  title="Delete file"
+                >
+                  <Trash2 size={10} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right: editor ── */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b shrink-0"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+          <div className="flex items-center gap-2">
+            <FileText size={12} style={{ color: 'var(--text-muted)' }} />
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>
+              {activeFile ?? '—'}
+            </span>
+            {isDirty && <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" title="Unsaved changes" />}
+            {saveMsg && <span className="text-[11px] font-semibold text-emerald-500">{saveMsg}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {error && (
+              <span className="text-[11px] font-semibold text-red-500 max-w-xs truncate">{error}</span>
+            )}
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{lineCount} lines</span>
+            <button
+              onClick={saveFile}
+              disabled={!activeFile || saving || !isDirty}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
+              style={isDirty && !saving
+                ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }
+              }
+              title="Save (Ctrl+S)"
+            >
+              {saving ? <RotateCcw size={11} className="animate-spin" /> : <Save size={11} />}
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => activeFile && onRunSpec(activeFile)}
+              disabled={!activeFile || isDirty}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
+              style={{ backgroundColor: '#059669', borderColor: '#059669', color: '#fff' }}
+              title={isDirty ? 'Save before running' : 'Run this spec'}
+            >
+              <Play size={11} /> Run
+            </button>
+          </div>
+        </div>
+
+        {/* Editor body */}
+        {!activeFile ? (
+          <div className="flex-1 flex items-center justify-center flex-col gap-3" style={{ backgroundColor: '#1e1e2e' }}>
+            <PenLine size={32} style={{ color: '#4c4f69' }} />
+            <p className="text-sm" style={{ color: '#6c7086' }}>Select a spec file to edit</p>
+            <button onClick={() => setShowNew(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+              style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+              <Plus size={12} /> New spec file
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#1e1e2e' }}>
+            <RotateCcw size={18} className="animate-spin" style={{ color: '#6c7086' }} />
+          </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
+            {/* Line numbers */}
+            <div className="select-none text-right pr-3 pl-3 py-3 text-[12px] font-mono leading-[1.6] shrink-0 overflow-hidden"
+              style={{ color: '#4c4f69', minWidth: '3rem', userSelect: 'none' }}>
+              {Array.from({ length: lineCount }, (_, i) => (
+                <div key={i + 1}>{i + 1}</div>
+              ))}
+            </div>
+            {/* Code textarea */}
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              spellCheck={false}
+              className="flex-1 resize-none focus:outline-none py-3 pr-4 text-[12.5px] font-mono leading-[1.6]"
+              style={{
+                backgroundColor: '#1e1e2e',
+                color: '#cdd6f4',
+                caretColor: '#cdd6f4',
+                tabSize: 2,
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
@@ -1935,8 +2228,11 @@ export default function PlaywrightDashboard() {
   const [lastRunAt, setLastRunAt]           = useState<string | null>(null)
   const [runLog, setRunLog]                 = useState<string[]>([])
   const [showLog, setShowLog]               = useState(false)
-  const [availableSpecs, setAvailableSpecs] = useState<string[]>([])
-  const [selectedSpec, setSelectedSpec]     = useState<string>('')
+  const [availableSpecs, setAvailableSpecs]   = useState<string[]>([])
+  const [selectedSpec, setSelectedSpec]       = useState<string>('')
+  const [selectedSpecs, setSelectedSpecs]     = useState<Set<string>>(new Set())
+  const [specPickerOpen, setSpecPickerOpen]   = useState(false)
+  const specPickerRef                         = useRef<HTMLDivElement>(null)
   // ── Multi-run history ────────────────────────────────────────────────────────
   const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
   const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
@@ -2089,35 +2385,95 @@ export default function PlaywrightDashboard() {
     [suites, activeTab, searchQuery]
   )
 
-  // ── Run tests (real SSE when server online, demo animation otherwise) ───────
-  const runTests = useCallback(async () => {
+  // ── Core SSE runner (shared by runTests + runSingleSpec) ───────────────────
+  const runWithSSE = useCallback(async (body: Record<string, unknown>) => {
     setRunning(true)
     setShowLog(true)
     setRunLog([])
     setExpandedErrors({})
     setSearchQuery('')
-
-    // Optimistically mark everything pending
+    setActiveView('dashboard')
     setSuites(prev => prev.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
     setExpandedSuites(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))
+    try {
+      const response = await fetch(`${API_BASE}/api/playwright/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      outer: while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n')
+        buffer = parts.pop() ?? ''
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          let msg: string
+          try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
+          if (msg.startsWith('[DONE]')) { break outer }
+          setRunLog(prev => [...prev.slice(-999), msg])
+        }
+      }
+      await fetchResults()
+      await fetchHistory()
+    } catch (err) {
+      setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
+    } finally {
+      setRunning(false)
+    }
+  }, [fetchResults, fetchHistory])  // eslint-disable-line
+
+  // ── Run a single spec from editor ─────────────────────────────────────────
+  const runSingleSpec = useCallback((spec: string) => {
+    runWithSSE({ spec, config })
+  }, [runWithSSE, config])
+
+  // ── Run tests (real SSE when server online, demo animation otherwise) ───────
+  const runTests = useCallback(async () => {
+    // Build spec list from multi-select; fall back to single dropdown
+    const specList = selectedSpecs.size > 0
+      ? Array.from(selectedSpecs)
+      : (selectedSpec ? [selectedSpec] : [])
+
+    if (!serverOnline) {
+      // ── Demo animation ─────────────────────────────────────────────────────
+      setRunning(true)
+      setShowLog(true)
+      setRunLog(['[DEMO] Server offline — running demo animation'])
+      setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
+      setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
+      const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
+      for (const { suiteId, test } of flat) {
+        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
+        await new Promise(r => setTimeout(r, 120 + Math.random() * 220))
+        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
+        setRunLog(prev => [...prev, `  ${test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '–'} ${test.title}`])
+      }
+      setRunLog(prev => [...prev, '[DONE] Demo run complete'])
+      setRunning(false)
+      return
+    }
 
     if (serverOnline) {
       // ── Real run via server SSE ─────────────────────────────────────────────
       try {
+        const body: Record<string, unknown> = { config }
+        if (specList.length === 1) body.spec = specList[0]
+        else if (specList.length > 1) body.specs = specList
         const response = await fetch(`${API_BASE}/api/playwright/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            spec:   selectedSpec || undefined,
-            config,
-          }),
+          body: JSON.stringify(body),
         })
         if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
-
         const reader  = response.body.getReader()
         const decoder = new TextDecoder()
         let   buffer  = ''
-
         outer: while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -2132,30 +2488,15 @@ export default function PlaywrightDashboard() {
             setRunLog(prev => [...prev.slice(-999), msg])
           }
         }
-        // Refresh results + history after run completes
         await fetchResults()
         await fetchHistory()
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
-        setRunLog(prev => [...prev, `[ERROR] ${errMsg}`])
+        setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
       }
-    } else {
-      // ── Demo animation ──────────────────────────────────────────────────────
-      setRunLog(['[DEMO] Server offline — running demo animation'])
-      setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
-      setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
-      const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
-      for (const { suiteId, test } of flat) {
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
-        await new Promise(r => setTimeout(r, 120 + Math.random() * 220))
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
-        setRunLog(prev => [...prev, `  ${test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '–'} ${test.title}`])
-      }
-      setRunLog(prev => [...prev, '[DONE] Demo run complete'])
     }
 
     setRunning(false)
-  }, [serverOnline, selectedSpec, config, fetchResults, fetchHistory])
+  }, [serverOnline, selectedSpec, selectedSpecs, config, fetchResults, fetchHistory])
 
   const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
@@ -2213,6 +2554,7 @@ export default function PlaywrightDashboard() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
               {([
                 { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
+                { key: 'editor'    as const, label: 'Editor',    icon: <PenLine size={12} /> },
                 { key: 'docs'      as const, label: 'Docs',      icon: <BookOpen size={12} /> },
               ]).map(({ key, label, icon }) => (
                 <button
@@ -2233,17 +2575,64 @@ export default function PlaywrightDashboard() {
             {/* Dashboard actions */}
             {activeView === 'dashboard' && (
               <>
-                {/* Spec selector */}
+                {/* Multi-spec picker */}
                 {availableSpecs.length > 0 && (
-                  <select
-                    value={selectedSpec}
-                    onChange={e => setSelectedSpec(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                    title="Pick a spec file to run">
-                    <option value="">All specs</option>
-                    {availableSpecs.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <div className="relative" ref={specPickerRef}>
+                    <button
+                      onClick={() => setSpecPickerOpen(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors"
+                      style={specPickerOpen || selectedSpecs.size > 0
+                        ? { borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.07)', color: '#2563eb' }
+                        : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }
+                      }
+                    >
+                      <CheckSquare size={12} />
+                      {selectedSpecs.size === 0
+                        ? 'All specs'
+                        : `${selectedSpecs.size} spec${selectedSpecs.size > 1 ? 's' : ''}`}
+                      <ChevronDown size={11} />
+                    </button>
+                    {specPickerOpen && (
+                      <div className="absolute top-full left-0 mt-1 z-50 rounded-xl border shadow-lg overflow-hidden min-w-[220px]"
+                        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                        <div className="flex items-center justify-between px-3 py-2 border-b text-[11px]"
+                          style={{ borderColor: 'var(--border)' }}>
+                          <span className="font-bold" style={{ color: 'var(--text-main)' }}>Select specs to run</span>
+                          <button
+                            onClick={() => setSelectedSpecs(selectedSpecs.size === availableSpecs.length ? new Set() : new Set(availableSpecs))}
+                            className="font-semibold hover:underline"
+                            style={{ color: '#2563eb' }}>
+                            {selectedSpecs.size === availableSpecs.length ? 'None' : 'All'}
+                          </button>
+                        </div>
+                        {availableSpecs.map(s => (
+                          <label key={s} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-opacity-50"
+                            style={{ backgroundColor: selectedSpecs.has(s) ? 'rgba(37,99,235,0.06)' : undefined }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedSpecs.has(s)}
+                              onChange={() => setSelectedSpecs(prev => {
+                                const next = new Set(prev)
+                                next.has(s) ? next.delete(s) : next.add(s)
+                                return next
+                              })}
+                              className="rounded accent-blue-600"
+                            />
+                            <span className="text-[11px] font-mono" style={{ color: 'var(--text-main)' }}>
+                              {s.replace(/\.spec\.(ts|js)$/, '')}<span className="opacity-40">.spec.ts</span>
+                            </span>
+                          </label>
+                        ))}
+                        <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--border)' }}>
+                          <button onClick={() => setSpecPickerOpen(false)}
+                            className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                            style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {/* Quick grep filter */}
                 <div className="relative flex items-center">
@@ -2701,6 +3090,22 @@ export default function PlaywrightDashboard() {
             {/* Flaky test panel */}
             <FlakyPanel suites={suites} />
           </>
+        )}
+
+        {/* ── Editor view ──────────────────────────────────────────────────────── */}
+        {activeView === 'editor' && (
+          <EditorView
+            specs={availableSpecs}
+            onReloadSpecs={() => {
+              fetch(`${API_BASE}/api/playwright/specs`)
+                .then(r => r.json())
+                .then(d => { if (d.specs) setAvailableSpecs(d.specs) })
+                .catch(() => {})
+            }}
+            onRunSpec={spec => {
+              runSingleSpec(spec)
+            }}
+          />
         )}
 
         {/* ── Docs view ────────────────────────────────────────────────────────── */}

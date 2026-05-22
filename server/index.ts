@@ -309,6 +309,79 @@ app.get('/api/playwright/specs', (_req, res) => {
   }
 })
 
+const NEW_SPEC_TEMPLATE = `import { test, expect } from '@playwright/test'
+
+test.describe('My test suite', () => {
+  test('should do something', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveTitle(/.*/)
+  })
+})
+`
+
+// GET /api/playwright/file?name=filename.spec.ts — read a spec file
+app.get('/api/playwright/file', async (req, res) => {
+  const { name } = req.query as { name?: string }
+  if (!name || !/\.spec\.(ts|js)$/.test(name))
+    return res.status(400).json({ error: 'Invalid filename — must end in .spec.ts or .spec.js' })
+  const filePath = path.join(TESTS_DIR, path.basename(name))
+  if (!existsSync(filePath)) return res.status(404).json({ error: `File "${name}" not found` })
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    res.json({ name, content })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// PUT /api/playwright/file — overwrite an existing spec file
+app.put('/api/playwright/file', async (req, res) => {
+  const { name, content } = req.body as { name?: string; content?: string }
+  if (!name || !/\.spec\.(ts|js)$/.test(name))
+    return res.status(400).json({ error: 'Invalid filename' })
+  if (typeof content !== 'string')
+    return res.status(400).json({ error: 'content is required' })
+  const filePath = path.join(TESTS_DIR, path.basename(name))
+  try {
+    await fs.writeFile(filePath, content, 'utf-8')
+    res.json({ ok: true, name })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// POST /api/playwright/file — create a new spec file (fails if already exists)
+app.post('/api/playwright/file', async (req, res) => {
+  const { name, content } = req.body as { name?: string; content?: string }
+  if (!name || !/\.spec\.(ts|js)$/.test(name))
+    return res.status(400).json({ error: 'Filename must end in .spec.ts or .spec.js' })
+  const safe     = path.basename(name)
+  const filePath = path.join(TESTS_DIR, safe)
+  if (existsSync(filePath)) return res.status(409).json({ error: `"${safe}" already exists` })
+  try {
+    await fs.mkdir(TESTS_DIR, { recursive: true })
+    await fs.writeFile(filePath, content ?? NEW_SPEC_TEMPLATE, 'utf-8')
+    res.json({ ok: true, name: safe })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// DELETE /api/playwright/file?name=filename.spec.ts — delete a spec file
+app.delete('/api/playwright/file', async (req, res) => {
+  const { name } = req.query as { name?: string }
+  if (!name || !/\.spec\.(ts|js)$/.test(name))
+    return res.status(400).json({ error: 'Invalid filename' })
+  const filePath = path.join(TESTS_DIR, path.basename(name))
+  if (!existsSync(filePath)) return res.status(404).json({ error: `File "${name}" not found` })
+  try {
+    await fs.unlink(filePath)
+    res.json({ ok: true, name })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 // GET /api/playwright/results — read + normalize pw-results.json
 app.get('/api/playwright/results', async (_req, res) => {
   try {
@@ -381,8 +454,9 @@ app.get('/api/playwright/results/:runId', async (req, res) => {
 
 // POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
 app.post('/api/playwright/run', (req, res) => {
-  const { spec, config } = req.body as {
+  const { spec, specs, config } = req.body as {
     spec?: string
+    specs?: string[]           // multi-run: array of spec filenames
     config?: Record<string, unknown>
   }
 
@@ -393,7 +467,11 @@ app.post('/api/playwright/run', (req, res) => {
   const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
   const args = ['playwright', 'test', '--reporter=list,json']
-  if (spec) args.push(spec)
+
+  // Multi-spec support — push each spec as a positional argument
+  const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
+  for (const s of specList) args.push(s)
+
   // Test-title filters — passed as CLI flags
   if (typeof config?.grep === 'string' && config.grep.trim())
     args.push(`--grep=${config.grep.trim()}`)
@@ -405,10 +483,14 @@ app.post('/api/playwright/run', (req, res) => {
   if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
   send(`[INFO] npx ${args.join(' ')}`)
-  if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
-  if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
-  if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
-  if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
+  if (specList.length > 1)   send(`[INFO] running ${specList.length} spec files`)
+  if (config?.baseUrl)        send(`[INFO] baseUrl  → ${config.baseUrl}`)
+  if (config?.timeout)        send(`[INFO] timeout  → ${config.timeout}ms`)
+  if (config?.workers)        send(`[INFO] workers  → ${config.workers}`)
+  if (config?.grep)           send(`[INFO] grep     → ${config.grep}`)
+
+  // Archive key: join spec names for multi-run
+  const archiveSpec = specList.length === 1 ? specList[0] : (specList.length > 1 ? specList.join(',') : spec)
 
   const child = spawn('npx', args, {
     cwd: root,
@@ -424,7 +506,7 @@ app.post('/api/playwright/run', (req, res) => {
 
   child.on('close', async code => {
     // Archive FIRST so history is ready by the time the client calls fetchHistory()
-    try { await archiveRun(spec) } catch { /* non-fatal */ }
+    try { await archiveRun(archiveSpec) } catch { /* non-fatal */ }
     send(`[DONE] Finished with exit code ${code ?? 0}`)
     res.end()
   })
