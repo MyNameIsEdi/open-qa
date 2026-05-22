@@ -375,9 +375,15 @@ function RunsPanel({
                       </div>
                     </td>
                     {/* Spec */}
-                    <td className="px-2 py-2.5 max-w-[140px]">
+                    <td className="px-2 py-2.5 max-w-[160px]">
                       {run.spec
-                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>{run.spec.replace(/\.spec\.(ts|js)$/, '')}</span>
+                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>
+                            {run.spec
+                              .replace(/^tests[\\/]/g, '')          // strip leading tests/
+                              .replace(/,tests[\\/]/g, ', ')        // strip tests/ after comma
+                              .replace(/\.spec\.(ts|js)/g, '')      // strip .spec.ts extension
+                            }
+                          </span>
                         : <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>all</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono"                                                         style={{ color: 'var(--text-muted)' }}>{run.total}</td>

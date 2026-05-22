@@ -498,25 +498,42 @@ app.post('/api/playwright/run', (req, res) => {
 
   const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
-  const args = ['playwright', 'test', '--reporter=list,json']
+  const args = ['test', '--reporter=list,json']
 
-  // Multi-spec support — push each spec as a positional argument.
-  // Playwright matches positional args as path-substring patterns against
-  // the files it discovers in testDir.  Bare filenames work because
-  // Bare filenames (e.g. 'sv-api.spec.ts') are resolved by prepending
-  // 'tests/' so Playwright receives a CWD-relative forward-slash path
-  // ('tests/sv-api.spec.ts'). This is the only approach that reliably
-  // works on Windows — absolute backslash paths fail because Playwright
-  // normalises its internal file list to forward slashes, so the match
-  // never hits and all tests run as fallback.
+  // ── Spec filtering ────────────────────────────────────────────────────────
+  // We receive bare filenames (e.g. 'sv-api.spec.ts') from the dashboard.
+  // We convert them to absolute OS-native paths so Playwright can match them
+  // exactly against its internal file list — no ambiguity, no fallback.
+  //
+  // WHY NOT shell: true / forward-slash paths:
+  //   On Windows, cmd.exe treats '/' as a switch prefix, so passing
+  //   'tests/sv-api.spec.ts' through the shell silently drops the argument
+  //   and Playwright falls back to running all tests.
+  //
+  // WHY NOT bare filenames:
+  //   Playwright resolves positional args against cwd, not testDir.
+  //   'sv-api.spec.ts' → '{root}/sv-api.spec.ts' which doesn't exist →
+  //   no match → all tests run.
+  //
+  // SOLUTION: spawn playwright-cli directly (no shell) and pass the
+  // absolute path via path.join (OS-native separators).  Playwright
+  // normalises both sides with path.resolve before comparing, so the
+  // match is exact and reliable on every platform.
+  const TESTS_DIR = path.join(root, 'tests')
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  const resolvedSpecs = specList.map(s =>
-    s.includes('/') || s.includes('\\') ? s : `tests/${s}`
-  )
+
+  // Strip any stale 'tests/' prefix callers might send, then build absolute path
+  const cleanName = (s: string) =>
+    s.replace(/^tests[\\/]/, '').replace(/^.*[\\/]/, '')  // basename only
+  const resolvedSpecs = specList.map(s => path.join(TESTS_DIR, cleanName(s)))
+
+  // Archive label uses bare filenames (no path, no 'tests/' prefix)
+  const bareNames = specList.map(s => cleanName(s))
+
   for (const s of resolvedSpecs) args.push(s)
 
   if (resolvedSpecs.length > 0) {
-    send(`[FILTER] spec(s): ${resolvedSpecs.join(', ')}`)
+    send(`[FILTER] spec(s): ${bareNames.join(', ')}`)
   }
 
   // Test-title filters — passed as CLI flags
@@ -529,19 +546,22 @@ app.post('/api/playwright/run', (req, res) => {
   const env: Record<string, string> = { ...process.env as Record<string, string>, FORCE_COLOR: '0' }
   if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
-  send(`[INFO] npx ${args.join(' ')}`)
+  send(`[INFO] npx playwright ${args.join(' ')}`)
   if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
   if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
   if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
   if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
 
-  // Archive key: join spec names for multi-run
-  const archiveSpec = resolvedSpecs.length === 1 ? resolvedSpecs[0] : (resolvedSpecs.length > 1 ? resolvedSpecs.join(',') : spec)
+  // Archive key: bare filenames joined (clean display in Run History)
+  const archiveSpec = bareNames.length > 0 ? bareNames.join(',') : spec
 
-  const child = spawn('npx', args, {
+  // Spawn playwright CLI directly — no shell wrapper on any platform.
+  // On Windows this requires the .cmd shim; on Unix the bare name works.
+  const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+  const child = spawn(npxBin, ['playwright', ...args], {
     cwd: root,
     env,
-    shell: process.platform === 'win32',
+    shell: false,
   })
 
   const stream = (chunk: Buffer) =>
