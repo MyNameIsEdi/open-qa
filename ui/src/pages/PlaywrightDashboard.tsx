@@ -106,6 +106,9 @@ interface PlaywrightConfig {
   headed: boolean
   forbidOnly: boolean
   fullyParallel: boolean
+  // Test-run filters
+  grep: string
+  grepInvert: string
 }
 
 const DEFAULT_CONFIG: PlaywrightConfig = {
@@ -123,6 +126,8 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   headed: false,
   forbidOnly: true,
   fullyParallel: true,
+  grep: '',
+  grepInvert: '',
 }
 
 const STORAGE_KEY = 'pw_dashboard_config_v1'
@@ -689,13 +694,14 @@ function SelectControl({
   )
 }
 
-function TextInput({ value, onChange, mono = true, width = 'w-48' }: {
-  value: string; onChange: (v: string) => void; mono?: boolean; width?: string
+function TextInput({ value, onChange, mono = true, width = 'w-48', placeholder }: {
+  value: string; onChange: (v: string) => void; mono?: boolean; width?: string; placeholder?: string
 }) {
   return (
     <input
       type="text"
       value={value}
+      placeholder={placeholder}
       onChange={e => onChange(e.target.value)}
       className={`px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${mono ? 'font-mono' : ''} ${width}`}
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
@@ -1022,6 +1028,26 @@ function SettingsView({ config, onChange, noPresets = false }: { config: Playwri
                   { value: 'retain-on-failure',  label: 'Keep on failure' },
                   { value: 'on',                 label: 'Always' },
                 ]}
+              />
+            </SettingRow>
+          </SettingCard>
+
+          {/* Test Filtering */}
+          <SettingCard icon={<Search size={14} />} title="Test Filtering" subtitle="Narrow which tests run by title or pattern">
+            <SettingRow label="Grep (include)" desc="Only run tests whose title matches this pattern (regex or plain string)">
+              <TextInput
+                value={config.grep}
+                onChange={v => set('grep', v)}
+                width="w-52"
+                placeholder="e.g. @smoke or Login"
+              />
+            </SettingRow>
+            <SettingRow label="Grep invert (exclude)" desc="Skip tests whose title matches this pattern">
+              <TextInput
+                value={config.grepInvert}
+                onChange={v => set('grepInvert', v)}
+                width="w-52"
+                placeholder="e.g. @slow or flaky"
               />
             </SettingRow>
           </SettingCard>
@@ -2081,7 +2107,10 @@ export default function PlaywrightDashboard() {
         const response = await fetch(`${API_BASE}/api/playwright/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ spec: selectedSpec || undefined }),
+          body: JSON.stringify({
+            spec:   selectedSpec || undefined,
+            config,
+          }),
         })
         if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
 
@@ -2126,7 +2155,7 @@ export default function PlaywrightDashboard() {
     }
 
     setRunning(false)
-  }, [serverOnline, selectedSpec, fetchResults, fetchHistory])
+  }, [serverOnline, selectedSpec, config, fetchResults, fetchHistory])
 
   const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
@@ -2216,6 +2245,24 @@ export default function PlaywrightDashboard() {
                     {availableSpecs.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
+                {/* Quick grep filter */}
+                <div className="relative flex items-center">
+                  <Search size={11} className="absolute left-2.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={config.grep}
+                    onChange={e => setConfig(c => ({ ...c, grep: e.target.value }))}
+                    placeholder="grep filter…"
+                    className="pl-7 pr-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
+                    style={{ borderColor: config.grep ? '#2563eb' : 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    title="Filter tests by title (--grep)"
+                  />
+                  {config.grep && (
+                    <button onClick={() => setConfig(c => ({ ...c, grep: '' }))} className="absolute right-2 opacity-50 hover:opacity-100">
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
                 <button onClick={exportReport}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}

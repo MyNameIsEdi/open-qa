@@ -381,7 +381,10 @@ app.get('/api/playwright/results/:runId', async (req, res) => {
 
 // POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
 app.post('/api/playwright/run', (req, res) => {
-  const { spec } = req.body as { spec?: string }
+  const { spec, config } = req.body as {
+    spec?: string
+    config?: Record<string, unknown>
+  }
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -391,12 +394,25 @@ app.post('/api/playwright/run', (req, res) => {
 
   const args = ['playwright', 'test', '--reporter=list,json']
   if (spec) args.push(spec)
+  // Test-title filters — passed as CLI flags
+  if (typeof config?.grep === 'string' && config.grep.trim())
+    args.push(`--grep=${config.grep.trim()}`)
+  if (typeof config?.grepInvert === 'string' && config.grepInvert.trim())
+    args.push(`--grep-invert=${config.grepInvert.trim()}`)
+
+  // Inject full config into playwright.config.ts via PW_RUNTIME_CONFIG env var
+  const env: Record<string, string> = { ...process.env as Record<string, string>, FORCE_COLOR: '0' }
+  if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
   send(`[INFO] npx ${args.join(' ')}`)
+  if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
+  if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
+  if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
+  if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
 
   const child = spawn('npx', args, {
     cwd: root,
-    env: { ...process.env, FORCE_COLOR: '0' },
+    env,
     shell: process.platform === 'win32',
   })
 
