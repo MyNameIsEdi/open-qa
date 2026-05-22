@@ -498,7 +498,12 @@ app.post('/api/playwright/run', (req, res) => {
 
   const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
-  const args = ['test', '--reporter=list,json']
+  // Do NOT pass --reporter here: playwright.config.ts already configures
+  // list + html + json (with outputFile: 'test-results/pw-results.json').
+  // Overriding on the CLI would give the json reporter no outputFile, causing
+  // it to dump raw JSON to stdout (breaking the SSE stream) and leaving
+  // pw-results.json stale so archiveRun() always reads the old results.
+  const args = ['test']
 
   // ── Spec filtering ────────────────────────────────────────────────────────
   // We receive bare filenames (e.g. 'sv-api.spec.ts') from the dashboard.
@@ -512,7 +517,6 @@ app.post('/api/playwright/run', (req, res) => {
   // on Windows).  cmd.exe treats backslash as a directory separator, not a
   // flag, so C:\...\tests\sv-api.spec.ts is passed verbatim to playwright.
   // Playwright then does path.resolve on both sides → exact match.
-  const TESTS_DIR = path.join(root, 'tests')
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
 
   // Strip any stale 'tests/' prefix callers might send, keep basename only
@@ -539,7 +543,7 @@ app.post('/api/playwright/run', (req, res) => {
   const env: Record<string, string> = { ...process.env as Record<string, string>, FORCE_COLOR: '0' }
   if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
-  send(`[INFO] npx playwright ${args.join(' ')}`)
+  send(`[INFO] Running: npx playwright ${args.join(' ')}`)
   if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
   if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
   if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
