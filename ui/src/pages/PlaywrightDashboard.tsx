@@ -180,7 +180,7 @@ function HistoryChart({
         </div>
       </div>
       <div className="px-5 py-3">
-        <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
+        <div className="flex gap-2" style={{ height: CHART_H + 20 }}>
           {displayed.map(run => {
             const passH      = Math.round((run.passed  / maxTotal) * CHART_H)
             const failH      = Math.round((run.failed  / maxTotal) * CHART_H)
@@ -457,12 +457,12 @@ function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
 }
 
 function StatusBadge({ status }: { status: Status }) {
-  const base = 'text-[11px] font-semibold px-2 py-0.5 rounded-full'
-  if (status === 'passed')  return <span className={`${base} bg-emerald-50 text-emerald-700`}>passed</span>
-  if (status === 'failed')  return <span className={`${base} bg-red-50 text-red-600`}>failed</span>
-  if (status === 'skipped') return <span className={`${base} bg-amber-50 text-amber-600`}>skipped</span>
-  if (status === 'running') return <span className={`${base} bg-blue-50 text-blue-600`}>running…</span>
-  return <span className={`${base} bg-neutral-100 text-neutral-400`}>pending</span>
+  const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase'
+  if (status === 'passed')  return <span className={`${base}`} style={{ background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.2)' }}>pass</span>
+  if (status === 'failed')  return <span className={`${base}`} style={{ background: 'rgba(239,68,68,0.12)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)' }}>fail</span>
+  if (status === 'skipped') return <span className={`${base}`} style={{ background: 'rgba(251,191,36,0.12)', color: '#d97706', border: '1px solid rgba(251,191,36,0.2)' }}>skip</span>
+  if (status === 'running') return <span className={`${base}`} style={{ background: 'rgba(59,130,246,0.12)', color: '#2563eb', border: '1px solid rgba(59,130,246,0.2)' }}>running…</span>
+  return <span className={`${base}`} style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.15)' }}>pending</span>
 }
 
 // ─── Settings Sub-components ──────────────────────────────────────────────────
@@ -2428,19 +2428,42 @@ export default function PlaywrightDashboard() {
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Playwright Dashboard</h1>
+              <h1 className="text-2xl font-black tracking-tight"
+              style={{ background: 'linear-gradient(135deg, var(--text-main) 0%, #3b82f6 60%, #8b5cf6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Playwright Dashboard
+            </h1>
               {serverOnline === true && !demoMode && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>Live</span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Live
+                </span>
               )}
               {demoMode && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>Demo</span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  Demo
+                </span>
+              )}
+              {serverOnline === false && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                  Offline
+                </span>
               )}
             </div>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {suites.length} suites · {counts.total} tests · {formatMs(totalDuration)}
-              {lastRunAt && ` · run at ${new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-              {serverOnline === false && <span className="ml-2 text-amber-500">· server offline</span>}
-              {isLoading && <span className="ml-2 text-blue-400">· loading…</span>}
+            <p className="text-xs mt-1.5 flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+              <span>{suites.length} suites</span>
+              <span style={{ color: 'var(--border)' }}>·</span>
+              <span>{counts.total} tests</span>
+              {totalDuration > 0 && <>
+                <span style={{ color: 'var(--border)' }}>·</span>
+                <span>{formatMs(totalDuration)}</span>
+              </>}
+              {lastRunAt && <>
+                <span style={{ color: 'var(--border)' }}>·</span>
+                <span>last run {new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </>}
+              {isLoading && <span className="text-blue-400 flex items-center gap-1"><RotateCcw size={10} className="animate-spin" /> loading…</span>}
             </p>
           </div>
 
@@ -2589,7 +2612,11 @@ export default function PlaywrightDashboard() {
                 </button>
                 <button
                   onClick={running ? () => setRunning(false) : runTests}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? 'text-white' : 'text-white'}`}
+                  style={running
+                    ? { background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 0 0 3px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.3)' }
+                    : { background: 'linear-gradient(135deg,#3b82f6,#6366f1)', boxShadow: '0 0 0 3px rgba(59,130,246,0.2), 0 2px 8px rgba(99,102,241,0.3)' }
+                  }>
                   {running ? <><Square size={14} /> Stop</> : <><Play size={14} /> Run Tests</>}
                 </button>
               </>
@@ -2778,27 +2805,40 @@ export default function PlaywrightDashboard() {
             {/* Metric cards */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
               {([
-                { label: 'Total',     value: counts.total,            color: 'var(--text-main)' },
-                { label: 'Passed',    value: counts.passed,           color: '#059669' },
-                { label: 'Failed',    value: counts.failed,           color: '#ef4444' },
-                { label: 'Skipped',   value: counts.skipped,          color: '#d97706' },
-                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444' },
-                { label: 'Duration',  value: formatMs(totalDuration), color: 'var(--text-main)' },
-              ] as const).map(({ label, value, color }) => (
-                <div key={label} className="p-4 rounded-2xl border text-center shadow-sm"
+                { label: 'Total',     value: counts.total,            color: '#6366f1', accent: '#6366f1', icon: <Hash size={13} /> },
+                { label: 'Passed',    value: counts.passed,           color: '#059669', accent: '#10b981', icon: <CheckCircle2 size={13} /> },
+                { label: 'Failed',    value: counts.failed,           color: '#ef4444', accent: '#ef4444', icon: <XCircle size={13} /> },
+                { label: 'Skipped',   value: counts.skipped,          color: '#d97706', accent: '#fbbf24', icon: <MinusCircle size={13} /> },
+                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444', accent: passRate >= 80 ? '#10b981' : '#ef4444', icon: <TrendingUp size={13} /> },
+                { label: 'Duration',  value: formatMs(totalDuration), color: '#8b5cf6', accent: '#8b5cf6', icon: <Clock size={13} /> },
+              ]).map(({ label, value, color, accent, icon }) => (
+                <div key={label} className="pt-3 pb-4 px-3 rounded-2xl border text-center shadow-sm relative overflow-hidden"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                  <p className="text-2xl font-black leading-none" style={{ color }}>{value}</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  {/* Accent top bar */}
+                  <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ backgroundColor: accent }} />
+                  <div className="flex justify-center mb-1.5" style={{ color: accent }}>{icon}</div>
+                  <p className="text-xl font-black leading-none" style={{ color }}>{value}</p>
+                  <p className="text-[11px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
                 </div>
               ))}
             </div>
 
             {/* Progress bar */}
-            <div className="mb-6 h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--border)' }}>
-              {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
-              {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
-              {counts.skipped > 0 && <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${(counts.skipped / counts.total) * 100}%` }} />}
-              {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
+            <div className="mb-5">
+              <div className="h-2.5 rounded-full overflow-hidden flex gap-px" style={{ backgroundColor: 'var(--border)' }}>
+                {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
+                {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
+                {counts.skipped > 0 && <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${(counts.skipped / counts.total) * 100}%` }} />}
+                {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
+              </div>
+              {counts.total > 0 && (
+                <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  <span className="text-emerald-600 font-semibold">{counts.passed} passed</span>
+                  {counts.failed > 0  && <span className="text-red-500 font-semibold">{counts.failed} failed</span>}
+                  {counts.skipped > 0 && <span className="text-amber-500">{counts.skipped} skipped</span>}
+                  <span className="font-semibold" style={{ color: passRate >= 80 ? '#059669' : '#ef4444' }}>{passRate}%</span>
+                </div>
+              )}
             </div>
 
             {/* History chart — real run records only */}
@@ -2838,16 +2878,16 @@ export default function PlaywrightDashboard() {
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {([
-                  { key: 'active' as const,  label: `Active (${counts.passed + counts.failed})` },
-                  { key: 'all' as const,     label: `All (${counts.total})` },
-                  { key: 'passed' as const,  label: `Passed (${counts.passed})` },
-                  { key: 'failed' as const,  label: `Failed (${counts.failed})` },
-                  { key: 'skipped' as const, label: `Skipped (${counts.skipped})` },
-                ]).map(({ key, label }) => (
+                  { key: 'active' as const,  label: `Active (${counts.passed + counts.failed})`, activeColor: '#2563eb', activeBg: '#2563eb' },
+                  { key: 'all' as const,     label: `All (${counts.total})`,                     activeColor: '#6366f1', activeBg: '#6366f1' },
+                  { key: 'passed' as const,  label: `Passed (${counts.passed})`,                 activeColor: '#059669', activeBg: '#10b981' },
+                  { key: 'failed' as const,  label: `Failed (${counts.failed})`,                 activeColor: '#dc2626', activeBg: '#ef4444' },
+                  { key: 'skipped' as const, label: `Skipped (${counts.skipped})`,               activeColor: '#d97706', activeBg: '#fbbf24' },
+                ]).map(({ key, label, activeBg }) => (
                   <button key={key} onClick={() => setActiveTab(key)}
                     className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border"
                     style={activeTab === key
-                      ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
+                      ? { background: activeBg, color: '#fff', borderColor: activeBg }
                       : { background: 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
                     }>
                     {label}
@@ -2885,10 +2925,11 @@ export default function PlaywrightDashboard() {
                 const isOpen        = expandedSuites[suite.id]
                 const suiteDuration = suite.tests.reduce((a, t) => a + t.duration, 0)
                 const maxDuration   = Math.max(...suite.tests.map(t => t.duration), 1)
+                const statusAccent  = status === 'passed' ? '#10b981' : status === 'failed' ? '#ef4444' : status === 'running' ? '#3b82f6' : status === 'skipped' ? '#fbbf24' : 'var(--border)'
 
                 return (
                   <div key={suite.id} className="rounded-2xl border shadow-sm overflow-hidden"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', borderLeft: `3px solid ${statusAccent}` }}>
                     <button
                       onClick={() => toggleSuite(suite.id)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors"
@@ -2901,7 +2942,14 @@ export default function PlaywrightDashboard() {
                         <span className="ml-2 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{suite.file}</span>
                       </span>
                       {suiteDuration > 0 && <span className="text-xs font-mono shrink-0 hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{formatMs(suiteDuration)}</span>}
-                      <span className="text-xs shrink-0 font-medium" style={{ color: 'var(--text-muted)' }}>{passed}/{suite.tests.length} passed</span>
+                      {/* Mini pass rate pill */}
+                      <span className="text-[10px] shrink-0 font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: passed === suite.tests.length ? 'rgba(16,185,129,0.1)' : passed === 0 ? 'rgba(239,68,68,0.1)' : 'rgba(251,191,36,0.1)',
+                          color: passed === suite.tests.length ? '#059669' : passed === 0 ? '#dc2626' : '#d97706',
+                        }}>
+                        {passed}/{suite.tests.length}
+                      </span>
                       {isOpen ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />}
                     </button>
 
@@ -2988,12 +3036,16 @@ export default function PlaywrightDashboard() {
 
               {filteredSuites.length === 0 && (
                 <div className="text-center py-16 rounded-2xl border shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)',
+                    background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 70%)' }}>
                   {suites.length === 0 ? (
                     <>
-                      <Play size={28} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
-                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-main)' }}>No test results yet</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                        <Play size={24} style={{ color: '#3b82f6', opacity: 0.6 }} />
+                      </div>
+                      <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>No test results yet</p>
+                      <p className="text-xs max-w-xs mx-auto" style={{ color: 'var(--text-muted)' }}>
                         {serverOnline === false
                           ? 'Server is offline — start it with: npm run dev'
                           : 'Click Run Tests to execute your Playwright specs.'}
@@ -3001,10 +3053,20 @@ export default function PlaywrightDashboard() {
                     </>
                   ) : (
                     <>
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)' }}>
+                        <Search size={22} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                      </div>
+                      <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>
+                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match this filter'}
                       </p>
-                      {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')}
+                          className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-full"
+                          style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+                          Clear search
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -3025,10 +3087,12 @@ export default function PlaywrightDashboard() {
                       <span className="text-xs font-bold w-5 shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>#{i + 1}</span>
                       <StatusIcon status={test.status} size={13} />
                       <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
-                      <div className="w-24 h-1.5 rounded-full overflow-hidden shrink-0 hidden sm:block" style={{ backgroundColor: 'var(--border)' }}>
-                        <div className="h-full rounded-full bg-amber-400" style={{ width: `${(test.duration / slowestTests[0].duration) * 100}%` }} />
+                      <div className="flex-1 h-2 rounded-full overflow-hidden shrink-0 hidden sm:block max-w-[160px]" style={{ backgroundColor: 'var(--border)' }}>
+                        <div className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                          style={{ width: `${(test.duration / slowestTests[0].duration) * 100}%`,
+                            background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }} />
                       </div>
-                      <span className="text-xs font-mono font-semibold shrink-0" style={{ color: '#d97706' }}>{formatMs(test.duration)}</span>
+                      <span className="text-xs font-mono font-bold shrink-0" style={{ color: '#d97706' }}>{formatMs(test.duration)}</span>
                     </div>
                   ))}
                 </div>
@@ -3044,16 +3108,27 @@ export default function PlaywrightDashboard() {
                     <Terminal size={13} style={{ color: '#10b981' }} />
                     <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run Output</span>
                     {running && <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
+                    <span className="text-[10px]" style={{ color: '#6c7086' }}>{runLog.length} lines</span>
                   </div>
                   <button onClick={() => setShowLog(false)} className="hover:opacity-70 transition-opacity">
                     <X size={13} style={{ color: 'var(--text-muted)' }} />
                   </button>
                 </div>
-                <pre
-                  className="text-[10.5px] font-mono px-4 py-3 overflow-auto leading-relaxed"
-                  style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', margin: 0, maxHeight: '280px' }}>
-                  {runLog.join('\n')}
-                </pre>
+                <div className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
+                  style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}>
+                  {runLog.map((line, i) => {
+                    const color =
+                      /✓|passed|\[PASS\]/i.test(line) ? '#a6e3a1' :
+                      /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line) ? '#f38ba8' :
+                      /\[FILTER\]|\[INFO\]/i.test(line) ? '#89b4fa' :
+                      /\[TIMEOUT\]|\[OFFLINE\]/i.test(line) ? '#fab387' :
+                      /skipped|pending/i.test(line) ? '#f9e2af' :
+                      '#cdd6f4'
+                    return (
+                      <div key={i} style={{ color, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{line}</div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
