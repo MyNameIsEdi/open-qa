@@ -72,6 +72,7 @@
     "title": "Autonomous Agents",
     "subtitle": "{{active}} active · {{planned}} planned. Click \"Add to Claude\" to copy any agent's config.",
     "search_placeholder": "Search agents…",
+    "server_starting": "Server starting…",
     "no_match": "No agents match your search."
   },
   "skills": {

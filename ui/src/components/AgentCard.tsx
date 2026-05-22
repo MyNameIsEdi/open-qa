@@ -1,25 +1,27 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ScheduleIcon from '@mui/icons-material/Schedule'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import CheckIcon from '@mui/icons-material/Check'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined'
-import RunOutput from './RunOutput'
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined';
+import RunOutput from './RunOutput';
 
 export interface AgentDef {
-  name: string
-  description: string
-  status: 'active' | 'planned'
-  runCommand: string
-  systemPrompt: string
-  toolSchema?: object
-  runId?: string
+  name: string;
+  description: string;
+  status: 'active' | 'planned';
+  runCommand: string;
+  systemPrompt: string;
+  toolSchema?: object;
+  runId?: string;
 }
 
 interface Props {
-  agent: AgentDef
+  agent: AgentDef;
+  runDisabled?: boolean;
+  runDisabledLabel?: string;
 }
 
 function buildClaudePayload(agent: AgentDef) {
@@ -37,44 +39,44 @@ function buildClaudePayload(agent: AgentDef) {
     },
     null,
     2,
-  )
+  );
 }
 
-export default function AgentCard({ agent }: Props) {
-  const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [output, setOutput] = useState('')
-  const [runError, setRunError] = useState('')
-  const [showOutput, setShowOutput] = useState(false)
+export default function AgentCard({ agent, runDisabled = false, runDisabledLabel }: Props) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [output, setOutput] = useState('');
+  const [runError, setRunError] = useState('');
+  const [showOutput, setShowOutput] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(buildClaudePayload(agent))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(buildClaudePayload(agent));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleRun = async () => {
-    if (!agent.runId) return
-    setRunning(true)
-    setOutput('')
-    setRunError('')
-    setShowOutput(true)
+    if (!agent.runId || runDisabled) return;
+    setRunning(true);
+    setOutput('');
+    setRunError('');
+    setShowOutput(true);
 
     try {
-      const res = await fetch(`/api/run/${agent.runId}`, { method: 'POST' })
-      const data = await res.json()
+      const res = await fetch(`/api/run/${agent.runId}`, { method: 'POST' });
+      const data = await res.json();
       if (!res.ok || !data.ok) {
-        setRunError(data.error || data.stderr || 'Unknown error')
+        setRunError(data.error || data.stderr || 'Unknown error');
       } else {
-        setOutput(data.output || '(no output)')
+        setOutput(data.output || '(no output)');
       }
     } catch (e) {
-      setRunError(e instanceof Error ? e.message : 'Network error')
+      setRunError(e instanceof Error ? e.message : 'Network error');
     } finally {
-      setRunning(false)
+      setRunning(false);
     }
-  }
+  };
 
   return (
     <div
@@ -114,20 +116,18 @@ export default function AgentCard({ agent }: Props) {
       </code>
 
       {/* Output panel */}
-      {showOutput && (
-        <RunOutput output={output} loading={running} error={runError} />
-      )}
+      {showOutput && <RunOutput output={output} loading={running} error={runError} />}
 
       {/* Action buttons */}
       <div className="mt-auto flex gap-2">
         {agent.runId && (
           <button
             onClick={handleRun}
-            disabled={running}
+            disabled={running || runDisabled}
             className="flex items-center justify-center gap-1.5 flex-1 py-2 px-3 rounded-xl text-xs font-medium bg-sage-50 text-sage-700 hover:bg-sage-100 active:scale-95 transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <PlayArrowOutlinedIcon sx={{ fontSize: 14 }} />
-            {running ? t('common.running') : t('common.run')}
+            {running ? t('common.running') : runDisabled ? runDisabledLabel : t('common.run')}
           </button>
         )}
         <button
@@ -148,5 +148,5 @@ export default function AgentCard({ agent }: Props) {
         </button>
       </div>
     </div>
-  )
+  );
 }
