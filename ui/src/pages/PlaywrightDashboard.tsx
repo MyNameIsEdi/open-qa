@@ -542,6 +542,32 @@ interface Preset {
   specs?: string[]
 }
 
+/** Shared Playwright config for all SV Students suites (Render free-tier) */
+const SV_CONFIG: Partial<PlaywrightConfig> = {
+  baseUrl:       'https://sv-students-recommend.onrender.com',
+  testDir:       './tests',
+  timeout:       60000,
+  retries:       1,
+  workers:       1,
+  headed:        false,
+  fullyParallel: false,
+  browsers:      { chromium: true, firefox: false, webkit: false },
+  screenshot:    'only-on-failure',
+  video:         'retain-on-failure',
+  trace:         'on-first-retry',
+  reporter:      'html',
+}
+
+const SV_ALL_SPECS = [
+  'tests/sv-login.spec.ts',
+  'tests/sv-register.spec.ts',
+  'tests/sv-home.spec.ts',
+  'tests/sv-api.spec.ts',
+  'tests/sv-docs.spec.ts',
+  'tests/sv-a11y.spec.ts',
+  'tests/sv-navigation.spec.ts',
+]
+
 const PRESETS: Preset[] = [
   {
     label: 'Local Dev',
@@ -566,45 +592,44 @@ const PRESETS: Preset[] = [
     },
   },
   {
-    label: 'Cross-Browser',
-    icon: <Globe size={13} />,
-    description: 'Chromium + Firefox + WebKit, 4 parallel workers',
-    color: '#7c3aed',
-    config: {
-      browsers: { chromium: true, firefox: true, webkit: true },
-      workers: 4, retries: 1, fullyParallel: true, reporter: 'html',
-    },
-  },
-  {
-    label: 'Mobile',
-    icon: <Smartphone size={13} />,
-    description: 'WebKit + Chromium for iOS & Android coverage',
-    color: '#d97706',
-    config: {
-      browsers: { chromium: true, firefox: false, webkit: true },
-      workers: 2, retries: 1, headed: false, reporter: 'html',
-    },
-  },
-  {
-    label: 'SV Students',
+    label: 'SV: All',
     icon: <FlaskConical size={13} />,
-    description: 'Render free-tier site — 60s timeout, Chromium only, 1 worker',
+    description: 'Full SV Students suite — all 7 spec files',
     color: '#0891b2',
-    specs: ['tests/sv-students.spec.ts'],
-    config: {
-      baseUrl:       'https://sv-students-recommend.onrender.com',
-      testDir:       './tests',
-      timeout:       60000,
-      retries:       1,
-      workers:       1,
-      headed:        false,
-      fullyParallel: false,
-      browsers:      { chromium: true, firefox: false, webkit: false },
-      screenshot:    'only-on-failure',
-      video:         'retain-on-failure',
-      trace:         'on-first-retry',
-      reporter:      'html',
-    },
+    specs: SV_ALL_SPECS,
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Login',
+    icon: <Hash size={13} />,
+    description: 'Login structure, validation, forgot-password & register',
+    color: '#7c3aed',
+    specs: ['tests/sv-login.spec.ts', 'tests/sv-register.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Home',
+    icon: <Layers size={13} />,
+    description: 'Home feed — auth redirect, structure, filters, modals',
+    color: '#d97706',
+    specs: ['tests/sv-home.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: API',
+    icon: <Globe size={13} />,
+    description: 'Public & authenticated REST API endpoints',
+    color: '#059669',
+    specs: ['tests/sv-api.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Docs & A11y',
+    icon: <BookOpen size={13} />,
+    description: 'Swagger UI rendering + Hebrew accessibility page',
+    color: '#e11d48',
+    specs: ['tests/sv-docs.spec.ts', 'tests/sv-a11y.spec.ts'],
+    config: SV_CONFIG,
   },
 ]
 
@@ -657,7 +682,7 @@ function SettingsView({ config, onChange, noPresets = false }: { config: Playwri
           <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a battle-tested configuration</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
           {PRESETS.map(preset => (
             <button
               key={preset.label}
@@ -2584,7 +2609,7 @@ export default function PlaywrightDashboard() {
                 <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
                 <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
                 {PRESETS.map(preset => {
                   const isActive = preset.specs
                     ? preset.specs.every(s => selectedSpecs.has(s)) && selectedSpecs.size === preset.specs.length
