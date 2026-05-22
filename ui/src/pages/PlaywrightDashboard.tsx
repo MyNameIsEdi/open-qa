@@ -14,7 +14,7 @@ import {
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
 type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey      = 'dashboard' | 'editor' | 'docs'
+type ViewKey      = 'dashboard' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
 type ErrorType    = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
@@ -538,6 +538,8 @@ interface Preset {
   description: string
   color: string
   config: Partial<PlaywrightConfig>
+  /** If set, auto-selects these spec files when the preset is applied */
+  specs?: string[]
 }
 
 const PRESETS: Preset[] = [
@@ -588,6 +590,7 @@ const PRESETS: Preset[] = [
     icon: <FlaskConical size={13} />,
     description: 'Render free-tier site — 60s timeout, Chromium only, 1 worker',
     color: '#0891b2',
+    specs: ['tests/sv-students.spec.ts'],
     config: {
       baseUrl:       'https://sv-students-recommend.onrender.com',
       testDir:       './tests',
@@ -2027,6 +2030,7 @@ export default function PlaywrightDashboard() {
   const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
   const [justSaved, setJustSaved]         = useState(false)
   const [settingsOpen, setSettingsOpen]   = useState(false)
+  const [configTab, setConfigTab]         = useState<'config' | 'editor'>('config')
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({})
@@ -2352,7 +2356,6 @@ export default function PlaywrightDashboard() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
               {([
                 { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
-                { key: 'editor'    as const, label: 'Editor',    icon: <PenLine size={12} /> },
                 { key: 'docs'      as const, label: 'Docs',      icon: <BookOpen size={12} /> },
               ]).map(({ key, label, icon }) => (
                 <button
@@ -2554,53 +2557,86 @@ export default function PlaywrightDashboard() {
                 <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
-                {PRESETS.map(preset => (
-                  <button
-                    key={preset.label}
-                    onClick={() => setConfig(c => ({ ...c, ...preset.config }))}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
-                  >
-                    <span style={{ color: preset.color }}>{preset.icon}</span>
-                    <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
-                  </button>
-                ))}
+                {PRESETS.map(preset => {
+                  const isActive = preset.specs
+                    ? preset.specs.every(s => selectedSpecs.has(s)) && selectedSpecs.size === preset.specs.length
+                    : false
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => {
+                        setConfig(c => ({ ...c, ...preset.config }))
+                        if (preset.specs) setSelectedSpecs(new Set(preset.specs))
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
+                      style={{
+                        borderColor: isActive ? preset.color : 'var(--border)',
+                        backgroundColor: isActive ? `${preset.color}15` : 'var(--bg-body)',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = `${preset.color}10` }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = isActive ? preset.color : 'var(--border)'
+                        e.currentTarget.style.backgroundColor = isActive ? `${preset.color}15` : 'var(--bg-body)'
+                      }}
+                    >
+                      <span style={{ color: preset.color }}>{preset.icon}</span>
+                      <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            {/* ── Collapsible full config panel ───────────────────────── */}
+            {/* ── Collapsible config + editor panel ───────────────────── */}
             {settingsOpen && (
               <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: '#93c5fd' }}>
+                {/* Panel header with Config | Editor tabs */}
                 <div className="flex items-center justify-between px-4 py-2.5 border-b"
                   style={{ borderColor: '#bfdbfe', backgroundColor: 'rgba(37,99,235,0.04)' }}>
-                  <div className="flex items-center gap-2">
-                    <Settings size={13} style={{ color: '#2563eb' }} />
-                    <span className="text-xs font-bold" style={{ color: '#1d4ed8' }}>Configuration</span>
-                    {changedCount > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount} changed</span>
+                  <div className="flex items-center gap-1">
+                    {([
+                      { id: 'config' as const, icon: <Settings size={12} />, label: 'Config' },
+                      { id: 'editor' as const, icon: <PenLine size={12} />, label: 'Editor' },
+                    ]).map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setConfigTab(tab.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                        style={configTab === tab.id
+                          ? { backgroundColor: 'var(--bg-card)', color: '#2563eb', boxShadow: '0 1px 3px rgba(0,0,0,.08)' }
+                          : { color: 'var(--text-muted)' }
+                        }
+                      >
+                        {tab.icon} {tab.label}
+                      </button>
+                    ))}
+                    {configTab === 'config' && changedCount > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none ml-1">{changedCount} changed</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setConfig(DEFAULT_CONFIG)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
-                      <RotateCcw size={11} /> Reset
-                    </button>
-                    <button
-                      onClick={saveConfig}
-                      disabled={isSaved}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
-                      style={justSaved
-                        ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-                        : isSaved
-                          ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
-                          : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
-                      }
-                    >
-                      {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
-                    </button>
+                    {configTab === 'config' && (
+                      <>
+                        <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                          <RotateCcw size={11} /> Reset
+                        </button>
+                        <button
+                          onClick={saveConfig}
+                          disabled={isSaved}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
+                          style={justSaved
+                            ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                            : isSaved
+                              ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                              : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                          }
+                        >
+                          {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
+                        </button>
+                      </>
+                    )}
                     <button onClick={() => setSettingsOpen(false)}
                       className="p-1.5 rounded-lg border transition-colors"
                       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
@@ -2608,9 +2644,18 @@ export default function PlaywrightDashboard() {
                     </button>
                   </div>
                 </div>
-                <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-                  <SettingsView config={config} onChange={setConfig} noPresets />
-                </div>
+                {/* Panel body */}
+                {configTab === 'config' ? (
+                  <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <SettingsView config={config} onChange={setConfig} noPresets />
+                  </div>
+                ) : (
+                  <EditorView
+                    specs={availableSpecs}
+                    onReloadSpecs={fetchSpecs}
+                    onRunSpec={runSingleSpec}
+                  />
+                )}
               </div>
             )}
 
@@ -2897,22 +2942,6 @@ export default function PlaywrightDashboard() {
             {/* Flaky test panel */}
             <FlakyPanel suites={suites} />
           </>
-        )}
-
-        {/* ── Editor view ──────────────────────────────────────────────────────── */}
-        {activeView === 'editor' && (
-          <EditorView
-            specs={availableSpecs}
-            onReloadSpecs={() => {
-              fetch(`${API_BASE}/api/playwright/specs`)
-                .then(r => r.json())
-                .then(d => { if (d.specs) setAvailableSpecs(d.specs) })
-                .catch(() => {})
-            }}
-            onRunSpec={spec => {
-              runSingleSpec(spec)
-            }}
-          />
         )}
 
         {/* ── Docs view ────────────────────────────────────────────────────────── */}
