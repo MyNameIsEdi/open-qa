@@ -13,7 +13,7 @@ import {
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
 type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey      = 'dashboard' | 'settings' | 'docs'
+type ViewKey      = 'dashboard' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
 type ErrorType    = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
@@ -794,6 +794,26 @@ const PRESETS: Preset[] = [
       workers: 2, retries: 1, headed: false, reporter: 'html',
     },
   },
+  {
+    label: 'SV Students',
+    icon: <FlaskConical size={13} />,
+    description: 'Render free-tier site — 60s timeout, Chromium only, 1 worker',
+    color: '#0891b2',
+    config: {
+      baseUrl:       'https://sv-students-recommend.onrender.com',
+      testDir:       './tests',
+      timeout:       60000,
+      retries:       1,
+      workers:       1,
+      headed:        false,
+      fullyParallel: false,
+      browsers:      { chromium: true, firefox: false, webkit: false },
+      screenshot:    'only-on-failure',
+      video:         'retain-on-failure',
+      trace:         'on-first-retry',
+      reporter:      'html',
+    },
+  },
 ]
 
 // ─── Settings View ────────────────────────────────────────────────────────────
@@ -806,7 +826,7 @@ const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
   dot:    'One dot per test — ultra-compact, ideal for large suites in CI',
 }
 
-function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange: (c: PlaywrightConfig) => void }) {
+function SettingsView({ config, onChange, noPresets = false }: { config: PlaywrightConfig; onChange: (c: PlaywrightConfig) => void; noPresets?: boolean }) {
   const [copied, setCopied]     = useState(false)
   const [downloaded, setDownloaded] = useState(false)
   const configCode = useMemo(() => generateConfig(config), [config])
@@ -837,6 +857,7 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
     <div className="flex flex-col gap-5">
 
       {/* ── Quick Presets ── */}
+      {!noPresets && (
       <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
@@ -869,6 +890,7 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
           ))}
         </div>
       </div>
+      )}
 
       {/* ── Main grid: left settings + right preview ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -1873,6 +1895,7 @@ export default function PlaywrightDashboard() {
   const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
   const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
   const [justSaved, setJustSaved]         = useState(false)
+  const [settingsOpen, setSettingsOpen]   = useState(false)
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
@@ -2161,7 +2184,6 @@ export default function PlaywrightDashboard() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
               {([
                 { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
-                { key: 'settings'  as const, label: 'Settings',  icon: <Settings size={12} /> },
                 { key: 'docs'      as const, label: 'Docs',      icon: <BookOpen size={12} /> },
               ]).map(({ key, label, icon }) => (
                 <button
@@ -2175,11 +2197,6 @@ export default function PlaywrightDashboard() {
                 >
                   {icon}
                   {label}
-                  {key === 'settings' && changedCount > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">
-                      {changedCount}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -2223,40 +2240,26 @@ export default function PlaywrightDashboard() {
                   Demo
                 </button>
                 <button
+                  onClick={() => setSettingsOpen(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
+                  style={settingsOpen
+                    ? { borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', color: '#2563eb' }
+                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }
+                  }
+                  onMouseEnter={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
+                  onMouseLeave={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
+                  title="Toggle config panel">
+                  <Settings size={13} />
+                  Config
+                  {changedCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount}</span>
+                  )}
+                  {settingsOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                </button>
+                <button
                   onClick={running ? () => setRunning(false) : runTests}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   {running ? <><Square size={14} /> Stop</> : <><Play size={14} /> Run Tests</>}
-                </button>
-              </>
-            )}
-
-            {/* Settings actions */}
-            {activeView === 'settings' && (
-              <>
-                <button onClick={() => setConfig(DEFAULT_CONFIG)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
-                  <RotateCcw size={13} /> Reset to defaults
-                </button>
-                <button
-                  onClick={saveConfig}
-                  disabled={isSaved}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={justSaved
-                    ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-                    : isSaved
-                      ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
-                      : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
-                  }
-                >
-                  {justSaved
-                    ? <><Check size={13} /> Saved!</>
-                    : isSaved
-                      ? <><Check size={13} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</>
-                      : <><Save size={13} /> Save</>
-                  }
                 </button>
               </>
             )}
@@ -2305,6 +2308,75 @@ export default function PlaywrightDashboard() {
                   style={{ color: '#1d4ed8' }}>
                   Return to latest →
                 </button>
+              </div>
+            )}
+
+            {/* ── Presets bar (always visible) ────────────────────────── */}
+            <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center gap-2 px-4 py-2 border-b"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <Zap size={12} style={{ color: '#8b5cf6' }} />
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
+                {PRESETS.map(preset => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setConfig(c => ({ ...c, ...preset.config }))}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
+                  >
+                    <span style={{ color: preset.color }}>{preset.icon}</span>
+                    <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Collapsible full config panel ───────────────────────── */}
+            {settingsOpen && (
+              <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: '#93c5fd' }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b"
+                  style={{ borderColor: '#bfdbfe', backgroundColor: 'rgba(37,99,235,0.04)' }}>
+                  <div className="flex items-center gap-2">
+                    <Settings size={13} style={{ color: '#2563eb' }} />
+                    <span className="text-xs font-bold" style={{ color: '#1d4ed8' }}>Configuration</span>
+                    {changedCount > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount} changed</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                      <RotateCcw size={11} /> Reset
+                    </button>
+                    <button
+                      onClick={saveConfig}
+                      disabled={isSaved}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
+                      style={justSaved
+                        ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                        : isSaved
+                          ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                          : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                      }
+                    >
+                      {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
+                    </button>
+                    <button onClick={() => setSettingsOpen(false)}
+                      className="p-1.5 rounded-lg border transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                  <SettingsView config={config} onChange={setConfig} noPresets />
+                </div>
               </div>
             )}
 
@@ -2582,11 +2654,6 @@ export default function PlaywrightDashboard() {
             {/* Flaky test panel */}
             <FlakyPanel suites={suites} />
           </>
-        )}
-
-        {/* ── Settings view ────────────────────────────────────────────────────── */}
-        {activeView === 'settings' && (
-          <SettingsView config={config} onChange={setConfig} />
         )}
 
         {/* ── Docs view ────────────────────────────────────────────────────────── */}
