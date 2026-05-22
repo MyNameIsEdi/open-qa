@@ -1770,7 +1770,7 @@ function EditorView({
           setError(d.error ?? 'Failed to load')
         }
       })
-      .catch(() => setError('Server unreachable'))
+      .catch(() => setError('Cannot reach server at localhost:3001 — is it running?'))
       .finally(() => setLoading(false))
   }, [activeFile])
 
@@ -2648,6 +2648,28 @@ export default function PlaywrightDashboard() {
                 {configTab === 'config' ? (
                   <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
                     <SettingsView config={config} onChange={setConfig} noPresets />
+                  </div>
+                ) : serverOnline === false ? (
+                  /* Server offline — don't attempt fetch, show clear instructions */
+                  <div className="flex flex-col items-center justify-center gap-3 py-16 px-6" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <Terminal size={28} className="opacity-30" style={{ color: 'var(--text-muted)' }} />
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Server is offline</p>
+                    <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                      The test editor reads and saves files through your local Express server.<br />
+                      Start it with <code className="font-mono px-1 py-0.5 rounded text-[11px]" style={{ backgroundColor: 'var(--bg-body)' }}>npm run dev</code> then click Retry.
+                    </p>
+                    <button
+                      onClick={() => { fetchSpecs(); fetchResults() }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}>
+                      <RefreshCw size={12} /> Retry connection
+                    </button>
+                  </div>
+                ) : serverOnline === null ? (
+                  /* Still connecting */
+                  <div className="flex items-center justify-center gap-2 py-16" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <RefreshCw size={14} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Connecting to local server…</span>
                   </div>
                 ) : (
                   <EditorView
