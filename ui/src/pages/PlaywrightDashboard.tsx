@@ -1754,25 +1754,41 @@ function EditorView({
   const lineNumbersRef                  = useRef<HTMLDivElement>(null)
 
   const isDirty = content !== savedContent
+  const [loadKey, setLoadKey] = useState(0)
 
-  // Load file when activeFile changes
+  // Auto-select first spec when the list arrives (handles async fetchSpecs timing)
+  useEffect(() => {
+    if (!activeFile && specs.length > 0) setActiveFile(specs[0])
+  }, [specs, activeFile])
+
+  // Load file content — re-runs when activeFile or loadKey changes (loadKey = manual retry)
   useEffect(() => {
     if (!activeFile) return
     setLoading(true)
     setError(null)
     fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(activeFile)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.content !== undefined) {
-          setContent(d.content)
-          setSavedContent(d.content)
-        } else {
-          setError(d.error ?? 'Failed to load')
+      .then(async r => {
+        const text = await r.text()
+        try {
+          const d = JSON.parse(text) as { content?: string; error?: string }
+          if (d.content !== undefined) {
+            setContent(d.content)
+            setSavedContent(d.content)
+          } else {
+            setError(d.error ?? 'Failed to load file')
+          }
+        } catch {
+          setError(`Server returned an unexpected response (HTTP ${r.status}) — check your server console`)
         }
       })
-      .catch(() => setError('Cannot reach server at localhost:3001 — is it running?'))
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')
+          ? 'Cannot connect to localhost:3001 — make sure the server is running (npm run dev)'
+          : msg)
+      })
       .finally(() => setLoading(false))
-  }, [activeFile])
+  }, [activeFile, loadKey])
 
   const saveFile = useCallback(async () => {
     if (!activeFile) return
@@ -1787,7 +1803,7 @@ function EditorView({
       const d = await r.json()
       if (d.ok) { setSavedContent(content); setSaveMsg('Saved!'); setTimeout(() => setSaveMsg(null), 2000) }
       else setError(d.error ?? 'Save failed')
-    } catch { setError('Server unreachable') }
+    } catch { setError('Save failed — server not reachable') }
     finally { setSaving(false) }
   }, [activeFile, content])
 
@@ -1807,7 +1823,7 @@ function EditorView({
         // Small delay so specs list refreshes before we select
         setTimeout(() => setActiveFile(name), 200)
       } else setError(d.error ?? 'Create failed')
-    } catch { setError('Server unreachable') }
+    } catch { setError('Create failed — server not reachable') }
   }, [newName, onReloadSpecs])
 
   const deleteFile = useCallback(async (name: string) => {
@@ -1820,7 +1836,7 @@ function EditorView({
         if (activeFile === name) { setActiveFile(null); setContent(''); setSavedContent('') }
         onReloadSpecs()
       } else setError(d.error ?? 'Delete failed')
-    } catch { setError('Server unreachable') }
+    } catch { setError('Delete failed — server not reachable') }
   }, [activeFile, onReloadSpecs])
 
   // Tab → insert 2 spaces
@@ -1938,7 +1954,19 @@ function EditorView({
           </div>
           <div className="flex items-center gap-2">
             {error && (
-              <span className="text-[11px] font-semibold text-red-500 max-w-xs truncate">{error}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-red-400 max-w-xs truncate" title={error}>{error}</span>
+                {activeFile && (
+                  <button
+                    onClick={() => setLoadKey(k => k + 1)}
+                    className="text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0"
+                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                    title="Retry loading file"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
             )}
             <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{lineCount} lines</span>
             <button
