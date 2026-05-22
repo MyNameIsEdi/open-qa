@@ -72,7 +72,22 @@ interface RunRecord {
   skipped: number
   flaky: number
   duration: number
+  spec?: string | null
 }
+
+/** Fallback chart data shown when the server is offline / no real history yet */
+const MOCK_RUN_RECORDS: RunRecord[] = (() => {
+  const now = Date.now()
+  return [
+    { id: 'demo-1', runAt: new Date(now - 6 * 86_400_000).toISOString(), total: 22, passed: 17, failed: 4, skipped: 1, flaky: 1, duration: 62_000 },
+    { id: 'demo-2', runAt: new Date(now - 5 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 58_000 },
+    { id: 'demo-3', runAt: new Date(now - 4 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 1, skipped: 1, flaky: 1, duration: 55_000 },
+    { id: 'demo-4', runAt: new Date(now - 3 * 86_400_000).toISOString(), total: 22, passed: 18, failed: 3, skipped: 1, flaky: 0, duration: 61_000 },
+    { id: 'demo-5', runAt: new Date(now - 2 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 2, skipped: 0, flaky: 1, duration: 57_000 },
+    { id: 'demo-6', runAt: new Date(now - 1 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 59_000 },
+    { id: 'demo-7', runAt: new Date(now - 2 * 3_600_000).toISOString(),  total: 22, passed: 16, failed: 4, skipped: 2, flaky: 2, duration: 68_000 },
+  ]
+})()
 
 // ─── Playwright Config Type ───────────────────────────────────────────────────
 
@@ -420,50 +435,58 @@ function HistoryChart({
   )
 }
 
-// ─── Runs Panel (expandable list of all recorded runs) ─────────────────────────
+// ─── Runs Panel (collapsible table of all recorded runs) ──────────────────────
 
 function RunsPanel({
   runs,
   selectedId,
   onSelect,
   onLoadLatest,
+  isDemo,
 }: {
   runs: RunRecord[]
   selectedId: string | null
   onSelect: (id: string) => void
   onLoadLatest: () => void
+  isDemo: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  // Open by default when there is real data
+  const [open, setOpen] = useState(!isDemo && runs.length > 0)
+
+  // Keep open state in sync when runs first arrive
+  React.useEffect(() => {
+    if (!isDemo && runs.length > 0) setOpen(true)
+  }, [isDemo, runs.length])
 
   if (runs.length === 0) return null
 
-  // Compute delta vs previous run for each run
-  const delta = (run: RunRecord, prevRun: RunRecord | undefined) => {
-    if (!prevRun) return null
-    const dFail = run.failed - prevRun.failed
-    if (dFail === 0) return null
-    return { dFail }
-  }
+  const total = runs.length  // used for #N numbering (newest = #total)
 
   return (
     <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-      {/* header */}
+
+      {/* ── header ── */}
       <button
-        className="w-full flex items-center gap-2 px-4 py-2.5 text-left"
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors"
         onClick={() => setOpen(o => !o)}
         style={{ backgroundColor: 'var(--bg-body)' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
       >
         <Clock size={13} style={{ color: '#6366f1' }} />
-        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>All Runs</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· {runs.length} recorded</span>
-        {selectedId && (
-          <span className="ml-1 text-[10px] font-bold px-2 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-            viewing historical
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· {runs.length} run{runs.length !== 1 ? 's' : ''} recorded</span>
+        {isDemo && (
+          <span className="text-[10px] px-2 py-px rounded-full bg-amber-50 text-amber-600 border border-amber-200">demo</span>
+        )}
+        {selectedId && !isDemo && (
+          <span className="text-[10px] font-bold px-2 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+            viewing #{total - runs.findIndex(r => r.id === selectedId)}
           </span>
         )}
         <div className="ml-auto flex items-center gap-3">
-          {selectedId && (
+          {selectedId && !isDemo && (
             <button
               onClick={e => { e.stopPropagation(); onLoadLatest() }}
               className="text-[11px] font-semibold text-blue-600 hover:underline"
@@ -472,67 +495,83 @@ function RunsPanel({
             </button>
           )}
           {open
-            ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} />
+            ? <ChevronUp  size={13} style={{ color: 'var(--text-muted)' }} />
             : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />}
         </div>
       </button>
 
+      {/* ── table ── */}
       {open && (
         <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--border)' }}>
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
-                <th className="text-left px-4 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Run</th>
-                <th className="text-right px-3 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Total</th>
-                <th className="text-right px-3 py-2 font-semibold text-emerald-600">Passed</th>
-                <th className="text-right px-3 py-2 font-semibold text-red-500">Failed</th>
-                <th className="text-right px-3 py-2 font-semibold text-amber-500">Skip</th>
-                <th className="text-right px-3 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Duration</th>
-                <th className="text-right px-4 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Pass %</th>
+                <th className="text-left px-4 py-2 font-semibold w-8"  style={{ color: 'var(--text-muted)' }}>#</th>
+                <th className="text-left px-2 py-2 font-semibold"       style={{ color: 'var(--text-muted)' }}>Date</th>
+                <th className="text-left px-2 py-2 font-semibold"       style={{ color: 'var(--text-muted)' }}>Spec</th>
+                <th className="text-right px-3 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Total</th>
+                <th className="text-right px-3 py-2 font-semibold text-emerald-600">✓</th>
+                <th className="text-right px-3 py-2 font-semibold text-red-500">✗</th>
+                <th className="text-right px-3 py-2 font-semibold text-amber-500">–</th>
+                <th className="text-right px-3 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Duration</th>
+                <th className="text-right px-4 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Pass %</th>
               </tr>
             </thead>
             <tbody>
               {runs.map((run, i) => {
                 const isSelected = run.id === selectedId
-                const prevRun    = runs[i + 1]   // runs[0] is newest
-                const d          = delta(run, prevRun)
+                const prevRun    = runs[i + 1]   // runs[0] = newest
+                const dFail      = prevRun != null ? run.failed - prevRun.failed : 0
+                const hasDelta   = prevRun != null && dFail !== 0
                 const rate       = run.total > 0 ? Math.round((run.passed / run.total) * 100) : 0
+                const runNum     = total - i
+
                 return (
                   <tr
                     key={run.id}
-                    onClick={() => onSelect(run.id)}
-                    className="cursor-pointer transition-colors"
+                    onClick={() => !isDemo && onSelect(run.id)}
+                    className={`transition-colors ${isDemo ? '' : 'cursor-pointer'}`}
                     style={{
                       borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : undefined,
                       backgroundColor: isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)',
                     }}
-                    onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)' }}
+                    onMouseEnter={e => { if (!isSelected && !isDemo) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
+                    onMouseLeave={e => {  (e.currentTarget as HTMLElement).style.backgroundColor = isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)' }}
                   >
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
-                        <div>
-                          <p className="font-medium" style={{ color: 'var(--text-main)' }}>
-                            {new Date(run.runAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {i === 0 && (
-                            <span className="text-[10px] font-bold text-blue-600">latest</span>
-                          )}
-                        </div>
-                        {d && (
-                          <span className={`ml-1 text-[10px] font-bold px-1.5 py-px rounded-full ${d.dFail > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                            {d.dFail > 0 ? `+${d.dFail} fail` : `${d.dFail} fail`}
+                    {/* # */}
+                    <td className="px-4 py-2.5 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      {isSelected
+                        ? <span className="font-bold text-blue-600">#{runNum}</span>
+                        : `#${runNum}`}
+                    </td>
+                    {/* Date + latest badge */}
+                    <td className="px-2 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium" style={{ color: 'var(--text-main)' }}>
+                          {new Date(run.runAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {i === 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200 shrink-0">latest</span>
+                        )}
+                        {hasDelta && (
+                          <span className={`text-[10px] font-bold px-1.5 py-px rounded-full shrink-0 ${dFail > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                            {dFail > 0 ? `+${dFail}✗` : `${dFail}✗`}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{run.total}</td>
+                    {/* Spec */}
+                    <td className="px-2 py-2.5 max-w-[140px]">
+                      {run.spec
+                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>{run.spec.replace(/\.spec\.(ts|js)$/, '')}</span>
+                        : <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>all</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono"                                                         style={{ color: 'var(--text-muted)' }}>{run.total}</td>
                     <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-600">{run.passed}</td>
-                    <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: run.failed > 0 ? '#ef4444' : 'var(--text-muted)' }}>{run.failed}</td>
-                    <td className="px-3 py-2.5 text-right font-mono" style={{ color: run.skipped > 0 ? '#d97706' : 'var(--text-muted)' }}>{run.skipped}</td>
-                    <td className="px-3 py-2.5 text-right font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>{formatMs(run.duration)}</td>
-                    <td className="px-4 py-2.5 text-right font-bold" style={{ color: rate >= 80 ? '#059669' : '#ef4444' }}>{rate}%</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold"                  style={{ color: run.failed > 0 ? '#ef4444' : 'var(--text-muted)' }}>{run.failed}</td>
+                    <td className="px-3 py-2.5 text-right font-mono"                                style={{ color: run.skipped > 0 ? '#d97706' : 'var(--text-muted)' }}>{run.skipped}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-[11px]"                   style={{ color: 'var(--text-muted)' }}>{formatMs(run.duration)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold"                                style={{ color: rate >= 80 ? '#059669' : '#ef4444' }}>{rate}%</td>
                   </tr>
                 )
               })}
@@ -2295,19 +2334,25 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* History chart — real data, clickable */}
-            <HistoryChart
-              runs={runHistory}
-              selectedId={selectedRunId}
-              onSelect={id => fetchResults(id)}
-            />
+            {/* History chart — real data when available, mock fallback in demo mode */}
+            {(() => {
+              const chartRuns = runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []
+              return (
+                <HistoryChart
+                  runs={chartRuns}
+                  selectedId={selectedRunId}
+                  onSelect={id => !demoMode && fetchResults(id)}
+                />
+              )
+            })()}
 
-            {/* Runs panel — expandable list of all archived runs */}
+            {/* Runs panel — real runs only (not demo mock rows) */}
             <RunsPanel
-              runs={runHistory}
+              runs={runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []}
               selectedId={selectedRunId}
               onSelect={id => fetchResults(id)}
               onLoadLatest={() => fetchResults()}
+              isDemo={runHistory.length === 0 && demoMode}
             />
 
             {/* Search + Filter + Mode toggle */}

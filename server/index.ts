@@ -275,14 +275,21 @@ function normalizePwResults(raw: Record<string, unknown>) {
   }
 }
 
-/** Copy the latest pw-results.json into the runs archive and return the run id */
-async function archiveRun(): Promise<string | null> {
+/**
+ * Read pw-results.json, embed _meta (spec, archivedAt), and write to RUNS_DIR.
+ * Called BEFORE sending [DONE] to avoid the client fetching history too early.
+ */
+async function archiveRun(spec?: string): Promise<string | null> {
   try {
     if (!existsSync(RESULTS_PATH)) return null
     await fs.mkdir(RUNS_DIR, { recursive: true })
-    const ts   = new Date().toISOString().replace(/[:.]/g, '-')
-    const id   = `run-${ts}`
-    await fs.copyFile(RESULTS_PATH, path.join(RUNS_DIR, `${id}.json`))
+    const ts  = new Date().toISOString().replace(/[:.]/g, '-')
+    const id  = `run-${ts}`
+    const raw = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
+    // embed lightweight metadata directly in the archive (normalizePwResults ignores unknown keys)
+    raw._spec       = spec ?? null
+    raw._archivedAt = new Date().toISOString()
+    await fs.writeFile(path.join(RUNS_DIR, `${id}.json`), JSON.stringify(raw))
     return id
   } catch {
     return null
@@ -318,19 +325,33 @@ app.get('/api/playwright/results', async (_req, res) => {
 // GET /api/playwright/history — list all archived runs (newest first, max 30)
 app.get('/api/playwright/history', async (_req, res) => {
   try {
+    // Auto-seed: archive the current pw-results.json if no runs exist yet
+    const existingFiles = existsSync(RUNS_DIR)
+      ? (await fs.readdir(RUNS_DIR)).filter(f => /^run-.+\.json$/.test(f))
+      : []
+    if (existingFiles.length === 0 && existsSync(RESULTS_PATH)) {
+      await archiveRun()
+    }
+
     if (!existsSync(RUNS_DIR)) return res.json({ runs: [] })
     const files = (await fs.readdir(RUNS_DIR))
       .filter(f => /^run-.+\.json$/.test(f))
       .sort()
       .reverse()
       .slice(0, 30)
+
     const runs = (
       await Promise.all(
         files.map(async f => {
           try {
-            const raw = JSON.parse(await fs.readFile(path.join(RUNS_DIR, f), 'utf-8')) as Record<string, unknown>
-            const n   = normalizePwResults(raw)
-            return { id: f.replace('.json', ''), runAt: n.runAt, ...n.stats }
+            const raw  = JSON.parse(await fs.readFile(path.join(RUNS_DIR, f), 'utf-8')) as Record<string, unknown>
+            const n    = normalizePwResults(raw)
+            return {
+              id:   f.replace('.json', ''),
+              runAt: n.runAt,
+              spec: (raw._spec as string | null | undefined) ?? null,
+              ...n.stats,
+            }
           } catch {
             return null
           }
@@ -386,8 +407,9 @@ app.post('/api/playwright/run', (req, res) => {
   child.stderr.on('data', stream)
 
   child.on('close', async code => {
+    // Archive FIRST so history is ready by the time the client calls fetchHistory()
+    try { await archiveRun(spec) } catch { /* non-fatal */ }
     send(`[DONE] Finished with exit code ${code ?? 0}`)
-    try { await archiveRun() } catch { /* non-fatal */ }
     res.end()
   })
 
