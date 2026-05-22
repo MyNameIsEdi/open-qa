@@ -13,7 +13,7 @@ import {
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
 type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
-type ViewKey      = 'dashboard' | 'settings' | 'docs'
+type ViewKey      = 'dashboard' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
 type ErrorType    = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
@@ -62,6 +62,33 @@ interface RunHistory {
   skipped: number
 }
 
+/** A single archived run returned by GET /api/playwright/history */
+interface RunRecord {
+  id: string
+  runAt: string
+  total: number
+  passed: number
+  failed: number
+  skipped: number
+  flaky: number
+  duration: number
+  spec?: string | null
+}
+
+/** Fallback chart data shown when the server is offline / no real history yet */
+const MOCK_RUN_RECORDS: RunRecord[] = (() => {
+  const now = Date.now()
+  return [
+    { id: 'demo-1', runAt: new Date(now - 6 * 86_400_000).toISOString(), total: 22, passed: 17, failed: 4, skipped: 1, flaky: 1, duration: 62_000 },
+    { id: 'demo-2', runAt: new Date(now - 5 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 58_000 },
+    { id: 'demo-3', runAt: new Date(now - 4 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 1, skipped: 1, flaky: 1, duration: 55_000 },
+    { id: 'demo-4', runAt: new Date(now - 3 * 86_400_000).toISOString(), total: 22, passed: 18, failed: 3, skipped: 1, flaky: 0, duration: 61_000 },
+    { id: 'demo-5', runAt: new Date(now - 2 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 2, skipped: 0, flaky: 1, duration: 57_000 },
+    { id: 'demo-6', runAt: new Date(now - 1 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 59_000 },
+    { id: 'demo-7', runAt: new Date(now - 2 * 3_600_000).toISOString(),  total: 22, passed: 16, failed: 4, skipped: 2, flaky: 2, duration: 68_000 },
+  ]
+})()
+
 // ─── Playwright Config Type ───────────────────────────────────────────────────
 
 interface PlaywrightConfig {
@@ -79,6 +106,9 @@ interface PlaywrightConfig {
   headed: boolean
   forbidOnly: boolean
   fullyParallel: boolean
+  // Test-run filters
+  grep: string
+  grepInvert: string
 }
 
 const DEFAULT_CONFIG: PlaywrightConfig = {
@@ -96,6 +126,8 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   headed: false,
   forbidOnly: true,
   fullyParallel: true,
+  grep: '',
+  grepInvert: '',
 }
 
 const STORAGE_KEY = 'pw_dashboard_config_v1'
@@ -301,20 +333,47 @@ const INITIAL_SUITES: TestSuite[] = [
 
 // ─── Run History ──────────────────────────────────────────────────────────────
 
-const MOCK_HISTORY: RunHistory[] = [
-  { label: 'May 14', passed: 17, failed: 4, skipped: 1 },
-  { label: 'May 15', passed: 18, failed: 3, skipped: 1 },
-  { label: 'May 16', passed: 19, failed: 2, skipped: 1 },
-  { label: 'May 17', passed: 20, failed: 1, skipped: 1 },
-  { label: 'May 18', passed: 18, failed: 3, skipped: 1 },
-  { label: 'May 19', passed: 19, failed: 2, skipped: 1 },
-  { label: 'May 20', passed: 16, failed: 2, skipped: 2 },
-]
-
 const CHART_H = 56
 
-function HistoryChart({ history }: { history: RunHistory[] }) {
-  const maxTotal = Math.max(...history.map(h => h.passed + h.failed + h.skipped), 1)
+/** Format a runAt ISO string into a short label */
+function fmtRunLabel(runAt: string): string {
+  try {
+    const d   = new Date(runAt)
+    const now = new Date()
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  } catch { return '?' }
+}
+
+function HistoryChart({
+  runs,
+  selectedId,
+  onSelect,
+}: {
+  runs: RunRecord[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const displayed  = runs.slice().reverse()   // oldest → newest left → right
+  const maxTotal   = Math.max(...displayed.map(r => r.total), 1)
+
+  if (runs.length === 0) {
+    return (
+      <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+          <TrendingUp size={13} style={{ color: '#3b82f6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
+        </div>
+        <div className="px-4 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+          No run history yet — click <strong>Run Tests</strong> to record your first run.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
@@ -324,7 +383,9 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
         <div className="flex items-center gap-2">
           <TrendingUp size={13} style={{ color: '#3b82f6' }} />
           <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
-          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· last 7 runs</span>
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            · {runs.length} run{runs.length !== 1 ? 's' : ''} · click a bar to view
+          </span>
         </div>
         <div className="flex items-center gap-4">
           {([['#10b981', 'Passed'], ['#ef4444', 'Failed'], ['#fbbf24', 'Skipped']] as const).map(([color, label]) => (
@@ -337,24 +398,192 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
       </div>
       <div className="px-5 py-3">
         <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
-          {history.map((run, i) => {
-            const passH  = Math.round((run.passed  / maxTotal) * CHART_H)
-            const failH  = Math.round((run.failed  / maxTotal) * CHART_H)
-            const skipH  = Math.round((run.skipped / maxTotal) * CHART_H)
-            const isLast = i === history.length - 1
+          {displayed.map(run => {
+            const passH      = Math.round((run.passed  / maxTotal) * CHART_H)
+            const failH      = Math.round((run.failed  / maxTotal) * CHART_H)
+            const skipH      = Math.round((run.skipped / maxTotal) * CHART_H)
+            const isSelected = run.id === selectedId
             return (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <div style={{ flex: 1, width: '100%', position: 'relative' }}>
-                  {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: isLast ? '#10b981' : '#6ee7b7', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
-                  {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: isLast ? '#ef4444' : '#fca5a5', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
-                  {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: isLast ? '#fbbf24' : '#fde68a', borderRadius: '3px 3px 0 0' }} />}
+              <div
+                key={run.id}
+                onClick={() => onSelect(run.id)}
+                title={`${new Date(run.runAt).toLocaleString()}\n${run.passed}✓  ${run.failed}✗  ${run.skipped}–\n${formatMs(run.duration)}`}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 5, cursor: 'pointer',
+                  opacity: selectedId === null || isSelected ? 1 : 0.55,
+                  transition: 'opacity 150ms',
+                }}
+              >
+                <div style={{
+                  flex: 1, width: '100%', position: 'relative',
+                  outline: isSelected ? '2px solid #3b82f6' : undefined,
+                  borderRadius: 3,
+                }}>
+                  {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: '#10b981', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: '#ef4444', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: '#fbbf24', borderRadius: '3px 3px 0 0' }} />}
                 </div>
-                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, lineHeight: 1, fontWeight: isLast ? 700 : 400 }}>{run.label}</span>
+                <span style={{
+                  fontSize: 9, flexShrink: 0, lineHeight: 1,
+                  color: isSelected ? '#3b82f6' : '#94a3b8',
+                  fontWeight: isSelected ? 700 : 400,
+                }}>
+                  {fmtRunLabel(run.runAt)}
+                </span>
               </div>
             )
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Runs Panel (collapsible table of all recorded runs) ──────────────────────
+
+function RunsPanel({
+  runs,
+  selectedId,
+  onSelect,
+  onLoadLatest,
+  isDemo,
+}: {
+  runs: RunRecord[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onLoadLatest: () => void
+  isDemo: boolean
+}) {
+  // Open by default when there is real data
+  const [open, setOpen] = useState(!isDemo && runs.length > 0)
+
+  // Keep open state in sync when runs first arrive
+  React.useEffect(() => {
+    if (!isDemo && runs.length > 0) setOpen(true)
+  }, [isDemo, runs.length])
+
+  if (runs.length === 0) return null
+
+  const total = runs.length  // used for #N numbering (newest = #total)
+
+  return (
+    <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+
+      {/* ── header ── */}
+      <button
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors"
+        onClick={() => setOpen(o => !o)}
+        style={{ backgroundColor: 'var(--bg-body)' }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+      >
+        <Clock size={13} style={{ color: '#6366f1' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· {runs.length} run{runs.length !== 1 ? 's' : ''} recorded</span>
+        {isDemo && (
+          <span className="text-[10px] px-2 py-px rounded-full bg-amber-50 text-amber-600 border border-amber-200">demo</span>
+        )}
+        {selectedId && !isDemo && (
+          <span className="text-[10px] font-bold px-2 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+            viewing #{total - runs.findIndex(r => r.id === selectedId)}
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-3">
+          {selectedId && !isDemo && (
+            <button
+              onClick={e => { e.stopPropagation(); onLoadLatest() }}
+              className="text-[11px] font-semibold text-blue-600 hover:underline"
+            >
+              ← Latest
+            </button>
+          )}
+          {open
+            ? <ChevronUp  size={13} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />}
+        </div>
+      </button>
+
+      {/* ── table ── */}
+      {open && (
+        <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--border)' }}>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <th className="text-left px-4 py-2 font-semibold w-8"  style={{ color: 'var(--text-muted)' }}>#</th>
+                <th className="text-left px-2 py-2 font-semibold"       style={{ color: 'var(--text-muted)' }}>Date</th>
+                <th className="text-left px-2 py-2 font-semibold"       style={{ color: 'var(--text-muted)' }}>Spec</th>
+                <th className="text-right px-3 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Total</th>
+                <th className="text-right px-3 py-2 font-semibold text-emerald-600">✓</th>
+                <th className="text-right px-3 py-2 font-semibold text-red-500">✗</th>
+                <th className="text-right px-3 py-2 font-semibold text-amber-500">–</th>
+                <th className="text-right px-3 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Duration</th>
+                <th className="text-right px-4 py-2 font-semibold"      style={{ color: 'var(--text-muted)' }}>Pass %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((run, i) => {
+                const isSelected = run.id === selectedId
+                const prevRun    = runs[i + 1]   // runs[0] = newest
+                const dFail      = prevRun != null ? run.failed - prevRun.failed : 0
+                const hasDelta   = prevRun != null && dFail !== 0
+                const rate       = run.total > 0 ? Math.round((run.passed / run.total) * 100) : 0
+                const runNum     = total - i
+
+                return (
+                  <tr
+                    key={run.id}
+                    onClick={() => !isDemo && onSelect(run.id)}
+                    className={`transition-colors ${isDemo ? '' : 'cursor-pointer'}`}
+                    style={{
+                      borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : undefined,
+                      backgroundColor: isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)',
+                    }}
+                    onMouseEnter={e => { if (!isSelected && !isDemo) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
+                    onMouseLeave={e => {  (e.currentTarget as HTMLElement).style.backgroundColor = isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)' }}
+                  >
+                    {/* # */}
+                    <td className="px-4 py-2.5 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      {isSelected
+                        ? <span className="font-bold text-blue-600">#{runNum}</span>
+                        : `#${runNum}`}
+                    </td>
+                    {/* Date + latest badge */}
+                    <td className="px-2 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium" style={{ color: 'var(--text-main)' }}>
+                          {new Date(run.runAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {i === 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200 shrink-0">latest</span>
+                        )}
+                        {hasDelta && (
+                          <span className={`text-[10px] font-bold px-1.5 py-px rounded-full shrink-0 ${dFail > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                            {dFail > 0 ? `+${dFail}✗` : `${dFail}✗`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    {/* Spec */}
+                    <td className="px-2 py-2.5 max-w-[140px]">
+                      {run.spec
+                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>{run.spec.replace(/\.spec\.(ts|js)$/, '')}</span>
+                        : <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>all</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono"                                                         style={{ color: 'var(--text-muted)' }}>{run.total}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-600">{run.passed}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold"                  style={{ color: run.failed > 0 ? '#ef4444' : 'var(--text-muted)' }}>{run.failed}</td>
+                    <td className="px-3 py-2.5 text-right font-mono"                                style={{ color: run.skipped > 0 ? '#d97706' : 'var(--text-muted)' }}>{run.skipped}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-[11px]"                   style={{ color: 'var(--text-muted)' }}>{formatMs(run.duration)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold"                                style={{ color: rate >= 80 ? '#059669' : '#ef4444' }}>{rate}%</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -465,13 +694,14 @@ function SelectControl({
   )
 }
 
-function TextInput({ value, onChange, mono = true, width = 'w-48' }: {
-  value: string; onChange: (v: string) => void; mono?: boolean; width?: string
+function TextInput({ value, onChange, mono = true, width = 'w-48', placeholder }: {
+  value: string; onChange: (v: string) => void; mono?: boolean; width?: string; placeholder?: string
 }) {
   return (
     <input
       type="text"
       value={value}
+      placeholder={placeholder}
       onChange={e => onChange(e.target.value)}
       className={`px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${mono ? 'font-mono' : ''} ${width}`}
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
@@ -570,6 +800,26 @@ const PRESETS: Preset[] = [
       workers: 2, retries: 1, headed: false, reporter: 'html',
     },
   },
+  {
+    label: 'SV Students',
+    icon: <FlaskConical size={13} />,
+    description: 'Render free-tier site — 60s timeout, Chromium only, 1 worker',
+    color: '#0891b2',
+    config: {
+      baseUrl:       'https://sv-students-recommend.onrender.com',
+      testDir:       './tests',
+      timeout:       60000,
+      retries:       1,
+      workers:       1,
+      headed:        false,
+      fullyParallel: false,
+      browsers:      { chromium: true, firefox: false, webkit: false },
+      screenshot:    'only-on-failure',
+      video:         'retain-on-failure',
+      trace:         'on-first-retry',
+      reporter:      'html',
+    },
+  },
 ]
 
 // ─── Settings View ────────────────────────────────────────────────────────────
@@ -582,7 +832,7 @@ const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
   dot:    'One dot per test — ultra-compact, ideal for large suites in CI',
 }
 
-function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange: (c: PlaywrightConfig) => void }) {
+function SettingsView({ config, onChange, noPresets = false }: { config: PlaywrightConfig; onChange: (c: PlaywrightConfig) => void; noPresets?: boolean }) {
   const [copied, setCopied]     = useState(false)
   const [downloaded, setDownloaded] = useState(false)
   const configCode = useMemo(() => generateConfig(config), [config])
@@ -613,6 +863,7 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
     <div className="flex flex-col gap-5">
 
       {/* ── Quick Presets ── */}
+      {!noPresets && (
       <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
@@ -645,6 +896,7 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
           ))}
         </div>
       </div>
+      )}
 
       {/* ── Main grid: left settings + right preview ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -776,6 +1028,26 @@ function SettingsView({ config, onChange }: { config: PlaywrightConfig; onChange
                   { value: 'retain-on-failure',  label: 'Keep on failure' },
                   { value: 'on',                 label: 'Always' },
                 ]}
+              />
+            </SettingRow>
+          </SettingCard>
+
+          {/* Test Filtering */}
+          <SettingCard icon={<Search size={14} />} title="Test Filtering" subtitle="Narrow which tests run by title or pattern">
+            <SettingRow label="Grep (include)" desc="Only run tests whose title matches this pattern (regex or plain string)">
+              <TextInput
+                value={config.grep}
+                onChange={v => set('grep', v)}
+                width="w-52"
+                placeholder="e.g. @smoke or Login"
+              />
+            </SettingRow>
+            <SettingRow label="Grep invert (exclude)" desc="Skip tests whose title matches this pattern">
+              <TextInput
+                value={config.grepInvert}
+                onChange={v => set('grepInvert', v)}
+                width="w-52"
+                placeholder="e.g. @slow or flaky"
               />
             </SettingRow>
           </SettingCard>
@@ -1649,6 +1921,7 @@ export default function PlaywrightDashboard() {
   const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
   const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
   const [justSaved, setJustSaved]         = useState(false)
+  const [settingsOpen, setSettingsOpen]   = useState(false)
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
   const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
@@ -1664,6 +1937,9 @@ export default function PlaywrightDashboard() {
   const [showLog, setShowLog]               = useState(false)
   const [availableSpecs, setAvailableSpecs] = useState<string[]>([])
   const [selectedSpec, setSelectedSpec]     = useState<string>('')
+  // ── Multi-run history ────────────────────────────────────────────────────────
+  const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
+  const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
 
   // ── Derived counts ──────────────────────────────────────────────────────────
   const allTests = useMemo(() => suites.flatMap(s => s.tests), [suites])
@@ -1734,15 +2010,17 @@ export default function PlaywrightDashboard() {
     setTimeout(() => setJustSaved(false), 2000)
   }, [config])
 
-  // ── Fetch results from server ───────────────────────────────────────────────
-  const fetchResults = useCallback(async () => {
+  // ── Fetch results from server (latest or a specific archived run) ───────────
+  const fetchResults = useCallback(async (runId?: string) => {
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/playwright/results`)
+      const url = runId
+        ? `${API_BASE}/api/playwright/results/${runId}`
+        : `${API_BASE}/api/playwright/results`
+      const res = await fetch(url)
       if (res.status === 404) {
-        // Server online but no results yet
         setServerOnline(true)
-        setDemoMode(true)
+        if (!runId) setDemoMode(true)
         return
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -1751,6 +2029,7 @@ export default function PlaywrightDashboard() {
       setDemoMode(false)
       setServerOnline(true)
       setLastRunAt(data.runAt ?? null)
+      setSelectedRunId(runId ?? null)
       setExpandedSuites(Object.fromEntries(data.suites.map(s => [s.id, true])))
     } catch {
       setServerOnline(false)
@@ -1771,11 +2050,23 @@ export default function PlaywrightDashboard() {
     }
   }, [])
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/playwright/history`)
+      if (!res.ok) return
+      const data = await res.json() as { runs: RunRecord[] }
+      setRunHistory(data.runs)
+    } catch {
+      // ignore — server may be offline
+    }
+  }, [])
+
   // ── Fetch on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
     fetchResults()
     fetchSpecs()
-  }, [fetchResults, fetchSpecs])
+    fetchHistory()
+  }, [fetchResults, fetchSpecs, fetchHistory])
 
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
@@ -1816,7 +2107,10 @@ export default function PlaywrightDashboard() {
         const response = await fetch(`${API_BASE}/api/playwright/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ spec: selectedSpec || undefined }),
+          body: JSON.stringify({
+            spec:   selectedSpec || undefined,
+            config,
+          }),
         })
         if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
 
@@ -1838,8 +2132,9 @@ export default function PlaywrightDashboard() {
             setRunLog(prev => [...prev.slice(-999), msg])
           }
         }
-        // Refresh results after run completes
+        // Refresh results + history after run completes
         await fetchResults()
+        await fetchHistory()
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
         setRunLog(prev => [...prev, `[ERROR] ${errMsg}`])
@@ -1860,9 +2155,9 @@ export default function PlaywrightDashboard() {
     }
 
     setRunning(false)
-  }, [serverOnline, selectedSpec, fetchResults])
+  }, [serverOnline, selectedSpec, config, fetchResults, fetchHistory])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null) }
+  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
   const exportReport = () => {
     const report = {
@@ -1918,7 +2213,6 @@ export default function PlaywrightDashboard() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
               {([
                 { key: 'dashboard' as const, label: 'Dashboard', icon: <LayoutDashboard size={12} /> },
-                { key: 'settings'  as const, label: 'Settings',  icon: <Settings size={12} /> },
                 { key: 'docs'      as const, label: 'Docs',      icon: <BookOpen size={12} /> },
               ]).map(({ key, label, icon }) => (
                 <button
@@ -1932,11 +2226,6 @@ export default function PlaywrightDashboard() {
                 >
                   {icon}
                   {label}
-                  {key === 'settings' && changedCount > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">
-                      {changedCount}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -1956,6 +2245,24 @@ export default function PlaywrightDashboard() {
                     {availableSpecs.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
+                {/* Quick grep filter */}
+                <div className="relative flex items-center">
+                  <Search size={11} className="absolute left-2.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={config.grep}
+                    onChange={e => setConfig(c => ({ ...c, grep: e.target.value }))}
+                    placeholder="grep filter…"
+                    className="pl-7 pr-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
+                    style={{ borderColor: config.grep ? '#2563eb' : 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    title="Filter tests by title (--grep)"
+                  />
+                  {config.grep && (
+                    <button onClick={() => setConfig(c => ({ ...c, grep: '' }))} className="absolute right-2 opacity-50 hover:opacity-100">
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
                 <button onClick={exportReport}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
@@ -1980,40 +2287,26 @@ export default function PlaywrightDashboard() {
                   Demo
                 </button>
                 <button
+                  onClick={() => setSettingsOpen(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
+                  style={settingsOpen
+                    ? { borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', color: '#2563eb' }
+                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }
+                  }
+                  onMouseEnter={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
+                  onMouseLeave={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
+                  title="Toggle config panel">
+                  <Settings size={13} />
+                  Config
+                  {changedCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount}</span>
+                  )}
+                  {settingsOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                </button>
+                <button
                   onClick={running ? () => setRunning(false) : runTests}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   {running ? <><Square size={14} /> Stop</> : <><Play size={14} /> Run Tests</>}
-                </button>
-              </>
-            )}
-
-            {/* Settings actions */}
-            {activeView === 'settings' && (
-              <>
-                <button onClick={() => setConfig(DEFAULT_CONFIG)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
-                  <RotateCcw size={13} /> Reset to defaults
-                </button>
-                <button
-                  onClick={saveConfig}
-                  disabled={isSaved}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={justSaved
-                    ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-                    : isSaved
-                      ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
-                      : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
-                  }
-                >
-                  {justSaved
-                    ? <><Check size={13} /> Saved!</>
-                    : isSaved
-                      ? <><Check size={13} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</>
-                      : <><Save size={13} /> Save</>
-                  }
                 </button>
               </>
             )}
@@ -2037,11 +2330,100 @@ export default function PlaywrightDashboard() {
                       : ' Connecting to server…'}
                 </span>
                 <button
-                  onClick={fetchResults}
+                  onClick={() => fetchResults()}
                   className="ml-auto shrink-0 font-semibold underline hover:no-underline"
                   style={{ color: '#92400e' }}>
                   Retry
                 </button>
+              </div>
+            )}
+
+            {/* Historical-run banner */}
+            {selectedRunId && !demoMode && (
+              <div className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
+                style={{ background: 'rgba(59,130,246,0.05)', borderColor: '#93c5fd', color: '#1d4ed8' }}>
+                <Clock size={12} className="shrink-0" />
+                <span>
+                  <strong>Historical run</strong> — viewing results from{' '}
+                  {lastRunAt
+                    ? new Date(lastRunAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'a past run'}.
+                </span>
+                <button
+                  onClick={() => { fetchResults(); }}
+                  className="ml-auto shrink-0 font-semibold underline hover:no-underline"
+                  style={{ color: '#1d4ed8' }}>
+                  Return to latest →
+                </button>
+              </div>
+            )}
+
+            {/* ── Presets bar (always visible) ────────────────────────── */}
+            <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center gap-2 px-4 py-2 border-b"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <Zap size={12} style={{ color: '#8b5cf6' }} />
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
+                {PRESETS.map(preset => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setConfig(c => ({ ...c, ...preset.config }))}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
+                  >
+                    <span style={{ color: preset.color }}>{preset.icon}</span>
+                    <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Collapsible full config panel ───────────────────────── */}
+            {settingsOpen && (
+              <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: '#93c5fd' }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b"
+                  style={{ borderColor: '#bfdbfe', backgroundColor: 'rgba(37,99,235,0.04)' }}>
+                  <div className="flex items-center gap-2">
+                    <Settings size={13} style={{ color: '#2563eb' }} />
+                    <span className="text-xs font-bold" style={{ color: '#1d4ed8' }}>Configuration</span>
+                    {changedCount > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount} changed</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                      <RotateCcw size={11} /> Reset
+                    </button>
+                    <button
+                      onClick={saveConfig}
+                      disabled={isSaved}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
+                      style={justSaved
+                        ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                        : isSaved
+                          ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                          : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                      }
+                    >
+                      {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
+                    </button>
+                    <button onClick={() => setSettingsOpen(false)}
+                      className="p-1.5 rounded-lg border transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                  <SettingsView config={config} onChange={setConfig} noPresets />
+                </div>
               </div>
             )}
 
@@ -2071,8 +2453,26 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* History chart */}
-            <HistoryChart history={MOCK_HISTORY} />
+            {/* History chart — real data when available, mock fallback in demo mode */}
+            {(() => {
+              const chartRuns = runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []
+              return (
+                <HistoryChart
+                  runs={chartRuns}
+                  selectedId={selectedRunId}
+                  onSelect={id => !demoMode && fetchResults(id)}
+                />
+              )
+            })()}
+
+            {/* Runs panel — real runs only (not demo mock rows) */}
+            <RunsPanel
+              runs={runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []}
+              selectedId={selectedRunId}
+              onSelect={id => fetchResults(id)}
+              onLoadLatest={() => fetchResults()}
+              isDemo={runHistory.length === 0 && demoMode}
+            />
 
             {/* Search + Filter + Mode toggle */}
             <div className="flex items-center gap-3 mb-5 flex-wrap">
@@ -2301,11 +2701,6 @@ export default function PlaywrightDashboard() {
             {/* Flaky test panel */}
             <FlakyPanel suites={suites} />
           </>
-        )}
-
-        {/* ── Settings view ────────────────────────────────────────────────────── */}
-        {activeView === 'settings' && (
-          <SettingsView config={config} onChange={setConfig} />
         )}
 
         {/* ── Docs view ────────────────────────────────────────────────────────── */}
