@@ -402,14 +402,7 @@ app.get('/api/playwright/results', async (_req, res) => {
 // GET /api/playwright/history — list all archived runs (newest first, max 30)
 app.get('/api/playwright/history', async (_req, res) => {
   try {
-    // Auto-seed: archive the current pw-results.json if no runs exist yet
-    const existingFiles = existsSync(RUNS_DIR)
-      ? (await fs.readdir(RUNS_DIR)).filter(f => /^run-.+\.json$/.test(f))
-      : []
-    if (existingFiles.length === 0 && existsSync(RESULTS_PATH)) {
-      await archiveRun()
-    }
-
+    // NOTE: no auto-seed — if the user cleared history it should stay empty.
     if (!existsSync(RUNS_DIR)) return res.json({ runs: [] })
     const files = (await fs.readdir(RUNS_DIR))
       .filter(f => /^run-.+\.json$/.test(f))
@@ -508,18 +501,17 @@ app.post('/api/playwright/run', (req, res) => {
   const args = ['playwright', 'test', '--reporter=list,json']
 
   // Multi-spec support — push each spec as a positional argument.
-  // Always resolve to an absolute path so Playwright finds the file
-  // regardless of testDir configuration or platform path separators.
-  //   • bare filename  → {TESTS_DIR}/sv-login.spec.ts (absolute)
-  //   • relative path  → resolved from project root (absolute)
-  //   • absolute path  → used as-is
+  // Playwright matches positional args as path-substring patterns against
+  // the files it discovers in testDir.  Bare filenames work because
+  // 'sv-api.spec.ts' is a substring of 'tests/sv-api.spec.ts'.
+  // Absolute paths with Windows backslashes do NOT match (different
+  // path separator from Playwright's internal forward-slash paths).
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  const resolvedSpecs = specList.map(s => {
-    if (path.isAbsolute(s)) return s
-    if (s.includes('/') || s.includes('\\')) return path.resolve(root, s)
-    return path.join(TESTS_DIR, s)   // bare filename in tests/
-  })
-  for (const s of resolvedSpecs) args.push(s)
+  for (const s of specList) args.push(s)
+
+  if (specList.length > 0) {
+    send(`[FILTER] spec(s): ${specList.join(', ')}`)
+  }
 
   // Test-title filters — passed as CLI flags
   if (typeof config?.grep === 'string' && config.grep.trim())
@@ -532,14 +524,13 @@ app.post('/api/playwright/run', (req, res) => {
   if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
 
   send(`[INFO] npx ${args.join(' ')}`)
-  if (resolvedSpecs.length > 1) send(`[INFO] running ${resolvedSpecs.length} spec files: ${resolvedSpecs.join(', ')}`)
-  if (config?.baseUrl)          send(`[INFO] baseUrl  → ${config.baseUrl}`)
-  if (config?.timeout)          send(`[INFO] timeout  → ${config.timeout}ms`)
-  if (config?.workers)          send(`[INFO] workers  → ${config.workers}`)
-  if (config?.grep)             send(`[INFO] grep     → ${config.grep}`)
+  if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
+  if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
+  if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
+  if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
 
-  // Archive key: join resolved spec names for multi-run
-  const archiveSpec = resolvedSpecs.length === 1 ? resolvedSpecs[0] : (resolvedSpecs.length > 1 ? resolvedSpecs.join(',') : spec)
+  // Archive key: join spec names for multi-run
+  const archiveSpec = specList.length === 1 ? specList[0] : (specList.length > 1 ? specList.join(',') : spec)
 
   const child = spawn('npx', args, {
     cwd: root,
