@@ -160,6 +160,7 @@ Automate TC-001 through TC-003 with Playwright APIRequestContext for fast CI fee
 
 const RESULTS_PATH = path.join(root, 'test-results', 'pw-results.json')
 const TESTS_DIR    = path.join(root, 'tests')
+const RUNS_DIR     = path.join(root, 'test-results', 'runs')
 
 /** Recursively collect all spec objects from a Playwright JSON suite tree */
 function collectSpecs(suite: Record<string, unknown>): Record<string, unknown>[] {
@@ -274,6 +275,20 @@ function normalizePwResults(raw: Record<string, unknown>) {
   }
 }
 
+/** Copy the latest pw-results.json into the runs archive and return the run id */
+async function archiveRun(): Promise<string | null> {
+  try {
+    if (!existsSync(RESULTS_PATH)) return null
+    await fs.mkdir(RUNS_DIR, { recursive: true })
+    const ts   = new Date().toISOString().replace(/[:.]/g, '-')
+    const id   = `run-${ts}`
+    await fs.copyFile(RESULTS_PATH, path.join(RUNS_DIR, `${id}.json`))
+    return id
+  } catch {
+    return null
+  }
+}
+
 // GET /api/playwright/specs — list *.spec.ts files in tests/
 app.get('/api/playwright/specs', (_req, res) => {
   try {
@@ -294,6 +309,49 @@ app.get('/api/playwright/results', async (_req, res) => {
       return res.status(404).json({ error: 'No results file found. Run tests first.' })
     }
     const raw = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
+    res.json(normalizePwResults(raw))
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// GET /api/playwright/history — list all archived runs (newest first, max 30)
+app.get('/api/playwright/history', async (_req, res) => {
+  try {
+    if (!existsSync(RUNS_DIR)) return res.json({ runs: [] })
+    const files = (await fs.readdir(RUNS_DIR))
+      .filter(f => /^run-.+\.json$/.test(f))
+      .sort()
+      .reverse()
+      .slice(0, 30)
+    const runs = (
+      await Promise.all(
+        files.map(async f => {
+          try {
+            const raw = JSON.parse(await fs.readFile(path.join(RUNS_DIR, f), 'utf-8')) as Record<string, unknown>
+            const n   = normalizePwResults(raw)
+            return { id: f.replace('.json', ''), runAt: n.runAt, ...n.stats }
+          } catch {
+            return null
+          }
+        })
+      )
+    ).filter(Boolean)
+    res.json({ runs })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// GET /api/playwright/results/:runId — fetch a specific archived run
+app.get('/api/playwright/results/:runId', async (req, res) => {
+  const { runId } = req.params
+  // sanitise to prevent path traversal
+  const safe     = runId.replace(/[^a-zA-Z0-9_\-]/g, '')
+  const filePath = path.join(RUNS_DIR, `${safe}.json`)
+  try {
+    if (!existsSync(filePath)) return res.status(404).json({ error: `Run "${safe}" not found` })
+    const raw = JSON.parse(await fs.readFile(filePath, 'utf-8')) as Record<string, unknown>
     res.json(normalizePwResults(raw))
   } catch (err: unknown) {
     res.status(500).json({ error: String(err) })
@@ -327,8 +385,9 @@ app.post('/api/playwright/run', (req, res) => {
   child.stdout.on('data', stream)
   child.stderr.on('data', stream)
 
-  child.on('close', code => {
+  child.on('close', async code => {
     send(`[DONE] Finished with exit code ${code ?? 0}`)
+    try { await archiveRun() } catch { /* non-fatal */ }
     res.end()
   })
 

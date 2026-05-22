@@ -62,6 +62,18 @@ interface RunHistory {
   skipped: number
 }
 
+/** A single archived run returned by GET /api/playwright/history */
+interface RunRecord {
+  id: string
+  runAt: string
+  total: number
+  passed: number
+  failed: number
+  skipped: number
+  flaky: number
+  duration: number
+}
+
 // ─── Playwright Config Type ───────────────────────────────────────────────────
 
 interface PlaywrightConfig {
@@ -301,20 +313,47 @@ const INITIAL_SUITES: TestSuite[] = [
 
 // ─── Run History ──────────────────────────────────────────────────────────────
 
-const MOCK_HISTORY: RunHistory[] = [
-  { label: 'May 14', passed: 17, failed: 4, skipped: 1 },
-  { label: 'May 15', passed: 18, failed: 3, skipped: 1 },
-  { label: 'May 16', passed: 19, failed: 2, skipped: 1 },
-  { label: 'May 17', passed: 20, failed: 1, skipped: 1 },
-  { label: 'May 18', passed: 18, failed: 3, skipped: 1 },
-  { label: 'May 19', passed: 19, failed: 2, skipped: 1 },
-  { label: 'May 20', passed: 16, failed: 2, skipped: 2 },
-]
-
 const CHART_H = 56
 
-function HistoryChart({ history }: { history: RunHistory[] }) {
-  const maxTotal = Math.max(...history.map(h => h.passed + h.failed + h.skipped), 1)
+/** Format a runAt ISO string into a short label */
+function fmtRunLabel(runAt: string): string {
+  try {
+    const d   = new Date(runAt)
+    const now = new Date()
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  } catch { return '?' }
+}
+
+function HistoryChart({
+  runs,
+  selectedId,
+  onSelect,
+}: {
+  runs: RunRecord[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const displayed  = runs.slice().reverse()   // oldest → newest left → right
+  const maxTotal   = Math.max(...displayed.map(r => r.total), 1)
+
+  if (runs.length === 0) {
+    return (
+      <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+          <TrendingUp size={13} style={{ color: '#3b82f6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
+        </div>
+        <div className="px-4 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+          No run history yet — click <strong>Run Tests</strong> to record your first run.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
@@ -324,7 +363,9 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
         <div className="flex items-center gap-2">
           <TrendingUp size={13} style={{ color: '#3b82f6' }} />
           <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
-          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· last 7 runs</span>
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            · {runs.length} run{runs.length !== 1 ? 's' : ''} · click a bar to view
+          </span>
         </div>
         <div className="flex items-center gap-4">
           {([['#10b981', 'Passed'], ['#ef4444', 'Failed'], ['#fbbf24', 'Skipped']] as const).map(([color, label]) => (
@@ -337,24 +378,168 @@ function HistoryChart({ history }: { history: RunHistory[] }) {
       </div>
       <div className="px-5 py-3">
         <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
-          {history.map((run, i) => {
-            const passH  = Math.round((run.passed  / maxTotal) * CHART_H)
-            const failH  = Math.round((run.failed  / maxTotal) * CHART_H)
-            const skipH  = Math.round((run.skipped / maxTotal) * CHART_H)
-            const isLast = i === history.length - 1
+          {displayed.map(run => {
+            const passH      = Math.round((run.passed  / maxTotal) * CHART_H)
+            const failH      = Math.round((run.failed  / maxTotal) * CHART_H)
+            const skipH      = Math.round((run.skipped / maxTotal) * CHART_H)
+            const isSelected = run.id === selectedId
             return (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <div style={{ flex: 1, width: '100%', position: 'relative' }}>
-                  {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: isLast ? '#10b981' : '#6ee7b7', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
-                  {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: isLast ? '#ef4444' : '#fca5a5', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
-                  {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: isLast ? '#fbbf24' : '#fde68a', borderRadius: '3px 3px 0 0' }} />}
+              <div
+                key={run.id}
+                onClick={() => onSelect(run.id)}
+                title={`${new Date(run.runAt).toLocaleString()}\n${run.passed}✓  ${run.failed}✗  ${run.skipped}–\n${formatMs(run.duration)}`}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: 5, cursor: 'pointer',
+                  opacity: selectedId === null || isSelected ? 1 : 0.55,
+                  transition: 'opacity 150ms',
+                }}
+              >
+                <div style={{
+                  flex: 1, width: '100%', position: 'relative',
+                  outline: isSelected ? '2px solid #3b82f6' : undefined,
+                  borderRadius: 3,
+                }}>
+                  {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: '#10b981', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: '#ef4444', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
+                  {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: '#fbbf24', borderRadius: '3px 3px 0 0' }} />}
                 </div>
-                <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, lineHeight: 1, fontWeight: isLast ? 700 : 400 }}>{run.label}</span>
+                <span style={{
+                  fontSize: 9, flexShrink: 0, lineHeight: 1,
+                  color: isSelected ? '#3b82f6' : '#94a3b8',
+                  fontWeight: isSelected ? 700 : 400,
+                }}>
+                  {fmtRunLabel(run.runAt)}
+                </span>
               </div>
             )
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Runs Panel (expandable list of all recorded runs) ─────────────────────────
+
+function RunsPanel({
+  runs,
+  selectedId,
+  onSelect,
+  onLoadLatest,
+}: {
+  runs: RunRecord[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onLoadLatest: () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  if (runs.length === 0) return null
+
+  // Compute delta vs previous run for each run
+  const delta = (run: RunRecord, prevRun: RunRecord | undefined) => {
+    if (!prevRun) return null
+    const dFail = run.failed - prevRun.failed
+    if (dFail === 0) return null
+    return { dFail }
+  }
+
+  return (
+    <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+      {/* header */}
+      <button
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left"
+        onClick={() => setOpen(o => !o)}
+        style={{ backgroundColor: 'var(--bg-body)' }}
+      >
+        <Clock size={13} style={{ color: '#6366f1' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>All Runs</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· {runs.length} recorded</span>
+        {selectedId && (
+          <span className="ml-1 text-[10px] font-bold px-2 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+            viewing historical
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-3">
+          {selectedId && (
+            <button
+              onClick={e => { e.stopPropagation(); onLoadLatest() }}
+              className="text-[11px] font-semibold text-blue-600 hover:underline"
+            >
+              ← Latest
+            </button>
+          )}
+          {open
+            ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--border)' }}>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                <th className="text-left px-4 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Run</th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Total</th>
+                <th className="text-right px-3 py-2 font-semibold text-emerald-600">Passed</th>
+                <th className="text-right px-3 py-2 font-semibold text-red-500">Failed</th>
+                <th className="text-right px-3 py-2 font-semibold text-amber-500">Skip</th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Duration</th>
+                <th className="text-right px-4 py-2 font-semibold" style={{ color: 'var(--text-muted)' }}>Pass %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((run, i) => {
+                const isSelected = run.id === selectedId
+                const prevRun    = runs[i + 1]   // runs[0] is newest
+                const d          = delta(run, prevRun)
+                const rate       = run.total > 0 ? Math.round((run.passed / run.total) * 100) : 0
+                return (
+                  <tr
+                    key={run.id}
+                    onClick={() => onSelect(run.id)}
+                    className="cursor-pointer transition-colors"
+                    style={{
+                      borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : undefined,
+                      backgroundColor: isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)',
+                    }}
+                    onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)' }}
+                  >
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />}
+                        <div>
+                          <p className="font-medium" style={{ color: 'var(--text-main)' }}>
+                            {new Date(run.runAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {i === 0 && (
+                            <span className="text-[10px] font-bold text-blue-600">latest</span>
+                          )}
+                        </div>
+                        {d && (
+                          <span className={`ml-1 text-[10px] font-bold px-1.5 py-px rounded-full ${d.dFail > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                            {d.dFail > 0 ? `+${d.dFail} fail` : `${d.dFail} fail`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono" style={{ color: 'var(--text-muted)' }}>{run.total}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-600">{run.passed}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: run.failed > 0 ? '#ef4444' : 'var(--text-muted)' }}>{run.failed}</td>
+                    <td className="px-3 py-2.5 text-right font-mono" style={{ color: run.skipped > 0 ? '#d97706' : 'var(--text-muted)' }}>{run.skipped}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>{formatMs(run.duration)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold" style={{ color: rate >= 80 ? '#059669' : '#ef4444' }}>{rate}%</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -1664,6 +1849,9 @@ export default function PlaywrightDashboard() {
   const [showLog, setShowLog]               = useState(false)
   const [availableSpecs, setAvailableSpecs] = useState<string[]>([])
   const [selectedSpec, setSelectedSpec]     = useState<string>('')
+  // ── Multi-run history ────────────────────────────────────────────────────────
+  const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
+  const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
 
   // ── Derived counts ──────────────────────────────────────────────────────────
   const allTests = useMemo(() => suites.flatMap(s => s.tests), [suites])
@@ -1734,15 +1922,17 @@ export default function PlaywrightDashboard() {
     setTimeout(() => setJustSaved(false), 2000)
   }, [config])
 
-  // ── Fetch results from server ───────────────────────────────────────────────
-  const fetchResults = useCallback(async () => {
+  // ── Fetch results from server (latest or a specific archived run) ───────────
+  const fetchResults = useCallback(async (runId?: string) => {
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/playwright/results`)
+      const url = runId
+        ? `${API_BASE}/api/playwright/results/${runId}`
+        : `${API_BASE}/api/playwright/results`
+      const res = await fetch(url)
       if (res.status === 404) {
-        // Server online but no results yet
         setServerOnline(true)
-        setDemoMode(true)
+        if (!runId) setDemoMode(true)
         return
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -1751,6 +1941,7 @@ export default function PlaywrightDashboard() {
       setDemoMode(false)
       setServerOnline(true)
       setLastRunAt(data.runAt ?? null)
+      setSelectedRunId(runId ?? null)
       setExpandedSuites(Object.fromEntries(data.suites.map(s => [s.id, true])))
     } catch {
       setServerOnline(false)
@@ -1771,11 +1962,23 @@ export default function PlaywrightDashboard() {
     }
   }, [])
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/playwright/history`)
+      if (!res.ok) return
+      const data = await res.json() as { runs: RunRecord[] }
+      setRunHistory(data.runs)
+    } catch {
+      // ignore — server may be offline
+    }
+  }, [])
+
   // ── Fetch on mount ──────────────────────────────────────────────────────────
   useEffect(() => {
     fetchResults()
     fetchSpecs()
-  }, [fetchResults, fetchSpecs])
+    fetchHistory()
+  }, [fetchResults, fetchSpecs, fetchHistory])
 
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
@@ -1838,8 +2041,9 @@ export default function PlaywrightDashboard() {
             setRunLog(prev => [...prev.slice(-999), msg])
           }
         }
-        // Refresh results after run completes
+        // Refresh results + history after run completes
         await fetchResults()
+        await fetchHistory()
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
         setRunLog(prev => [...prev, `[ERROR] ${errMsg}`])
@@ -1860,9 +2064,9 @@ export default function PlaywrightDashboard() {
     }
 
     setRunning(false)
-  }, [serverOnline, selectedSpec, fetchResults])
+  }, [serverOnline, selectedSpec, fetchResults, fetchHistory])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null) }
+  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
   const exportReport = () => {
     const report = {
@@ -2037,10 +2241,30 @@ export default function PlaywrightDashboard() {
                       : ' Connecting to server…'}
                 </span>
                 <button
-                  onClick={fetchResults}
+                  onClick={() => fetchResults()}
                   className="ml-auto shrink-0 font-semibold underline hover:no-underline"
                   style={{ color: '#92400e' }}>
                   Retry
+                </button>
+              </div>
+            )}
+
+            {/* Historical-run banner */}
+            {selectedRunId && !demoMode && (
+              <div className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
+                style={{ background: 'rgba(59,130,246,0.05)', borderColor: '#93c5fd', color: '#1d4ed8' }}>
+                <Clock size={12} className="shrink-0" />
+                <span>
+                  <strong>Historical run</strong> — viewing results from{' '}
+                  {lastRunAt
+                    ? new Date(lastRunAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'a past run'}.
+                </span>
+                <button
+                  onClick={() => { fetchResults(); }}
+                  className="ml-auto shrink-0 font-semibold underline hover:no-underline"
+                  style={{ color: '#1d4ed8' }}>
+                  Return to latest →
                 </button>
               </div>
             )}
@@ -2071,8 +2295,20 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* History chart */}
-            <HistoryChart history={MOCK_HISTORY} />
+            {/* History chart — real data, clickable */}
+            <HistoryChart
+              runs={runHistory}
+              selectedId={selectedRunId}
+              onSelect={id => fetchResults(id)}
+            />
+
+            {/* Runs panel — expandable list of all archived runs */}
+            <RunsPanel
+              runs={runHistory}
+              selectedId={selectedRunId}
+              onSelect={id => fetchResults(id)}
+              onLoadLatest={() => fetchResults()}
+            />
 
             {/* Search + Filter + Mode toggle */}
             <div className="flex items-center gap-3 mb-5 flex-wrap">
