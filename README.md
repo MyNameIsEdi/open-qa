@@ -15,7 +15,7 @@
 🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/open-qa/#/)**
 
 
-<img src="screenshots/home.jpeg" width="900" alt="open-qa home page" />
+<img src="assets/screenshots/home.jpeg" width="900" alt="open-qa home page" />
 
 </div>
 
@@ -31,7 +31,7 @@ open-qa combines a Node.js AI agent core (self-healing tests, data generation, b
 
 ### Autonomous Agents
 
-<img src="screenshots/agents.png" width="900" alt="Agents page with search and category filters" />
+<img src="assets/screenshots/agents.png" width="900" alt="Agents page with search and category filters" />
 
 Browse and run AI agents directly from the UI. Active agents have a **▶ Run** button that executes the agent and streams output inline.
 
@@ -49,7 +49,7 @@ Browse and run AI agents directly from the UI. Active agents have a **▶ Run** 
 
 ### Testing Skills
 
-<img src="screenshots/skills.png" width="900" alt="Testing Skills page with searchable skill cards" />
+<img src="assets/screenshots/skills.png" width="900" alt="Testing Skills page with searchable skill cards" />
 
 Composable QA utilities for data generation, fuzzing, load profiles, parsing, and security workflows.
 Active skills can be copied directly into Claude-compatible tool payloads.
@@ -58,7 +58,7 @@ Active skills can be copied directly into Claude-compatible tool payloads.
 
 ### System Prompts Library
 
-<img src="screenshots/prompts.png" width="900" alt="System Prompts Library page" />
+<img src="assets/screenshots/prompts.png" width="900" alt="System Prompts Library page" />
 
 Browse expert QA prompts for planning, security, analysis, BDD, review, and API contract checks.
 Each card can expand the full prompt and copy it in one click.
@@ -67,7 +67,7 @@ Each card can expand the full prompt and copy it in one click.
 
 ### Prompt Playground
 
-<img src="screenshots/playground.png" width="900" alt="Prompt Playground" />
+<img src="assets/screenshots/playground.png" width="900" alt="Prompt Playground" />
 
 Select one of 6 expert QA system prompts, paste your PRD / spec / log / test code, and hit **Run**. Responses stream word-by-word. Works in MOCK mode out of the box.
 
@@ -83,7 +83,7 @@ Select one of 6 expert QA system prompts, paste your PRD / spec / log / test cod
 
 ### Test Generator
 
-<img src="screenshots/generate.png" width="900" alt="Test Generator page" />
+<img src="assets/screenshots/generate.png" width="900" alt="Test Generator page" />
 
 Paste a user story or acceptance criteria and get a complete, production-ready Playwright `.spec.ts` file back — with options for Page Object Model output and authenticated tests. Includes a one-click download button.
 
@@ -91,7 +91,7 @@ Paste a user story or acceptance criteria and get a complete, production-ready P
 
 ### QA Automation Guides
 
-<img src="screenshots/docs.png" width="900" alt="Documentation page with architecture and setup sections" />
+<img src="assets/screenshots/docs.png" width="900" alt="Documentation page with architecture and setup sections" />
 
 **12 hands-on chapters** built into the app — a complete course from zero to AI-powered QA:
 
@@ -122,7 +122,7 @@ Fill in a form at `/submit` — name, system prompt, category, run command — a
 
 ### QA Cheatsheet
 
-<img src="screenshots/cheatsheet.png" width="900" alt="Cheatsheet" />
+<img src="assets/screenshots/cheatsheet.png" width="900" alt="Cheatsheet" />
 
 One-click copy reference with **10 collapsible sections** — all your go-to patterns in one place:
 
@@ -188,40 +188,53 @@ npm run dev
 Run agents directly from the terminal:
 
 ```bash
-npm run run:healing         # Self-healing locator agent
-npm run run:datagen         # Smart edge-case data generator
-npm run run:bugreport       # Automated bug triage → output/AI_BUG_REPORT.md
+npm run run:healing            # Self-healing locator agent
+npm run run:datagen            # Smart edge-case data generator
+npm run run:bugreport          # Automated bug triage → output/AI_BUG_REPORT.md
 npm run run:visual-regression  # Visual regression → output/visual-regression/
-npm run run:auto-pom        # Auto-POM Builder → output/auto-pom/
-npm run run:visual-a11y     # Visual A11y Scanner → output/A11Y_REPORT.md
+npm run run:auto-pom           # Auto-POM Builder → output/auto-pom/
+npm run run:visual-a11y        # Visual A11y Scanner → output/A11Y_REPORT.md
 ```
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
 open-qa/
-├── src/                    # Core AI logic (Node.js / TypeScript)
+├── src/                        # Core AI logic (Node.js / TypeScript)
 │   ├── agents/
-│   │   ├── self-healing/index.ts       # Self-Healing Locator
-│   │   ├── visual-regression/index.ts  # Visual Regression Agent
-│   │   ├── auto-pom/index.ts           # Auto-POM Builder
-│   │   └── visual-a11y/index.ts        # Visual A11y Scanner
+│   │   ├── self-healing/       # Self-Healing Locator
+│   │   ├── visual-regression/  # Visual Regression Agent
+│   │   ├── auto-pom/           # Auto-POM Builder
+│   │   └── visual-a11y/        # Visual A11y Scanner
 │   ├── skills/
-│   │   ├── data-gen/index.ts           # Smart Edge-Case Data Gen
-│   │   ├── data-gen/prompts.ts         # QA engineer system prompts
-│   │   └── log-analyzer/index.ts       # Automated Bug Triage
+│   │   ├── data-gen/           # Smart Edge-Case Data Gen
+│   │   └── log-analyzer/       # Automated Bug Triage
 │   └── core/
-│       └── llm-client.ts               # Anthropic SDK wrapper (MOCK + live)
-├── ui/                     # React 18 + Vite + Tailwind marketplace
+│       └── llm-client.ts       # Anthropic SDK wrapper (MOCK + live)
+├── ui/                         # React 18 + Vite + Tailwind marketplace
 │   └── src/
-│       ├── components/     # Navbar, AgentCard, SkillCard, PromptCard, RunOutput, CodeSnippet
-│       └── pages/          # Home, Agents, Skills, Prompts, Playground, Generate, Guides, Cheatsheet, Docs, Submit
-├── server/                 # Express 4 API (port 3001)
-│   └── index.ts            # /api/agents, /api/skills, /api/run/:id, /api/playground
-├── tests/                  # Playwright test suite
-└── output/                 # Generated artifacts (bug reports, test data, POM files)
+│       ├── components/         # Navbar, AgentCard, SkillCard, PromptCard…
+│       └── pages/              # Home, Agents, Skills, Prompts, Playground…
+├── server/                     # Express 4 API (port 3001)
+│   └── index.ts                # /api/agents, /api/skills, /api/run/:id, SSE
+├── tests/                      # Playwright test suite
+├── docs/                       # HTML documentation site
+├── examples/                   # Usage examples & skill template
+│   ├── api-integration-test.ts
+│   ├── ecommerce-checkout.ts
+│   └── skill-template/         # Starter template for new skills
+├── assets/
+│   └── screenshots/            # README & documentation images
+├── output/                     # Generated artifacts from agent runs
+│   ├── api-tests/              # API test bug reports
+│   ├── checkout-tests/         # Checkout flow bug reports
+│   ├── visual-regression/      # Visual regression reports
+│   └── AI_BUG_REPORT.md        # Latest bug triage report
+├── scripts/                    # Developer utility scripts
+├── test-results/               # Playwright run results & archived runs
+└── playwright-report/          # Playwright HTML report
 ```
 
 ### Tech stack
@@ -278,7 +291,3 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 ---
 
 > *"Automate the routine, use AI for the unpredictable."*
-
-```
-
-```
