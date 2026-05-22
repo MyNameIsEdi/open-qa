@@ -505,31 +505,29 @@ app.post('/api/playwright/run', (req, res) => {
   // pw-results.json stale so archiveRun() always reads the old results.
   const args = ['test']
 
-  // ── Spec filtering ────────────────────────────────────────────────────────
+  // ── Spec filtering via testMatch (cross-platform, no CLI arg escaping) ──────
   // We receive bare filenames (e.g. 'sv-api.spec.ts') from the dashboard.
   //
-  // The key Windows constraint:
-  //   • shell: true  is required so cmd.exe can find and run npx (.cmd file)
-  //   • cmd.exe treats '/' as a switch prefix, so 'tests/sv-api.spec.ts'
-  //     would be silently broken into 'tests' + flag '/sv-api.spec.ts'
+  // Past approaches using CLI positional args all failed on Windows:
+  //   • forward-slash paths  → cmd.exe interprets '/' as switch prefix
+  //   • absolute backslash   → unreliable matching inside Playwright
   //
-  // Solution: build absolute paths with path.join (which uses backslashes
-  // on Windows).  cmd.exe treats backslash as a directory separator, not a
-  // flag, so C:\...\tests\sv-api.spec.ts is passed verbatim to playwright.
-  // Playwright then does path.resolve on both sides → exact match.
+  // Current approach: inject testMatch into PW_RUNTIME_CONFIG.
+  //   playwright.config.ts reads rc.testMatch and sets Playwright's testMatch.
+  //   The glob '**/sv-api.spec.ts' matches only that file, regardless of OS.
+  //   No CLI arg needed — no shell escaping issues.
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
 
-  // Strip any stale 'tests/' prefix callers might send, keep basename only
+  // Strip any stale 'tests/' prefix, keep basename only
   const cleanName = (s: string) =>
     s.replace(/^tests[\\/]/, '').replace(/^.*[\\/]/, '')
-  const resolvedSpecs = specList.map(s => path.join(TESTS_DIR, cleanName(s)))
-
-  // Archive label: clean bare filenames (no path prefix, no extension noise)
   const bareNames = specList.map(s => cleanName(s))
 
-  for (const s of resolvedSpecs) args.push(s)
-
-  if (resolvedSpecs.length > 0) {
+  // Build the runtime config, injecting testMatch when specific specs are chosen
+  const runtimeConfig: Record<string, unknown> = { ...(config ?? {}) }
+  if (bareNames.length > 0) {
+    // '**/sv-api.spec.ts' matches the file in any directory — OS-independent
+    runtimeConfig.testMatch = bareNames.map(s => `**/${s}`)
     send(`[FILTER] spec(s): ${bareNames.join(', ')}`)
   }
 
@@ -539,22 +537,20 @@ app.post('/api/playwright/run', (req, res) => {
   if (typeof config?.grepInvert === 'string' && config.grepInvert.trim())
     args.push(`--grep-invert=${config.grepInvert.trim()}`)
 
-  // Inject full config into playwright.config.ts via PW_RUNTIME_CONFIG env var
+  // Inject config (including testMatch) into playwright.config.ts via env var
   const env: Record<string, string> = { ...process.env as Record<string, string>, FORCE_COLOR: '0' }
-  if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
+  env.PW_RUNTIME_CONFIG = JSON.stringify(runtimeConfig)
 
   send(`[INFO] Running: npx playwright ${args.join(' ')}`)
-  if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
-  if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
-  if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
-  if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
+  if (runtimeConfig.baseUrl)  send(`[INFO] baseUrl  → ${runtimeConfig.baseUrl}`)
+  if (runtimeConfig.timeout)  send(`[INFO] timeout  → ${runtimeConfig.timeout}ms`)
+  if (runtimeConfig.workers)  send(`[INFO] workers  → ${runtimeConfig.workers}`)
+  if (runtimeConfig.grep)     send(`[INFO] grep     → ${runtimeConfig.grep}`)
+  if (bareNames.length > 0)   send(`[INFO] testMatch → ${(runtimeConfig.testMatch as string[]).join(', ')}`)
 
   // Archive key: bare filenames joined (clean display in Run History)
   const archiveSpec = bareNames.length > 0 ? bareNames.join(',') : spec
 
-  // On Windows use shell:true so cmd.exe can invoke npx.cmd.
-  // The spec paths use OS-native backslashes (from path.join above) so
-  // cmd.exe doesn't mis-parse them as flag prefixes.
   const child = spawn('npx', ['playwright', ...args], {
     cwd:   root,
     env,

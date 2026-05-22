@@ -4,6 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 // Falls back to sensible defaults when running directly from the CLI.
 type RC = {
   testDir?: string
+  /** Glob patterns — when set, only matching spec files run (used by the dashboard spec picker) */
+  testMatch?: string[]
   fullyParallel?: boolean
   forbidOnly?: boolean
   retries?: number
@@ -33,6 +35,9 @@ function buildProjects(b?: RC['browsers']) {
 
 export default defineConfig({
   testDir:       rc.testDir       ?? './tests',
+  // When the dashboard picks specific spec files, honour them via testMatch.
+  // The glob pattern '**/sv-api.spec.ts' matches regardless of OS path separator.
+  ...(rc.testMatch && rc.testMatch.length > 0 ? { testMatch: rc.testMatch } : {}),
   outputDir:     rc.outputDir     ?? 'test-results',
   fullyParallel: rc.fullyParallel ?? true,
   forbidOnly:    rc.forbidOnly    ?? !!process.env.CI,
