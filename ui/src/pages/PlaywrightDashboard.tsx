@@ -7,7 +7,7 @@ import {
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
   ExternalLink, ChevronRight, Hash, Grid3x3, List, Tag,
-  PenLine, Plus, Trash2, RefreshCw, CheckSquare, Square as SquareIcon,
+  PenLine, Plus, Trash2, RefreshCw, CheckSquare,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1943,6 +1943,7 @@ function EditorView({
   const [delConfirm, setDelConfirm]     = useState<string | null>(null)
   const [error, setError]               = useState<string | null>(null)
   const textareaRef                     = useRef<HTMLTextAreaElement>(null)
+  const lineNumbersRef                  = useRef<HTMLDivElement>(null)
 
   const isDirty = content !== savedContent
 
@@ -2175,7 +2176,9 @@ function EditorView({
         ) : (
           <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
             {/* Line numbers */}
-            <div className="select-none text-right pr-3 pl-3 py-3 text-[12px] font-mono leading-[1.6] shrink-0 overflow-hidden"
+            <div
+              ref={lineNumbersRef}
+              className="select-none text-right pr-3 pl-3 py-3 text-[12px] font-mono leading-[1.6] shrink-0 overflow-hidden pointer-events-none"
               style={{ color: '#4c4f69', minWidth: '3rem', userSelect: 'none' }}>
               {Array.from({ length: lineCount }, (_, i) => (
                 <div key={i + 1}>{i + 1}</div>
@@ -2187,6 +2190,10 @@ function EditorView({
               value={content}
               onChange={e => setContent(e.target.value)}
               onKeyDown={handleKeyDown}
+              onScroll={e => {
+                if (lineNumbersRef.current)
+                  lineNumbersRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop
+              }}
               spellCheck={false}
               className="flex-1 resize-none focus:outline-none py-3 pr-4 text-[12.5px] font-mono leading-[1.6]"
               style={{
@@ -2233,6 +2240,17 @@ export default function PlaywrightDashboard() {
   const [selectedSpecs, setSelectedSpecs]     = useState<Set<string>>(new Set())
   const [specPickerOpen, setSpecPickerOpen]   = useState(false)
   const specPickerRef                         = useRef<HTMLDivElement>(null)
+
+  // Close spec picker when clicking outside
+  useEffect(() => {
+    if (!specPickerOpen) return
+    const handler = (e: MouseEvent) => {
+      if (specPickerRef.current && !specPickerRef.current.contains(e.target as Node))
+        setSpecPickerOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [specPickerOpen])
   // ── Multi-run history ────────────────────────────────────────────────────────
   const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
   const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
@@ -2435,11 +2453,6 @@ export default function PlaywrightDashboard() {
 
   // ── Run tests (real SSE when server online, demo animation otherwise) ───────
   const runTests = useCallback(async () => {
-    // Build spec list from multi-select; fall back to single dropdown
-    const specList = selectedSpecs.size > 0
-      ? Array.from(selectedSpecs)
-      : (selectedSpec ? [selectedSpec] : [])
-
     if (!serverOnline) {
       // ── Demo animation ─────────────────────────────────────────────────────
       setRunning(true)
@@ -2459,44 +2472,15 @@ export default function PlaywrightDashboard() {
       return
     }
 
-    if (serverOnline) {
-      // ── Real run via server SSE ─────────────────────────────────────────────
-      try {
-        const body: Record<string, unknown> = { config }
-        if (specList.length === 1) body.spec = specList[0]
-        else if (specList.length > 1) body.specs = specList
-        const response = await fetch(`${API_BASE}/api/playwright/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-        if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
-        const reader  = response.body.getReader()
-        const decoder = new TextDecoder()
-        let   buffer  = ''
-        outer: while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const parts = buffer.split('\n')
-          buffer = parts.pop() ?? ''
-          for (const line of parts) {
-            if (!line.startsWith('data: ')) continue
-            let msg: string
-            try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
-            if (msg.startsWith('[DONE]')) { break outer }
-            setRunLog(prev => [...prev.slice(-999), msg])
-          }
-        }
-        await fetchResults()
-        await fetchHistory()
-      } catch (err) {
-        setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
-      }
-    }
-
-    setRunning(false)
-  }, [serverOnline, selectedSpec, selectedSpecs, config, fetchResults, fetchHistory])
+    // ── Real run — delegate to runWithSSE ────────────────────────────────────
+    const specList = selectedSpecs.size > 0
+      ? Array.from(selectedSpecs)
+      : (selectedSpec ? [selectedSpec] : [])
+    const body: Record<string, unknown> = { config }
+    if (specList.length === 1)     body.spec  = specList[0]
+    else if (specList.length > 1)  body.specs = specList
+    await runWithSSE(body)
+  }, [serverOnline, selectedSpec, selectedSpecs, config, runWithSSE])
 
   const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
