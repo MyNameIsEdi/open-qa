@@ -502,32 +502,25 @@ app.post('/api/playwright/run', (req, res) => {
 
   // ── Spec filtering ────────────────────────────────────────────────────────
   // We receive bare filenames (e.g. 'sv-api.spec.ts') from the dashboard.
-  // We convert them to absolute OS-native paths so Playwright can match them
-  // exactly against its internal file list — no ambiguity, no fallback.
   //
-  // WHY NOT shell: true / forward-slash paths:
-  //   On Windows, cmd.exe treats '/' as a switch prefix, so passing
-  //   'tests/sv-api.spec.ts' through the shell silently drops the argument
-  //   and Playwright falls back to running all tests.
+  // The key Windows constraint:
+  //   • shell: true  is required so cmd.exe can find and run npx (.cmd file)
+  //   • cmd.exe treats '/' as a switch prefix, so 'tests/sv-api.spec.ts'
+  //     would be silently broken into 'tests' + flag '/sv-api.spec.ts'
   //
-  // WHY NOT bare filenames:
-  //   Playwright resolves positional args against cwd, not testDir.
-  //   'sv-api.spec.ts' → '{root}/sv-api.spec.ts' which doesn't exist →
-  //   no match → all tests run.
-  //
-  // SOLUTION: spawn playwright-cli directly (no shell) and pass the
-  // absolute path via path.join (OS-native separators).  Playwright
-  // normalises both sides with path.resolve before comparing, so the
-  // match is exact and reliable on every platform.
+  // Solution: build absolute paths with path.join (which uses backslashes
+  // on Windows).  cmd.exe treats backslash as a directory separator, not a
+  // flag, so C:\...\tests\sv-api.spec.ts is passed verbatim to playwright.
+  // Playwright then does path.resolve on both sides → exact match.
   const TESTS_DIR = path.join(root, 'tests')
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
 
-  // Strip any stale 'tests/' prefix callers might send, then build absolute path
+  // Strip any stale 'tests/' prefix callers might send, keep basename only
   const cleanName = (s: string) =>
-    s.replace(/^tests[\\/]/, '').replace(/^.*[\\/]/, '')  // basename only
+    s.replace(/^tests[\\/]/, '').replace(/^.*[\\/]/, '')
   const resolvedSpecs = specList.map(s => path.join(TESTS_DIR, cleanName(s)))
 
-  // Archive label uses bare filenames (no path, no 'tests/' prefix)
+  // Archive label: clean bare filenames (no path prefix, no extension noise)
   const bareNames = specList.map(s => cleanName(s))
 
   for (const s of resolvedSpecs) args.push(s)
@@ -555,13 +548,13 @@ app.post('/api/playwright/run', (req, res) => {
   // Archive key: bare filenames joined (clean display in Run History)
   const archiveSpec = bareNames.length > 0 ? bareNames.join(',') : spec
 
-  // Spawn playwright CLI directly — no shell wrapper on any platform.
-  // On Windows this requires the .cmd shim; on Unix the bare name works.
-  const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-  const child = spawn(npxBin, ['playwright', ...args], {
-    cwd: root,
+  // On Windows use shell:true so cmd.exe can invoke npx.cmd.
+  // The spec paths use OS-native backslashes (from path.join above) so
+  // cmd.exe doesn't mis-parse them as flag prefixes.
+  const child = spawn('npx', ['playwright', ...args], {
+    cwd:   root,
     env,
-    shell: false,
+    shell: process.platform === 'win32',
   })
 
   const stream = (chunk: Buffer) =>
