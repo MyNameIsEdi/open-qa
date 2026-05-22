@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Play, Square, RotateCcw, Download, Bug, Eye, Camera,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
@@ -6,7 +6,8 @@ import {
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
   Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
-  ExternalLink, ChevronRight, Hash, Grid3x3, List, Tag,
+  ExternalLink, Hash, Grid3x3, List, Tag,
+  PenLine, Plus, Trash2, RefreshCw, CheckSquare,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -55,13 +56,6 @@ interface ArtifactModalState {
   testTitle: string
 }
 
-interface RunHistory {
-  label: string
-  passed: number
-  failed: number
-  skipped: number
-}
-
 /** A single archived run returned by GET /api/playwright/history */
 interface RunRecord {
   id: string
@@ -75,19 +69,6 @@ interface RunRecord {
   spec?: string | null
 }
 
-/** Fallback chart data shown when the server is offline / no real history yet */
-const MOCK_RUN_RECORDS: RunRecord[] = (() => {
-  const now = Date.now()
-  return [
-    { id: 'demo-1', runAt: new Date(now - 6 * 86_400_000).toISOString(), total: 22, passed: 17, failed: 4, skipped: 1, flaky: 1, duration: 62_000 },
-    { id: 'demo-2', runAt: new Date(now - 5 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 58_000 },
-    { id: 'demo-3', runAt: new Date(now - 4 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 1, skipped: 1, flaky: 1, duration: 55_000 },
-    { id: 'demo-4', runAt: new Date(now - 3 * 86_400_000).toISOString(), total: 22, passed: 18, failed: 3, skipped: 1, flaky: 0, duration: 61_000 },
-    { id: 'demo-5', runAt: new Date(now - 2 * 86_400_000).toISOString(), total: 22, passed: 20, failed: 2, skipped: 0, flaky: 1, duration: 57_000 },
-    { id: 'demo-6', runAt: new Date(now - 1 * 86_400_000).toISOString(), total: 22, passed: 19, failed: 2, skipped: 1, flaky: 0, duration: 59_000 },
-    { id: 'demo-7', runAt: new Date(now - 2 * 3_600_000).toISOString(),  total: 22, passed: 16, failed: 4, skipped: 2, flaky: 2, duration: 68_000 },
-  ]
-})()
 
 // ─── Playwright Config Type ───────────────────────────────────────────────────
 
@@ -132,204 +113,6 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
 
 const STORAGE_KEY = 'pw_dashboard_config_v1'
 const API_BASE    = 'http://localhost:3001'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const INITIAL_SUITES: TestSuite[] = [
-  {
-    id: 'login',
-    file: 'tests/login.spec.ts',
-    title: 'Login flow',
-    tests: [
-      {
-        id: 'l1', title: 'successful login redirects to dashboard', status: 'passed', duration: 1240, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1240 },
-          { browser: 'firefox',  status: 'passed', duration: 1480 },
-          { browser: 'webkit',   status: 'passed', duration: 1190 },
-        ],
-        steps: [
-          { title: 'page.goto("/login")',                    duration: 340, status: 'passed' },
-          { title: 'getByLabel("Email").fill(…)',            duration: 85,  status: 'passed' },
-          { title: 'getByLabel("Password").fill(…)',         duration: 70,  status: 'passed' },
-          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 210, status: 'passed' },
-          { title: 'expect(page).toHaveURL("/dashboard")',   duration: 535, status: 'passed' },
-        ],
-      },
-      {
-        id: 'l2', title: 'wrong password shows error message', status: 'passed', duration: 890, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 890 },
-          { browser: 'firefox',  status: 'passed', duration: 970 },
-          { browser: 'webkit',   status: 'passed', duration: 850 },
-        ],
-      },
-      {
-        id: 'l3', title: 'empty fields show validation errors', status: 'failed', duration: 2100, browser: 'chromium', retries: 1,
-        tags: ['@regression'],
-        error: "Error: Timeout 5000ms exceeded.\nExpected element to be visible: getByTestId('email-error')\nReceived: hidden\n  at tests/login.spec.ts:42:18",
-        browserResults: [
-          { browser: 'chromium', status: 'failed', duration: 2100 },
-          { browser: 'firefox',  status: 'failed', duration: 2340 },
-          { browser: 'webkit',   status: 'passed', duration: 810 },
-        ],
-        steps: [
-          { title: 'page.goto("/login")',                         duration: 290, status: 'passed' },
-          { title: 'getByRole("button", {name:"Sign In"}).click()', duration: 105, status: 'passed' },
-          { title: 'expect(getByTestId("email-error")).toBeVisible()', duration: 5005, status: 'failed' },
-        ],
-      },
-      {
-        id: 'l4', title: 'remember me checkbox persists session', status: 'passed', duration: 1560, browser: 'chromium',
-        retries: 1,   // flaky — eventually passed
-        tags: ['@regression'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1560 },
-          { browser: 'firefox',  status: 'passed', duration: 1740 },
-          { browser: 'webkit',   status: 'skipped', duration: 0 },
-        ],
-      },
-      {
-        id: 'l5', title: 'logout clears session and redirects', status: 'passed', duration: 730, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 730 },
-          { browser: 'firefox',  status: 'passed', duration: 820 },
-          { browser: 'webkit',   status: 'passed', duration: 700 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'nav',
-    file: 'tests/navigation.spec.ts',
-    title: 'Navigation',
-    tests: [
-      {
-        id: 'n1', title: 'clicking logo navigates to home', status: 'passed', duration: 410, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 410 },
-          { browser: 'firefox',  status: 'passed', duration: 490 },
-          { browser: 'webkit',   status: 'passed', duration: 380 },
-        ],
-      },
-      {
-        id: 'n2', title: 'all nav links are reachable', status: 'passed', duration: 1820, browser: 'chromium',
-        retries: 1,   // flaky — passed on retry
-        tags: ['@regression'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1820 },
-          { browser: 'firefox',  status: 'passed', duration: 2010 },
-          { browser: 'webkit',   status: 'passed', duration: 1750 },
-        ],
-      },
-      {
-        id: 'n3', title: 'browser back / forward works correctly', status: 'passed', duration: 590, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 590 },
-          { browser: 'firefox',  status: 'passed', duration: 640 },
-          { browser: 'webkit',   status: 'passed', duration: 560 },
-        ],
-      },
-      {
-        id: 'n4', title: 'deep link to /agents renders agents page', status: 'skipped', duration: 0, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'skipped', duration: 0 },
-          { browser: 'firefox',  status: 'skipped', duration: 0 },
-          { browser: 'webkit',   status: 'skipped', duration: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'forms',
-    file: 'tests/forms.spec.ts',
-    title: 'Form validation',
-    tests: [
-      {
-        id: 'f1', title: 'required fields marked on empty submit', status: 'passed', duration: 980, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 980 },
-          { browser: 'firefox',  status: 'passed', duration: 1050 },
-          { browser: 'webkit',   status: 'passed', duration: 920 },
-        ],
-      },
-      {
-        id: 'f2', title: 'email format validated inline', status: 'passed', duration: 760, browser: 'chromium',
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 760 },
-          { browser: 'firefox',  status: 'passed', duration: 800 },
-          { browser: 'webkit',   status: 'passed', duration: 730 },
-        ],
-      },
-      {
-        id: 'f3', title: 'max-length enforced on text inputs', status: 'failed', duration: 1350, browser: 'firefox',
-        tags: ['@regression'],
-        error: "Error: expect(received).toHaveValue(expected)\nExpected: 'a'.repeat(255)\nReceived: 'a'.repeat(256)\n  at tests/forms.spec.ts:88:5",
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 890 },
-          { browser: 'firefox',  status: 'failed', duration: 1350 },  // ← Firefox-only bug!
-          { browser: 'webkit',   status: 'passed', duration: 870 },
-        ],
-        steps: [
-          { title: 'page.goto("/signup")',                           duration: 310, status: 'passed' },
-          { title: 'getByLabel("Username").fill("a".repeat(300))',   duration: 195, status: 'passed' },
-          { title: 'expect(input).toHaveValue("a".repeat(255))',     duration: 845, status: 'failed' },
-        ],
-      },
-      {
-        id: 'f4', title: 'form submits with valid data', status: 'passed', duration: 1140, browser: 'chromium',
-        tags: ['@smoke'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1140 },
-          { browser: 'firefox',  status: 'passed', duration: 1230 },
-          { browser: 'webkit',   status: 'passed', duration: 1090 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'api',
-    file: 'tests/api.spec.ts',
-    title: 'API endpoints',
-    tests: [
-      { id: 'a1', title: 'GET /api/agents returns 200 with array',  status: 'passed', duration: 210,  browser: 'chromium', tags: ['@smoke'] },
-      { id: 'a2', title: 'POST /api/run/:id executes agent',         status: 'passed', duration: 3400, browser: 'chromium', retries: 1, tags: ['@regression'] },
-      { id: 'a3', title: 'GET /api/health returns ok status',        status: 'passed', duration: 95,   browser: 'chromium', tags: ['@smoke'] },
-      { id: 'a4', title: 'unknown route returns 404',                status: 'passed', duration: 130,  browser: 'chromium' },
-    ],
-  },
-  {
-    id: 'a11y',
-    file: 'tests/accessibility.spec.ts',
-    title: 'Accessibility (axe-core)',
-    tests: [
-      {
-        id: 'ax1', title: 'home page has no critical WCAG violations', status: 'passed', duration: 2200, browser: 'chromium',
-        tags: ['@a11y'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 2200 },
-          { browser: 'firefox',  status: 'passed', duration: 2450 },
-          { browser: 'webkit',   status: 'passed', duration: 2100 },
-        ],
-      },
-      {
-        id: 'ax2', title: 'agents page passes WCAG AA', status: 'passed', duration: 1980, browser: 'chromium',
-        tags: ['@a11y'],
-        browserResults: [
-          { browser: 'chromium', status: 'passed', duration: 1980 },
-          { browser: 'firefox',  status: 'passed', duration: 2180 },
-          { browser: 'webkit',   status: 'passed', duration: 1900 },
-        ],
-      },
-      { id: 'ax3', title: 'modal dialogs trap focus correctly', status: 'skipped', duration: 0, browser: 'chromium', tags: ['@a11y'] },
-    ],
-  },
-]
 
 // ─── Run History ──────────────────────────────────────────────────────────────
 
@@ -447,16 +230,19 @@ function RunsPanel({
   selectedId,
   onSelect,
   onLoadLatest,
+  onClearHistory,
   isDemo,
 }: {
   runs: RunRecord[]
   selectedId: string | null
   onSelect: (id: string) => void
   onLoadLatest: () => void
+  onClearHistory: () => void
   isDemo: boolean
 }) {
   // Open by default when there is real data
   const [open, setOpen] = useState(!isDemo && runs.length > 0)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   // Keep open state in sync when runs first arrive
   React.useEffect(() => {
@@ -498,6 +284,29 @@ function RunsPanel({
             >
               ← Latest
             </button>
+          )}
+          {!isDemo && !confirmClear && (
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmClear(true) }}
+              className="text-[11px] font-semibold hover:underline"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Clear history
+            </button>
+          )}
+          {!isDemo && confirmClear && (
+            <span className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Are you sure?</span>
+              <button
+                onClick={() => { setConfirmClear(false); onClearHistory() }}
+                className="text-[11px] font-bold text-red-500 hover:underline"
+              >Yes, clear</button>
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="text-[11px] font-semibold hover:underline"
+                style={{ color: 'var(--text-muted)' }}
+              >Cancel</button>
+            </span>
           )}
           {open
             ? <ChevronUp  size={13} style={{ color: 'var(--text-muted)' }} />
@@ -755,7 +564,37 @@ interface Preset {
   description: string
   color: string
   config: Partial<PlaywrightConfig>
+  /** If set, auto-selects these spec files when the preset is applied */
+  specs?: string[]
 }
+
+/** Shared Playwright config for all SV Students suites (Render free-tier) */
+const SV_CONFIG: Partial<PlaywrightConfig> = {
+  baseUrl:       'https://sv-students-recommend.onrender.com',
+  testDir:       './tests',
+  timeout:       60000,
+  retries:       1,
+  workers:       1,
+  headed:        false,
+  fullyParallel: false,
+  browsers:      { chromium: true, firefox: false, webkit: false },
+  screenshot:    'only-on-failure',
+  video:         'retain-on-failure',
+  trace:         'on-first-retry',
+  reporter:      'html',
+}
+
+// Bare filenames — no path prefix — matching what /api/playwright/specs returns.
+// The server prepends 'tests/' when building the Playwright CLI args.
+const SV_ALL_SPECS = [
+  'sv-login.spec.ts',
+  'sv-register.spec.ts',
+  'sv-home.spec.ts',
+  'sv-api.spec.ts',
+  'sv-docs.spec.ts',
+  'sv-a11y.spec.ts',
+  'sv-navigation.spec.ts',
+]
 
 const PRESETS: Preset[] = [
   {
@@ -781,44 +620,44 @@ const PRESETS: Preset[] = [
     },
   },
   {
-    label: 'Cross-Browser',
-    icon: <Globe size={13} />,
-    description: 'Chromium + Firefox + WebKit, 4 parallel workers',
-    color: '#7c3aed',
-    config: {
-      browsers: { chromium: true, firefox: true, webkit: true },
-      workers: 4, retries: 1, fullyParallel: true, reporter: 'html',
-    },
-  },
-  {
-    label: 'Mobile',
-    icon: <Smartphone size={13} />,
-    description: 'WebKit + Chromium for iOS & Android coverage',
-    color: '#d97706',
-    config: {
-      browsers: { chromium: true, firefox: false, webkit: true },
-      workers: 2, retries: 1, headed: false, reporter: 'html',
-    },
-  },
-  {
-    label: 'SV Students',
+    label: 'SV: All',
     icon: <FlaskConical size={13} />,
-    description: 'Render free-tier site — 60s timeout, Chromium only, 1 worker',
+    description: 'Full SV Students suite — all 7 spec files',
     color: '#0891b2',
-    config: {
-      baseUrl:       'https://sv-students-recommend.onrender.com',
-      testDir:       './tests',
-      timeout:       60000,
-      retries:       1,
-      workers:       1,
-      headed:        false,
-      fullyParallel: false,
-      browsers:      { chromium: true, firefox: false, webkit: false },
-      screenshot:    'only-on-failure',
-      video:         'retain-on-failure',
-      trace:         'on-first-retry',
-      reporter:      'html',
-    },
+    specs: SV_ALL_SPECS,
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Login',
+    icon: <Hash size={13} />,
+    description: 'Login structure, validation, forgot-password & register',
+    color: '#7c3aed',
+    specs: ['sv-login.spec.ts', 'sv-register.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Home',
+    icon: <Layers size={13} />,
+    description: 'Home feed — auth redirect, structure, filters, modals',
+    color: '#d97706',
+    specs: ['sv-home.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: API',
+    icon: <Globe size={13} />,
+    description: 'Public & authenticated REST API endpoints',
+    color: '#059669',
+    specs: ['sv-api.spec.ts'],
+    config: SV_CONFIG,
+  },
+  {
+    label: 'SV: Docs & A11y',
+    icon: <BookOpen size={13} />,
+    description: 'Swagger UI rendering + Hebrew accessibility page',
+    color: '#e11d48',
+    specs: ['sv-docs.spec.ts', 'sv-a11y.spec.ts'],
+    config: SV_CONFIG,
   },
 ]
 
@@ -871,7 +710,7 @@ function SettingsView({ config, onChange, noPresets = false }: { config: Playwri
           <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a battle-tested configuration</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
           {PRESETS.map(preset => (
             <button
               key={preset.label}
@@ -1164,28 +1003,10 @@ const BROWSER_META: Record<BrowserKey, { label: string; color: string; emoji: st
   webkit:   { label: 'WebKit',   color: '#999999', emoji: '🧡' },
 }
 
-function BrowserChip({ browser, status, duration }: { browser: BrowserKey; status: Status; duration: number }) {
-  const meta = BROWSER_META[browser]
-  const color =
-    status === 'passed'  ? '#10b981' :
-    status === 'failed'  ? '#ef4444' :
-    status === 'skipped' ? '#f59e0b' : 'var(--text-muted)'
-
-  return (
-    <div className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border min-w-[60px]"
-      style={{ borderColor: `${color}40`, backgroundColor: `${color}10` }}>
-      <span className="text-[11px]">{meta.emoji}</span>
-      <StatusIcon status={status} size={12} />
-      {duration > 0 && <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{formatMs(duration)}</span>}
-    </div>
-  )
-}
-
 // ─── Browser Matrix View ──────────────────────────────────────────────────────
 
 function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
-  const allTests = suites.flatMap(s => s.tests.map(t => ({ ...t, suiteTitle: s.title })))
-  const testsWithCross = allTests.filter(t => t.browserResults && t.browserResults.length > 0)
+  const testsWithCross = suites.flatMap(s => s.tests).filter(t => t.browserResults && t.browserResults.length > 0)
   const browsers: BrowserKey[] = ['chromium', 'firefox', 'webkit']
 
   if (testsWithCross.length === 0) {
@@ -1196,7 +1017,7 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
     )
   }
 
-  function cellStatus(test: typeof testsWithCross[number], browser: BrowserKey): Status | null {
+  function cellStatus(test: TestCase, browser: BrowserKey): Status | null {
     if (!test.browserResults) return null
     return test.browserResults.find(r => r.browser === browser)?.status ?? null
   }
@@ -1825,7 +1646,35 @@ npx playwright install chromium`} />
 
 // ─── Artifact Modal ───────────────────────────────────────────────────────────
 
+interface ArtifactFile {
+  name: string
+  path: string
+  size: number
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024)         return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose: () => void }) {
+  const [artifacts, setArtifacts] = useState<ArtifactFile[]>([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`${API_BASE}/api/playwright/artifacts`)
+      .then(r => r.json() as Promise<{ artifacts: ArtifactFile[] }>)
+      .then(data => { setArtifacts(data.artifacts); setLoading(false) })
+      .catch(() => { setArtifacts([]); setLoading(false) })
+  }, [state.testId])
+
+  const extType = (name: string) => {
+    const ext = name.split('.').pop()?.toUpperCase() ?? '?'
+    return ext
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -1841,29 +1690,35 @@ function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose:
           </button>
         </div>
         <p className="text-xs mb-4 font-mono truncate" style={{ color: 'var(--text-muted)' }}>{state.testTitle}</p>
-        <div className="flex flex-col gap-2">
-          {[
-            { label: 'screenshot-on-failure.png', size: '142 KB', type: 'PNG' },
-            { label: 'video-recording.webm',      size: '1.8 MB', type: 'WEBM' },
-            { label: 'trace.zip',                 size: '284 KB', type: 'ZIP' },
-          ].map(({ label, size, type }) => (
-            <div
-              key={label}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
-              onClick={() => alert(`[MOCK] Downloading ${label}`)}
-            >
-              <span className="font-mono" style={{ color: 'var(--text-main)' }}>{label}</span>
-              <div className="flex items-center gap-2">
-                <span style={{ color: 'var(--text-muted)' }}>{size}</span>
-                <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-semibold text-[10px]">{type}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[11px] mt-4 text-center" style={{ color: 'var(--text-muted)' }}>
-          Artifacts are simulated — connect Playwright CI to serve real files.
-        </p>
+
+        {loading ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>Loading artifacts…</p>
+        ) : artifacts.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
+            No artifacts found. Run tests with <code className="font-mono">screenshot: &apos;on&apos;</code> or <code className="font-mono">trace: &apos;on&apos;</code> to generate files.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            {artifacts.map(file => (
+              <a
+                key={file.path}
+                href={`${API_BASE}/test-results/${file.path}`}
+                download={file.name}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs hover:opacity-80 transition-opacity no-underline"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="font-mono truncate flex-1 mr-2" style={{ color: 'var(--text-main)' }}>{file.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span style={{ color: 'var(--text-muted)' }}>{formatBytes(file.size)}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-semibold text-[10px]">{extType(file.name)}</span>
+                  <Download size={11} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1878,6 +1733,8 @@ function FailedActions({
   suiteFile: string
   onViewArtifacts: (state: ArtifactModalState) => void
 }) {
+  const [jiraCopied, setJiraCopied] = useState(false)
+
   const exportJira = () => {
     const payload = {
       summary: `[QA] Test failure: ${test.title}`,
@@ -1885,12 +1742,17 @@ function FailedActions({
       labels: ['automated-test', 'playwright'],
       priority: 'High',
     }
-    console.log('[Jira Export Payload]', payload)
-    alert(`[MOCK] Jira issue payload logged to console.\n\nSummary: ${payload.summary}`)
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
+      setJiraCopied(true)
+      setTimeout(() => setJiraCopied(false), 2000)
+    }).catch(() => {
+      // Fallback: show the JSON in a small alert for browsers that block clipboard
+      prompt('Copy this Jira payload:', JSON.stringify(payload, null, 2))
+    })
   }
 
   const viewTrace = () => {
-    alert(`[MOCK] Opening Playwright Trace Viewer for:\n${suiteFile}\n\nIn production:\nnpx playwright show-trace trace.zip`)
+    window.open('http://localhost:3001/playwright-report/index.html', '_blank')
   }
 
   return (
@@ -1898,10 +1760,10 @@ function FailedActions({
       style={{ borderColor: 'var(--border)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
       <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--text-muted)' }}>Actions:</span>
       <button onClick={exportJira} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100">
-        <Bug size={11} /> Export to Jira
+        {jiraCopied ? <><Check size={11} /> Copied!</> : <><Bug size={11} /> Copy Jira JSON</>}
       </button>
       <button onClick={viewTrace} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors border border-violet-100">
-        <Eye size={11} /> View Trace
+        <Eye size={11} /> View Report
       </button>
       <button onClick={() => onViewArtifacts({ testId: test.id, testTitle: test.title })} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-colors border border-neutral-200">
         <Camera size={11} /> View Artifacts
@@ -1910,10 +1772,337 @@ function FailedActions({
   )
 }
 
+// ─── Editor View ─────────────────────────────────────────────────────────────
+
+const NEW_SPEC_STUB = `import { test, expect } from '@playwright/test'
+
+test.describe('My test suite', () => {
+  test('should do something', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveTitle(/.*/)
+  })
+})
+`
+
+function EditorView({
+  specs,
+  onReloadSpecs,
+  onRunSpec,
+}: {
+  specs: string[]
+  onReloadSpecs: () => void
+  onRunSpec: (spec: string) => void
+}) {
+  const [activeFile, setActiveFile]     = useState<string | null>(specs[0] ?? null)
+  const [content, setContent]           = useState('')
+  const [savedContent, setSavedContent] = useState('')
+  const [loading, setLoading]           = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [saveMsg, setSaveMsg]           = useState<string | null>(null)
+  const [newName, setNewName]           = useState('')
+  const [showNew, setShowNew]           = useState(false)
+  const [delConfirm, setDelConfirm]     = useState<string | null>(null)
+  const [error, setError]               = useState<string | null>(null)
+  const textareaRef                     = useRef<HTMLTextAreaElement>(null)
+  const lineNumbersRef                  = useRef<HTMLDivElement>(null)
+
+  const isDirty = content !== savedContent
+  const [loadKey, setLoadKey] = useState(0)
+
+  // Auto-select first spec when the list arrives (handles async fetchSpecs timing)
+  useEffect(() => {
+    if (!activeFile && specs.length > 0) setActiveFile(specs[0])
+  }, [specs, activeFile])
+
+  // Load file content — re-runs when activeFile or loadKey changes (loadKey = manual retry)
+  useEffect(() => {
+    if (!activeFile) return
+    setLoading(true)
+    setError(null)
+    fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(activeFile)}`)
+      .then(async r => {
+        const text = await r.text()
+        try {
+          const d = JSON.parse(text) as { content?: string; error?: string }
+          if (d.content !== undefined) {
+            setContent(d.content)
+            setSavedContent(d.content)
+          } else {
+            setError(d.error ?? 'Failed to load file')
+          }
+        } catch {
+          setError(`Server returned an unexpected response (HTTP ${r.status}) — check your server console`)
+        }
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')
+          ? 'Cannot connect to localhost:3001 — make sure the server is running (npm run dev)'
+          : msg)
+      })
+      .finally(() => setLoading(false))
+  }, [activeFile, loadKey])
+
+  const saveFile = useCallback(async () => {
+    if (!activeFile) return
+    setSaving(true)
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: activeFile, content }),
+      })
+      const d = await r.json()
+      if (d.ok) { setSavedContent(content); setSaveMsg('Saved!'); setTimeout(() => setSaveMsg(null), 2000) }
+      else setError(d.error ?? 'Save failed')
+    } catch { setError('Save failed — server not reachable') }
+    finally { setSaving(false) }
+  }, [activeFile, content])
+
+  const createFile = useCallback(async () => {
+    const name = newName.trim().replace(/\.spec\.(ts|js)$/, '') + '.spec.ts'
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content: NEW_SPEC_STUB }),
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setShowNew(false); setNewName('')
+        onReloadSpecs()
+        // Small delay so specs list refreshes before we select
+        setTimeout(() => setActiveFile(name), 200)
+      } else setError(d.error ?? 'Create failed')
+    } catch { setError('Create failed — server not reachable') }
+  }, [newName, onReloadSpecs])
+
+  const deleteFile = useCallback(async (name: string) => {
+    setError(null)
+    try {
+      const r = await fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(name)}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (d.ok) {
+        setDelConfirm(null)
+        if (activeFile === name) { setActiveFile(null); setContent(''); setSavedContent('') }
+        onReloadSpecs()
+      } else setError(d.error ?? 'Delete failed')
+    } catch { setError('Delete failed — server not reachable') }
+  }, [activeFile, onReloadSpecs])
+
+  // Tab → insert 2 spaces
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const el  = e.currentTarget
+      const s   = el.selectionStart
+      const end = el.selectionEnd
+      const next = content.slice(0, s) + '  ' + content.slice(end)
+      setContent(next)
+      requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2 })
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault()
+      saveFile()
+    }
+  }
+
+  const lineCount = content.split('\n').length
+
+  return (
+    <div className="flex gap-0 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)', minHeight: '72vh' }}>
+
+      {/* ── Left sidebar: file list ── */}
+      <div className="w-52 shrink-0 flex flex-col border-r" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+        <div className="flex items-center justify-between px-3 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Tests</span>
+          <div className="flex items-center gap-1">
+            <button onClick={onReloadSpecs} title="Refresh" className="p-1 rounded hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+              <RefreshCw size={11} />
+            </button>
+            <button onClick={() => setShowNew(v => !v)} title="New spec file"
+              className="p-1 rounded transition-colors"
+              style={showNew ? { color: '#2563eb' } : { color: 'var(--text-muted)' }}>
+              <Plus size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* New file input */}
+        {showNew && (
+          <div className="px-2 py-2 border-b flex flex-col gap-1.5" style={{ borderColor: 'var(--border)' }}>
+            <input
+              autoFocus
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') createFile(); if (e.key === 'Escape') { setShowNew(false); setNewName('') } }}
+              placeholder="my-test"
+              className="w-full px-2 py-1 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}
+            />
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>.spec.ts will be appended</p>
+            <button onClick={createFile} disabled={!newName.trim()}
+              className="w-full py-1 rounded-lg text-xs font-semibold disabled:opacity-40"
+              style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+              Create
+            </button>
+          </div>
+        )}
+
+        {/* File list */}
+        <div className="flex-1 overflow-y-auto py-1">
+          {specs.length === 0 && (
+            <p className="px-3 py-4 text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>No spec files found</p>
+          )}
+          {specs.map(s => (
+            <div
+              key={s}
+              className="group flex items-center justify-between px-3 py-2 cursor-pointer transition-colors"
+              style={activeFile === s
+                ? { backgroundColor: 'rgba(37,99,235,0.08)', borderLeft: '2px solid #2563eb' }
+                : { borderLeft: '2px solid transparent' }}
+              onClick={() => setActiveFile(s)}
+              onMouseEnter={e => { if (activeFile !== s) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)' }}
+              onMouseLeave={e => { if (activeFile !== s) (e.currentTarget as HTMLElement).style.backgroundColor = '' }}
+            >
+              <span className="text-[11px] font-mono truncate" style={{ color: activeFile === s ? '#2563eb' : 'var(--text-main)' }}>
+                {s.replace(/\.spec\.(ts|js)$/, '')}
+                <span className="opacity-40">.spec.ts</span>
+              </span>
+              {delConfirm === s ? (
+                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => deleteFile(s)} className="text-[10px] font-bold text-red-500 hover:underline">del</button>
+                  <button onClick={() => setDelConfirm(null)} className="text-[10px]" style={{ color: 'var(--text-muted)' }}>✕</button>
+                </div>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); setDelConfirm(s) }}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
+                  style={{ color: '#ef4444' }}
+                  title="Delete file"
+                >
+                  <Trash2 size={10} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right: editor ── */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b shrink-0"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+          <div className="flex items-center gap-2">
+            <FileText size={12} style={{ color: 'var(--text-muted)' }} />
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>
+              {activeFile ?? '—'}
+            </span>
+            {isDirty && <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" title="Unsaved changes" />}
+            {saveMsg && <span className="text-[11px] font-semibold text-emerald-500">{saveMsg}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {error && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-red-400 max-w-xs truncate" title={error}>{error}</span>
+                {activeFile && (
+                  <button
+                    onClick={() => setLoadKey(k => k + 1)}
+                    className="text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0"
+                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                    title="Retry loading file"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{lineCount} lines</span>
+            <button
+              onClick={saveFile}
+              disabled={!activeFile || saving || !isDirty}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
+              style={isDirty && !saving
+                ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }
+              }
+              title="Save (Ctrl+S)"
+            >
+              {saving ? <RotateCcw size={11} className="animate-spin" /> : <Save size={11} />}
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => activeFile && onRunSpec(activeFile)}
+              disabled={!activeFile || isDirty}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
+              style={{ backgroundColor: '#059669', borderColor: '#059669', color: '#fff' }}
+              title={isDirty ? 'Save before running' : 'Run this spec'}
+            >
+              <Play size={11} /> Run
+            </button>
+          </div>
+        </div>
+
+        {/* Editor body */}
+        {!activeFile ? (
+          <div className="flex-1 flex items-center justify-center flex-col gap-3" style={{ backgroundColor: '#1e1e2e' }}>
+            <PenLine size={32} style={{ color: '#4c4f69' }} />
+            <p className="text-sm" style={{ color: '#6c7086' }}>Select a spec file to edit</p>
+            <button onClick={() => setShowNew(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+              style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+              <Plus size={12} /> New spec file
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#1e1e2e' }}>
+            <RotateCcw size={18} className="animate-spin" style={{ color: '#6c7086' }} />
+          </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
+            {/* Line numbers */}
+            <div
+              ref={lineNumbersRef}
+              className="select-none text-right pr-3 pl-3 py-3 text-[12px] font-mono leading-[1.6] shrink-0 overflow-hidden pointer-events-none"
+              style={{ color: '#4c4f69', minWidth: '3rem', userSelect: 'none' }}>
+              {Array.from({ length: lineCount }, (_, i) => (
+                <div key={i + 1}>{i + 1}</div>
+              ))}
+            </div>
+            {/* Code textarea */}
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onScroll={e => {
+                if (lineNumbersRef.current)
+                  lineNumbersRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop
+              }}
+              spellCheck={false}
+              className="flex-1 resize-none focus:outline-none py-3 pr-4 text-[12.5px] font-mono leading-[1.6]"
+              style={{
+                backgroundColor: '#1e1e2e',
+                color: '#cdd6f4',
+                caretColor: '#cdd6f4',
+                tabSize: 2,
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
-  const [suites, setSuites]               = useState<TestSuite[]>(INITIAL_SUITES)
+  const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
   const [activeTab, setActiveTab]         = useState<FilterKey>('all')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
@@ -1922,9 +2111,10 @@ export default function PlaywrightDashboard() {
   const [lastSavedAt, setLastSavedAt]     = useState<string | null>(null)
   const [justSaved, setJustSaved]         = useState(false)
   const [settingsOpen, setSettingsOpen]   = useState(false)
+  const [configTab, setConfigTab]         = useState<'config' | 'editor'>('config')
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list')
   const [searchQuery, setSearchQuery]     = useState('')
-  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({ login: true })
+  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({})
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
   const [hoveredTest, setHoveredTest]     = useState<string | null>(null)
   const [artifactModal, setArtifactModal] = useState<ArtifactModalState | null>(null)
@@ -1935,8 +2125,21 @@ export default function PlaywrightDashboard() {
   const [lastRunAt, setLastRunAt]           = useState<string | null>(null)
   const [runLog, setRunLog]                 = useState<string[]>([])
   const [showLog, setShowLog]               = useState(false)
-  const [availableSpecs, setAvailableSpecs] = useState<string[]>([])
-  const [selectedSpec, setSelectedSpec]     = useState<string>('')
+  const [availableSpecs, setAvailableSpecs]   = useState<string[]>([])
+  const [selectedSpecs, setSelectedSpecs]     = useState<Set<string>>(new Set())
+  const [specPickerOpen, setSpecPickerOpen]   = useState(false)
+  const specPickerRef                         = useRef<HTMLDivElement>(null)
+
+  // Close spec picker when clicking outside
+  useEffect(() => {
+    if (!specPickerOpen) return
+    const handler = (e: MouseEvent) => {
+      if (specPickerRef.current && !specPickerRef.current.contains(e.target as Node))
+        setSpecPickerOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [specPickerOpen])
   // ── Multi-run history ────────────────────────────────────────────────────────
   const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
   const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
@@ -2050,6 +2253,16 @@ export default function PlaywrightDashboard() {
     }
   }, [])
 
+  const clearHistory = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE}/api/playwright/history`, { method: 'DELETE' })
+      setRunHistory([])
+      setSelectedRunId(null)
+      // Reload the latest pw-results.json (not a specific archived run)
+      fetchResults()
+    } catch { /* ignore network errors */ }
+  }, [fetchResults])
+
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/playwright/history`)
@@ -2067,6 +2280,23 @@ export default function PlaywrightDashboard() {
     fetchSpecs()
     fetchHistory()
   }, [fetchResults, fetchSpecs, fetchHistory])
+
+  // ── Auto-poll when server is offline — reconnects every 5 s ────────────────
+  useEffect(() => {
+    if (serverOnline !== false) return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/playwright/specs`)
+        if (res.ok) {
+          setServerOnline(true)
+          fetchResults()
+          fetchSpecs()
+          fetchHistory()
+        }
+      } catch { /* still offline */ }
+    }, 5_000)
+    return () => clearInterval(id)
+  }, [serverOnline, fetchResults, fetchSpecs, fetchHistory])
 
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
@@ -2089,75 +2319,79 @@ export default function PlaywrightDashboard() {
     [suites, activeTab, searchQuery]
   )
 
-  // ── Run tests (real SSE when server online, demo animation otherwise) ───────
-  const runTests = useCallback(async () => {
+  // ── Core SSE runner (shared by runTests + runSingleSpec) ───────────────────
+  const runWithSSE = useCallback(async (body: Record<string, unknown>) => {
+    const controller = new AbortController()
+    const timeoutId  = setTimeout(() => controller.abort(), 10 * 60 * 1000) // 10-minute hard limit
     setRunning(true)
     setShowLog(true)
     setRunLog([])
     setExpandedErrors({})
     setSearchQuery('')
-
-    // Optimistically mark everything pending
+    setActiveView('dashboard')
     setSuites(prev => prev.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
     setExpandedSuites(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))
-
-    if (serverOnline) {
-      // ── Real run via server SSE ─────────────────────────────────────────────
-      try {
-        const response = await fetch(`${API_BASE}/api/playwright/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            spec:   selectedSpec || undefined,
-            config,
-          }),
-        })
-        if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
-
-        const reader  = response.body.getReader()
-        const decoder = new TextDecoder()
-        let   buffer  = ''
-
-        outer: while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const parts = buffer.split('\n')
-          buffer = parts.pop() ?? ''
-          for (const line of parts) {
-            if (!line.startsWith('data: ')) continue
-            let msg: string
-            try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
-            if (msg.startsWith('[DONE]')) { break outer }
-            setRunLog(prev => [...prev.slice(-999), msg])
-          }
+    try {
+      const response = await fetch(`${API_BASE}/api/playwright/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
+      if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      outer: while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n')
+        buffer = parts.pop() ?? ''
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          let msg: string
+          try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
+          if (msg.startsWith('[DONE]')) { break outer }
+          setRunLog(prev => [...prev.slice(-999), msg])
         }
-        // Refresh results + history after run completes
-        await fetchResults()
-        await fetchHistory()
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
-        setRunLog(prev => [...prev, `[ERROR] ${errMsg}`])
       }
-    } else {
-      // ── Demo animation ──────────────────────────────────────────────────────
-      setRunLog(['[DEMO] Server offline — running demo animation'])
-      setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
-      setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
-      const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
-      for (const { suiteId, test } of flat) {
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
-        await new Promise(r => setTimeout(r, 120 + Math.random() * 220))
-        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
-        setRunLog(prev => [...prev, `  ${test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '–'} ${test.title}`])
+      await fetchResults()
+      await fetchHistory()
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setRunLog(prev => [...prev, '[TIMEOUT] Test run exceeded 10 minutes and was cancelled.'])
+      } else {
+        setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
       }
-      setRunLog(prev => [...prev, '[DONE] Demo run complete'])
+    } finally {
+      clearTimeout(timeoutId)
+      setRunning(false)
+    }
+  }, [fetchResults, fetchHistory])  // eslint-disable-line
+
+  // ── Run a single spec from editor ─────────────────────────────────────────
+  const runSingleSpec = useCallback((spec: string) => {
+    runWithSSE({ spec, config })
+  }, [runWithSSE, config])
+
+  // ── Run tests (real SSE when server online, show offline message otherwise) ─
+  const runTests = useCallback(async () => {
+    if (!serverOnline) {
+      setShowLog(true)
+      setRunLog(['[OFFLINE] Server is not running. Start it with: npm run dev', '[OFFLINE] Waiting for server to come online…'])
+      return
     }
 
-    setRunning(false)
-  }, [serverOnline, selectedSpec, config, fetchResults, fetchHistory])
+    // ── Real run — delegate to runWithSSE ────────────────────────────────────
+    const specList = selectedSpecs.size > 0 ? Array.from(selectedSpecs) : []
+    const body: Record<string, unknown> = { config }
+    if (specList.length === 1)     body.spec  = specList[0]
+    else if (specList.length > 1)  body.specs = specList
+    await runWithSSE(body)
+  }, [serverOnline, selectedSpecs, config, runWithSSE])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
+  const reset = () => { setSuites([]); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null); setSelectedRunId(null) }
 
   const exportReport = () => {
     const report = {
@@ -2233,17 +2467,64 @@ export default function PlaywrightDashboard() {
             {/* Dashboard actions */}
             {activeView === 'dashboard' && (
               <>
-                {/* Spec selector */}
+                {/* Multi-spec picker */}
                 {availableSpecs.length > 0 && (
-                  <select
-                    value={selectedSpec}
-                    onChange={e => setSelectedSpec(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                    title="Pick a spec file to run">
-                    <option value="">All specs</option>
-                    {availableSpecs.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <div className="relative" ref={specPickerRef}>
+                    <button
+                      onClick={() => setSpecPickerOpen(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors"
+                      style={specPickerOpen || selectedSpecs.size > 0
+                        ? { borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.07)', color: '#2563eb' }
+                        : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }
+                      }
+                    >
+                      <CheckSquare size={12} />
+                      {selectedSpecs.size === 0
+                        ? 'All specs'
+                        : `${selectedSpecs.size} spec${selectedSpecs.size > 1 ? 's' : ''}`}
+                      <ChevronDown size={11} />
+                    </button>
+                    {specPickerOpen && (
+                      <div className="absolute top-full left-0 mt-1 z-50 rounded-xl border shadow-lg overflow-hidden min-w-[220px]"
+                        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                        <div className="flex items-center justify-between px-3 py-2 border-b text-[11px]"
+                          style={{ borderColor: 'var(--border)' }}>
+                          <span className="font-bold" style={{ color: 'var(--text-main)' }}>Select specs to run</span>
+                          <button
+                            onClick={() => setSelectedSpecs(selectedSpecs.size === availableSpecs.length ? new Set() : new Set(availableSpecs))}
+                            className="font-semibold hover:underline"
+                            style={{ color: '#2563eb' }}>
+                            {selectedSpecs.size === availableSpecs.length ? 'None' : 'All'}
+                          </button>
+                        </div>
+                        {availableSpecs.map(s => (
+                          <label key={s} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-opacity-50"
+                            style={{ backgroundColor: selectedSpecs.has(s) ? 'rgba(37,99,235,0.06)' : undefined }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedSpecs.has(s)}
+                              onChange={() => setSelectedSpecs(prev => {
+                                const next = new Set(prev)
+                                next.has(s) ? next.delete(s) : next.add(s)
+                                return next
+                              })}
+                              className="rounded accent-blue-600"
+                            />
+                            <span className="text-[11px] font-mono" style={{ color: 'var(--text-main)' }}>
+                              {s.replace(/\.spec\.(ts|js)$/, '')}<span className="opacity-40">.spec.ts</span>
+                            </span>
+                          </label>
+                        ))}
+                        <div className="px-3 py-2 border-t" style={{ borderColor: 'var(--border)' }}>
+                          <button onClick={() => setSpecPickerOpen(false)}
+                            className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                            style={{ backgroundColor: '#2563eb', color: '#fff' }}>
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {/* Quick grep filter */}
                 <div className="relative flex items-center">
@@ -2270,7 +2551,7 @@ export default function PlaywrightDashboard() {
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                   <Download size={13} /> Export
                 </button>
-                <button onClick={fetchResults} disabled={running || isLoading}
+                <button onClick={() => fetchResults()} disabled={running || isLoading}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
@@ -2366,54 +2647,87 @@ export default function PlaywrightDashboard() {
                 <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
                 <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
-                {PRESETS.map(preset => (
-                  <button
-                    key={preset.label}
-                    onClick={() => setConfig(c => ({ ...c, ...preset.config }))}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
-                  >
-                    <span style={{ color: preset.color }}>{preset.icon}</span>
-                    <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
+                {PRESETS.map(preset => {
+                  const isActive = preset.specs
+                    ? preset.specs.every(s => selectedSpecs.has(s)) && selectedSpecs.size === preset.specs.length
+                    : false
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => {
+                        setConfig(c => ({ ...c, ...preset.config }))
+                        if (preset.specs) setSelectedSpecs(new Set(preset.specs))
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
+                      style={{
+                        borderColor: isActive ? preset.color : 'var(--border)',
+                        backgroundColor: isActive ? `${preset.color}15` : 'var(--bg-body)',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = `${preset.color}10` }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = isActive ? preset.color : 'var(--border)'
+                        e.currentTarget.style.backgroundColor = isActive ? `${preset.color}15` : 'var(--bg-body)'
+                      }}
+                    >
+                      <span style={{ color: preset.color }}>{preset.icon}</span>
+                      <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            {/* ── Collapsible full config panel ───────────────────────── */}
+            {/* ── Collapsible config + editor panel ───────────────────── */}
             {settingsOpen && (
               <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: '#93c5fd' }}>
+                {/* Panel header with Config | Editor tabs */}
                 <div className="flex items-center justify-between px-4 py-2.5 border-b"
                   style={{ borderColor: '#bfdbfe', backgroundColor: 'rgba(37,99,235,0.04)' }}>
-                  <div className="flex items-center gap-2">
-                    <Settings size={13} style={{ color: '#2563eb' }} />
-                    <span className="text-xs font-bold" style={{ color: '#1d4ed8' }}>Configuration</span>
-                    {changedCount > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none">{changedCount} changed</span>
+                  <div className="flex items-center gap-1">
+                    {([
+                      { id: 'config' as const, icon: <Settings size={12} />, label: 'Config' },
+                      { id: 'editor' as const, icon: <PenLine size={12} />, label: 'Editor' },
+                    ]).map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setConfigTab(tab.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                        style={configTab === tab.id
+                          ? { backgroundColor: 'var(--bg-card)', color: '#2563eb', boxShadow: '0 1px 3px rgba(0,0,0,.08)' }
+                          : { color: 'var(--text-muted)' }
+                        }
+                      >
+                        {tab.icon} {tab.label}
+                      </button>
+                    ))}
+                    {configTab === 'config' && changedCount > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none ml-1">{changedCount} changed</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setConfig(DEFAULT_CONFIG)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
-                      <RotateCcw size={11} /> Reset
-                    </button>
-                    <button
-                      onClick={saveConfig}
-                      disabled={isSaved}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
-                      style={justSaved
-                        ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-                        : isSaved
-                          ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
-                          : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
-                      }
-                    >
-                      {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
-                    </button>
+                    {configTab === 'config' && (
+                      <>
+                        <button onClick={() => setConfig(DEFAULT_CONFIG)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
+                          <RotateCcw size={11} /> Reset
+                        </button>
+                        <button
+                          onClick={saveConfig}
+                          disabled={isSaved}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60"
+                          style={justSaved
+                            ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+                            : isSaved
+                              ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-muted)' }
+                              : { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                          }
+                        >
+                          {justSaved ? <><Check size={11} /> Saved!</> : isSaved ? <><Check size={11} /> Saved{lastSavedAt ? ` · ${lastSavedAt}` : ''}</> : <><Save size={11} /> Save</>}
+                        </button>
+                      </>
+                    )}
                     <button onClick={() => setSettingsOpen(false)}
                       className="p-1.5 rounded-lg border transition-colors"
                       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}>
@@ -2421,9 +2735,40 @@ export default function PlaywrightDashboard() {
                     </button>
                   </div>
                 </div>
-                <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-                  <SettingsView config={config} onChange={setConfig} noPresets />
-                </div>
+                {/* Panel body */}
+                {configTab === 'config' ? (
+                  <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <SettingsView config={config} onChange={setConfig} noPresets />
+                  </div>
+                ) : serverOnline === false ? (
+                  /* Server offline — don't attempt fetch, show clear instructions */
+                  <div className="flex flex-col items-center justify-center gap-3 py-16 px-6" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <Terminal size={28} className="opacity-30" style={{ color: 'var(--text-muted)' }} />
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Server is offline</p>
+                    <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                      The test editor reads and saves files through your local Express server.<br />
+                      Start it with <code className="font-mono px-1 py-0.5 rounded text-[11px]" style={{ backgroundColor: 'var(--bg-body)' }}>npm run dev</code> then click Retry.
+                    </p>
+                    <button
+                      onClick={() => { fetchSpecs(); fetchResults() }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }}>
+                      <RefreshCw size={12} /> Retry connection
+                    </button>
+                  </div>
+                ) : serverOnline === null ? (
+                  /* Still connecting */
+                  <div className="flex items-center justify-center gap-2 py-16" style={{ backgroundColor: 'var(--bg-card)' }}>
+                    <RefreshCw size={14} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Connecting to local server…</span>
+                  </div>
+                ) : (
+                  <EditorView
+                    specs={availableSpecs}
+                    onReloadSpecs={fetchSpecs}
+                    onRunSpec={runSingleSpec}
+                  />
+                )}
               </div>
             )}
 
@@ -2453,25 +2798,21 @@ export default function PlaywrightDashboard() {
               {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
             </div>
 
-            {/* History chart — real data when available, mock fallback in demo mode */}
-            {(() => {
-              const chartRuns = runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []
-              return (
-                <HistoryChart
-                  runs={chartRuns}
-                  selectedId={selectedRunId}
-                  onSelect={id => !demoMode && fetchResults(id)}
-                />
-              )
-            })()}
+            {/* History chart — real run records only */}
+            <HistoryChart
+              runs={runHistory}
+              selectedId={selectedRunId}
+              onSelect={id => fetchResults(id)}
+            />
 
-            {/* Runs panel — real runs only (not demo mock rows) */}
+            {/* Runs panel */}
             <RunsPanel
-              runs={runHistory.length > 0 ? runHistory : demoMode ? MOCK_RUN_RECORDS : []}
+              runs={runHistory}
               selectedId={selectedRunId}
               onSelect={id => fetchResults(id)}
               onLoadLatest={() => fetchResults()}
-              isDemo={runHistory.length === 0 && demoMode}
+              onClearHistory={clearHistory}
+              isDemo={false}
             />
 
             {/* Search + Filter + Mode toggle */}
@@ -2644,10 +2985,24 @@ export default function PlaywrightDashboard() {
               {filteredSuites.length === 0 && (
                 <div className="text-center py-16 rounded-2xl border shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
-                  </p>
-                  {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                  {suites.length === 0 ? (
+                    <>
+                      <Play size={28} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
+                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-main)' }}>No test results yet</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {serverOnline === false
+                          ? 'Server is offline — start it with: npm run dev'
+                          : 'Click Run Tests to execute your Playwright specs.'}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
+                      </p>
+                      {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                    </>
+                  )}
                 </div>
               )}
             </div>}
