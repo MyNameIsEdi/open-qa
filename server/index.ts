@@ -1,9 +1,11 @@
 import express from 'express'
 import cors from 'cors'
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { fileURLToPath } from 'url'
 import path from 'path'
+import fs from 'fs/promises'
+import { existsSync, readdirSync } from 'fs'
 import Anthropic from '@anthropic-ai/sdk'
 import * as dotenv from 'dotenv'
 
@@ -152,6 +154,191 @@ Automate TC-001 through TC-003 with Playwright APIRequestContext for fast CI fee
     sendChunk('[DONE]')
     res.end()
   }
+})
+
+// ─── Playwright helpers ───────────────────────────────────────────────────────
+
+const RESULTS_PATH = path.join(root, 'test-results', 'pw-results.json')
+const TESTS_DIR    = path.join(root, 'tests')
+
+/** Recursively collect all spec objects from a Playwright JSON suite tree */
+function collectSpecs(suite: Record<string, unknown>): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = []
+  const specs = suite.specs as Record<string, unknown>[] | undefined
+  const subs  = suite.suites as Record<string, unknown>[] | undefined
+  if (specs) out.push(...specs)
+  if (subs)  for (const child of subs) out.push(...collectSpecs(child))
+  return out
+}
+
+/** Flatten Playwright's nested reporter JSON into our TestSuite[] format */
+function normalizePwResults(raw: Record<string, unknown>) {
+  const topSuites = (raw.suites ?? []) as Record<string, unknown>[]
+  const normalized: Record<string, unknown>[] = []
+
+  for (const topSuite of topSuites) {
+    const file    = (topSuite.file ?? topSuite.title ?? 'unknown.spec.ts') as string
+    const suiteId = file.replace(/[^a-z0-9]/gi, '-').toLowerCase()
+    const describes = (topSuite.suites ?? []) as Record<string, unknown>[]
+
+    const testMap: Record<string, Record<string, unknown>[]> = {}
+
+    const processBlock = (block: Record<string, unknown>) => {
+      const descTitle = (block.title as string | undefined) || '(root)'
+      if (!testMap[descTitle]) testMap[descTitle] = []
+
+      for (const spec of collectSpecs(block)) {
+        const specTitle = (spec.title as string) ?? ''
+        const tests     = (spec.tests ?? []) as Record<string, unknown>[]
+
+        const browserResults: Record<string, unknown>[] = []
+        let primaryStatus   = 'pending'
+        let primaryDuration = 0
+        let primaryError: string | undefined
+        let primaryBrowser  = 'chromium'
+        let retries         = 0
+
+        for (const t of tests) {
+          const browser  = ((t.projectName as string | undefined) ?? 'chromium').toLowerCase()
+          const results  = (t.results ?? []) as Record<string, unknown>[]
+          const last     = results[results.length - 1]
+          if (!last) continue
+
+          const rawSt  = (last.status as string | undefined) ?? ''
+          const status =
+            rawSt === 'passed'   ? 'passed'  :
+            rawSt === 'failed'   ? 'failed'  :
+            rawSt === 'skipped'  ? 'skipped' :
+            rawSt === 'timedOut' ? 'failed'  : 'pending'
+
+          const duration = (last.duration as number | undefined) ?? 0
+          const errors   = (last.errors   as Record<string, unknown>[] | undefined) ?? []
+          const errorMsg = errors.length > 0
+            ? errors.map(e => (e.message as string | undefined) ?? JSON.stringify(e)).join('\n')
+            : undefined
+
+          browserResults.push({ browser, status, duration })
+
+          if (browser === 'chromium' || browserResults.length === 1) {
+            primaryStatus   = status
+            primaryDuration = duration
+            primaryError    = errorMsg
+            primaryBrowser  = browser
+          }
+
+          retries = Math.max(retries, results.length - 1)
+        }
+
+        testMap[descTitle].push({
+          id:       `${suiteId}-${specTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`.slice(0, 80),
+          title:    specTitle,
+          status:   primaryStatus,
+          duration: primaryDuration,
+          browser:  primaryBrowser,
+          error:    primaryError,
+          retries:  retries > 0 ? retries : undefined,
+          browserResults: browserResults.length > 0 ? browserResults : undefined,
+        })
+      }
+    }
+
+    if (describes.length > 0) {
+      for (const desc of describes) processBlock(desc)
+    } else {
+      processBlock(topSuite)
+    }
+
+    for (const [descTitle, tests] of Object.entries(testMap)) {
+      if (tests.length === 0) continue
+      normalized.push({
+        id:    `${suiteId}-${descTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`.slice(0, 80),
+        file,
+        title: descTitle === '(root)' ? file.replace(/\.spec\.(ts|js)$/, '') : descTitle,
+        tests,
+      })
+    }
+  }
+
+  const stats = (raw.stats ?? {}) as Record<string, unknown>
+  return {
+    suites: normalized,
+    stats: {
+      total:    ((stats.expected as number) ?? 0) + ((stats.unexpected as number) ?? 0) + ((stats.skipped as number) ?? 0),
+      passed:   (stats.expected    as number) ?? 0,
+      failed:   (stats.unexpected  as number) ?? 0,
+      skipped:  (stats.skipped     as number) ?? 0,
+      flaky:    (stats.flaky       as number) ?? 0,
+      duration: (stats.duration    as number) ?? 0,
+    },
+    runAt: (stats.startTime as string | undefined) ?? new Date().toISOString(),
+  }
+}
+
+// GET /api/playwright/specs — list *.spec.ts files in tests/
+app.get('/api/playwright/specs', (_req, res) => {
+  try {
+    if (!existsSync(TESTS_DIR)) return res.json({ specs: [] })
+    const files = readdirSync(TESTS_DIR)
+      .filter(f => /\.spec\.(ts|js)$/.test(f))
+      .sort()
+    res.json({ specs: files })
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// GET /api/playwright/results — read + normalize pw-results.json
+app.get('/api/playwright/results', async (_req, res) => {
+  try {
+    if (!existsSync(RESULTS_PATH)) {
+      return res.status(404).json({ error: 'No results file found. Run tests first.' })
+    }
+    const raw = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
+    res.json(normalizePwResults(raw))
+  } catch (err: unknown) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
+app.post('/api/playwright/run', (req, res) => {
+  const { spec } = req.body as { spec?: string }
+
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+
+  const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
+
+  const args = ['playwright', 'test', '--reporter=list,json']
+  if (spec) args.push(spec)
+
+  send(`[INFO] npx ${args.join(' ')}`)
+
+  const child = spawn('npx', args, {
+    cwd: root,
+    env: { ...process.env, FORCE_COLOR: '0' },
+    shell: process.platform === 'win32',
+  })
+
+  const stream = (chunk: Buffer) =>
+    chunk.toString().split('\n').filter(Boolean).forEach(line => send(line))
+
+  child.stdout.on('data', stream)
+  child.stderr.on('data', stream)
+
+  child.on('close', code => {
+    send(`[DONE] Finished with exit code ${code ?? 0}`)
+    res.end()
+  })
+
+  child.on('error', err => {
+    send(`[ERROR] ${err.message}`)
+    send('[DONE]')
+    res.end()
+  })
+
+  req.on('close', () => child.kill())
 })
 
 app.listen(PORT, () => {

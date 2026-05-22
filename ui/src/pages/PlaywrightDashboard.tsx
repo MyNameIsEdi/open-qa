@@ -99,6 +99,7 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
 }
 
 const STORAGE_KEY = 'pw_dashboard_config_v1'
+const API_BASE    = 'http://localhost:3001'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -1654,6 +1655,15 @@ export default function PlaywrightDashboard() {
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
   const [hoveredTest, setHoveredTest]     = useState<string | null>(null)
   const [artifactModal, setArtifactModal] = useState<ArtifactModalState | null>(null)
+  // ── Real-data states ────────────────────────────────────────────────────────
+  const [serverOnline, setServerOnline]     = useState<boolean | null>(null)
+  const [isLoading, setIsLoading]           = useState(false)
+  const [demoMode, setDemoMode]             = useState(true)
+  const [lastRunAt, setLastRunAt]           = useState<string | null>(null)
+  const [runLog, setRunLog]                 = useState<string[]>([])
+  const [showLog, setShowLog]               = useState(false)
+  const [availableSpecs, setAvailableSpecs] = useState<string[]>([])
+  const [selectedSpec, setSelectedSpec]     = useState<string>('')
 
   // ── Derived counts ──────────────────────────────────────────────────────────
   const allTests = useMemo(() => suites.flatMap(s => s.tests), [suites])
@@ -1724,6 +1734,49 @@ export default function PlaywrightDashboard() {
     setTimeout(() => setJustSaved(false), 2000)
   }, [config])
 
+  // ── Fetch results from server ───────────────────────────────────────────────
+  const fetchResults = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/playwright/results`)
+      if (res.status === 404) {
+        // Server online but no results yet
+        setServerOnline(true)
+        setDemoMode(true)
+        return
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json() as { suites: TestSuite[]; runAt: string }
+      setSuites(data.suites)
+      setDemoMode(false)
+      setServerOnline(true)
+      setLastRunAt(data.runAt ?? null)
+      setExpandedSuites(Object.fromEntries(data.suites.map(s => [s.id, true])))
+    } catch {
+      setServerOnline(false)
+      setDemoMode(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const fetchSpecs = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/playwright/specs`)
+      if (!res.ok) return
+      const data = await res.json() as { specs: string[] }
+      setAvailableSpecs(data.specs)
+    } catch {
+      // ignore — server may be offline
+    }
+  }, [])
+
+  // ── Fetch on mount ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchResults()
+    fetchSpecs()
+  }, [fetchResults, fetchSpecs])
+
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
     [...allTests].filter(t => t.duration > 0).sort((a, b) => b.duration - a.duration).slice(0, 3),
@@ -1745,23 +1798,71 @@ export default function PlaywrightDashboard() {
     [suites, activeTab, searchQuery]
   )
 
-  // ── Run simulation ──────────────────────────────────────────────────────────
+  // ── Run tests (real SSE when server online, demo animation otherwise) ───────
   const runTests = useCallback(async () => {
     setRunning(true)
+    setShowLog(true)
+    setRunLog([])
     setExpandedErrors({})
     setSearchQuery('')
-    setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
-    setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
-    const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
-    for (const { suiteId, test } of flat) {
-      setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
-      await new Promise(r => setTimeout(r, 150 + Math.random() * 250))
-      setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
-    }
-    setRunning(false)
-  }, [])
 
-  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery('') }
+    // Optimistically mark everything pending
+    setSuites(prev => prev.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
+    setExpandedSuites(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))
+
+    if (serverOnline) {
+      // ── Real run via server SSE ─────────────────────────────────────────────
+      try {
+        const response = await fetch(`${API_BASE}/api/playwright/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ spec: selectedSpec || undefined }),
+        })
+        if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
+
+        const reader  = response.body.getReader()
+        const decoder = new TextDecoder()
+        let   buffer  = ''
+
+        outer: while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const parts = buffer.split('\n')
+          buffer = parts.pop() ?? ''
+          for (const line of parts) {
+            if (!line.startsWith('data: ')) continue
+            let msg: string
+            try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
+            if (msg.startsWith('[DONE]')) { break outer }
+            setRunLog(prev => [...prev.slice(-999), msg])
+          }
+        }
+        // Refresh results after run completes
+        await fetchResults()
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        setRunLog(prev => [...prev, `[ERROR] ${errMsg}`])
+      }
+    } else {
+      // ── Demo animation ──────────────────────────────────────────────────────
+      setRunLog(['[DEMO] Server offline — running demo animation'])
+      setSuites(INITIAL_SUITES.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
+      setExpandedSuites(Object.fromEntries(INITIAL_SUITES.map(s => [s.id, true])))
+      const flat = INITIAL_SUITES.flatMap(s => s.tests.map(t => ({ suiteId: s.id, test: t })))
+      for (const { suiteId, test } of flat) {
+        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: 'running' }) }))
+        await new Promise(r => setTimeout(r, 120 + Math.random() * 220))
+        setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: s.tests.map(t => t.id !== test.id ? t : { ...t, status: test.status, duration: test.duration, error: test.error, retries: test.retries }) }))
+        setRunLog(prev => [...prev, `  ${test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '–'} ${test.title}`])
+      }
+      setRunLog(prev => [...prev, '[DONE] Demo run complete'])
+    }
+
+    setRunning(false)
+  }, [serverOnline, selectedSpec, fetchResults])
+
+  const reset = () => { setSuites(INITIAL_SUITES); setActiveTab('all'); setExpandedErrors({}); setSearchQuery(''); setDemoMode(true); setLastRunAt(null) }
 
   const exportReport = () => {
     const report = {
@@ -1794,9 +1895,20 @@ export default function PlaywrightDashboard() {
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Playwright Dashboard</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Playwright Dashboard</h1>
+              {serverOnline === true && !demoMode && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>Live</span>
+              )}
+              {demoMode && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>Demo</span>
+              )}
+            </div>
             <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {INITIAL_SUITES.length} suites · {counts.total} tests · {formatMs(totalDuration)}
+              {suites.length} suites · {counts.total} tests · {formatMs(totalDuration)}
+              {lastRunAt && ` · run at ${new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {serverOnline === false && <span className="ml-2 text-amber-500">· server offline</span>}
+              {isLoading && <span className="ml-2 text-blue-400">· loading…</span>}
             </p>
           </div>
 
@@ -1832,6 +1944,18 @@ export default function PlaywrightDashboard() {
             {/* Dashboard actions */}
             {activeView === 'dashboard' && (
               <>
+                {/* Spec selector */}
+                {availableSpecs.length > 0 && (
+                  <select
+                    value={selectedSpec}
+                    onChange={e => setSelectedSpec(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    title="Pick a spec file to run">
+                    <option value="">All specs</option>
+                    {availableSpecs.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
                 <button onClick={exportReport}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
@@ -1839,12 +1963,21 @@ export default function PlaywrightDashboard() {
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                   <Download size={13} /> Export
                 </button>
+                <button onClick={fetchResults} disabled={running || isLoading}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+                  title="Reload results from server">
+                  <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} /> Refresh
+                </button>
                 <button onClick={reset} disabled={running}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
-                  <RotateCcw size={13} /> Reset
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+                  title="Reset to demo data">
+                  Demo
                 </button>
                 <button
                   onClick={running ? () => setRunning(false) : runTests}
@@ -1890,6 +2023,28 @@ export default function PlaywrightDashboard() {
         {/* ── Dashboard view ───────────────────────────────────────────────────── */}
         {activeView === 'dashboard' && (
           <>
+            {/* Demo-mode banner */}
+            {demoMode && (
+              <div className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
+                style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
+                <AlertTriangle size={12} className="shrink-0" />
+                <span>
+                  <strong>Demo mode</strong> — showing sample data.
+                  {serverOnline === false
+                    ? ' Start the Express server (npm run dev) then click Refresh.'
+                    : serverOnline === true
+                      ? ' No results file found yet — click Run Tests to generate real data.'
+                      : ' Connecting to server…'}
+                </span>
+                <button
+                  onClick={fetchResults}
+                  className="ml-auto shrink-0 font-semibold underline hover:no-underline"
+                  style={{ color: '#92400e' }}>
+                  Retry
+                </button>
+              </div>
+            )}
+
             {/* Metric cards */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
               {([
@@ -2118,6 +2273,28 @@ export default function PlaywrightDashboard() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Run log terminal */}
+            {showLog && runLog.length > 0 && (
+              <div className="mt-4 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
+                  <div className="flex items-center gap-2">
+                    <Terminal size={13} style={{ color: '#10b981' }} />
+                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run Output</span>
+                    {running && <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
+                  </div>
+                  <button onClick={() => setShowLog(false)} className="hover:opacity-70 transition-opacity">
+                    <X size={13} style={{ color: 'var(--text-muted)' }} />
+                  </button>
+                </div>
+                <pre
+                  className="text-[10.5px] font-mono px-4 py-3 overflow-auto leading-relaxed"
+                  style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', margin: 0, maxHeight: '280px' }}>
+                  {runLog.join('\n')}
+                </pre>
               </div>
             )}
 
