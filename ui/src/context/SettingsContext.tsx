@@ -2,10 +2,10 @@
  * SettingsContext — global config + chat state for QA Office.
  *
  * Persisted to localStorage under 'open_qa_settings_v1':
- *   • GlobalSettings (API key, model)
+ *   • GlobalSettings (API key, model, provider)
  *   • AgentConfig[]
  *   • OfficeLayout
- *   • Message[] (conversation history — capped at 200 msgs)
+ *   • Message[] (history — capped at 200 msgs)
  *
  * Runtime-only (not persisted):
  *   • agentStatuses
@@ -15,25 +15,66 @@ import React, {
   createContext, useContext, useState, useCallback, useEffect,
 } from 'react'
 
+// ─── Public constants ──────────────────────────────────────────────────────────
+
+/** The permanent Team Manager agent ID — used to route untagged messages */
+export const TEAM_MANAGER_ID = 'agent-manager'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AgentStatus = 'idle' | 'working' | 'waiting' | 'error'
 export type SpriteType  = 'dev' | 'tester' | 'analyst' | 'devops' | 'manager'
 
+/** Extended message type for orchestration events */
+export type MessageType = 'chat' | 'delegation' | 'qa_summary'
+
 export interface Attachment {
   name:    string   // original filename
-  type:    string   // MIME type (e.g. "image/png", "text/plain")
+  type:    string   // MIME type
   content: string   // Base64 (images) or raw text
 }
 
+/** A single test failure extracted from Playwright results for the summary card */
+export interface QAFailure {
+  testTitle:  string
+  suiteName:  string
+  error:      string
+  errorType:  'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error'
+  suggestion: string
+  fixCode?:   string
+}
+
+/** Structured post-run summary attached to a qa_summary Message */
+export interface QASummaryData {
+  total:    number
+  passed:   number
+  failed:   number
+  duration: number
+  failures: QAFailure[]
+}
+
+/** One step in a multi-agent delegation chain */
+export interface DelegationStep {
+  agentId:   string
+  agentName: string
+  status:    'pending' | 'active' | 'done' | 'error'
+  msgId?:    string   // message ID produced by this agent
+}
+
 export interface Message {
-  id:           string
-  role:         'user' | 'model'
-  content:      string
-  senderName:   string          // "User" | agent.name
-  agentId?:     string          // undefined for user messages
-  timestamp:    number
-  attachments?: Attachment[]
+  id:              string
+  role:            'user' | 'model'
+  content:         string
+  senderName:      string
+  agentId?:        string
+  timestamp:       number
+  attachments?:    Attachment[]
+  /** Optional: marks orchestration-specific messages */
+  type?:           MessageType
+  /** For type:'delegation' — the agents Edi M is delegating to */
+  delegationTo?:   string[]
+  /** For type:'qa_summary' — structured failure data from Playwright */
+  summaryData?:    QASummaryData
 }
 
 export interface AgentConfig {
@@ -43,6 +84,8 @@ export interface AgentConfig {
   systemPrompt:    string
   characterSprite: SpriteType
   deskId:          string
+  /** Marks the team manager — cannot be deleted from roster */
+  isManager?:      boolean
 }
 
 export interface DeskConfig {
@@ -59,42 +102,37 @@ export interface OfficeLayout {
 }
 
 export interface GlobalSettings {
-  geminiApiKey:   string
-  defaultModel:   string
-  /** Which AI backend to use in the Office chat */
-  provider:       'gemini' | 'ollama'
-  /** Base URL for the local Ollama server (default http://localhost:11434) */
-  ollamaBaseUrl:  string
-  /** Model name to use with Ollama (e.g. llama3.2, mistral, codellama) */
-  ollamaModel:    string
+  geminiApiKey:  string
+  defaultModel:  string
+  provider:      'gemini' | 'ollama'
+  ollamaBaseUrl: string
+  ollamaModel:   string
 }
 
-// ─── Context value interface ──────────────────────────────────────────────────
+// ─── Context value ────────────────────────────────────────────────────────────
 
 interface SettingsContextValue {
-  // Config
-  settings:       GlobalSettings
-  agents:         AgentConfig[]
-  layout:         OfficeLayout
-  // Runtime statuses
+  settings:           GlobalSettings
+  agents:             AgentConfig[]
+  layout:             OfficeLayout
   agentStatuses:      Record<string, AgentStatus>
-  activeTypingAgents: string[]   // agent IDs currently streaming a response
-  // Conversation
+  activeTypingAgents: string[]
   messages:           Message[]
-  // Setters
-  updateSettings: (patch: Partial<GlobalSettings>) => void
-  setAgents:      (agents: AgentConfig[]) => void
-  updateAgent:    (id: string, patch: Partial<AgentConfig>) => void
-  addAgent:       (agent: AgentConfig) => void
-  removeAgent:    (id: string) => void
-  setAgentStatus: (id: string, status: AgentStatus) => void
-  updateLayout:   (patch: Partial<OfficeLayout>) => void
+  // Config
+  updateSettings:   (patch: Partial<GlobalSettings>) => void
+  setAgents:        (agents: AgentConfig[]) => void
+  updateAgent:      (id: string, patch: Partial<AgentConfig>) => void
+  addAgent:         (agent: AgentConfig) => void
+  removeAgent:      (id: string) => void
+  setAgentStatus:   (id: string, status: AgentStatus) => void
+  updateLayout:     (patch: Partial<OfficeLayout>) => void
   // Chat
-  appendMessage:        (msg: Message) => void
-  appendChunk:          (msgId: string, chunk: string) => void
-  clearHistory:         () => void
-  setActiveTyping:      (agentIds: string[]) => void
-  removeActiveTyping:   (agentId: string) => void
+  appendMessage:       (msg: Message) => void
+  appendChunk:         (msgId: string, chunk: string) => void
+  updateMessage:       (msgId: string, patch: Partial<Omit<Message, 'id'>>) => void
+  clearHistory:        () => void
+  setActiveTyping:     (agentIds: string[]) => void
+  removeActiveTyping:  (agentId: string) => void
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -103,12 +141,13 @@ export const DEFAULT_LAYOUT: OfficeLayout = {
   rows:  8,
   cols:  12,
   desks: [
-    { id: 'desk-1', x: 1,  y: 1, label: 'E2E Station'  },
-    { id: 'desk-2', x: 4,  y: 1, label: 'Architecture' },
-    { id: 'desk-3', x: 7,  y: 1, label: 'Triage Hub'   },
-    { id: 'desk-4', x: 2,  y: 5, label: 'A11y Lab'     },
-    { id: 'desk-5', x: 6,  y: 5, label: 'CI Pipeline'  },
-    { id: 'desk-6', x: 10, y: 3, label: 'Healer Lab'   },
+    { id: 'desk-1', x: 1,  y: 1, label: 'E2E Station'   },
+    { id: 'desk-2', x: 4,  y: 1, label: 'Architecture'  },
+    { id: 'desk-3', x: 7,  y: 1, label: 'Triage Hub'    },
+    { id: 'desk-4', x: 2,  y: 5, label: 'A11y Lab'      },
+    { id: 'desk-5', x: 6,  y: 5, label: 'CI Pipeline'   },
+    { id: 'desk-6', x: 10, y: 3, label: 'Healer Lab'    },
+    { id: 'desk-7', x: 5,  y: 3, label: 'Manager Hub'   },  // Edi M
   ],
 }
 
@@ -181,13 +220,38 @@ export const DEFAULT_AGENTS: AgentConfig[] = [
     systemPrompt:
       'You are a Playwright self-healing locator specialist. ' +
       'When a test locator breaks due to UI changes: ' +
-      '(1) Ask for the failing test line, error message, and DOM snapshot (page.content() or accessibility tree). ' +
-      '(2) Strip noise (scripts, styles, SVGs); focus on role, aria-label, data-testid, name, type, placeholder. ' +
+      '(1) Ask for the failing test line, error message, and DOM snapshot. ' +
+      '(2) Strip noise (scripts, styles, SVGs); focus on role, aria-label, data-testid. ' +
       '(3) Rank 3+ candidate locators by resilience: ' +
       'getByTestId > getByRole+name > getByLabel > getByPlaceholder > getByText > CSS/XPath. ' +
-      '(4) Output a Markdown table with rank, ready-to-paste TypeScript code, confidence, and caveats. ' +
-      '(5) Flag risks: strict-mode violations, Shadow DOM, dynamic text, custom testIdAttribute. ' +
+      '(4) Output a Markdown table with rank, TypeScript code, confidence, and caveats. ' +
+      '(5) Flag risks: strict-mode violations, Shadow DOM, dynamic text. ' +
       '(6) Recommend adding data-testid attributes to prevent future breakage.',
+  },
+  {
+    id:              TEAM_MANAGER_ID,
+    name:            'Edi M',
+    role:            'Team Manager',
+    characterSprite: 'manager',
+    deskId:          'desk-7',
+    isManager:       true,
+    systemPrompt:
+      'You are Edi M, Team Manager and QA Orchestrator. ' +
+      'You lead a specialist QA team with these members:\n' +
+      '• @E2E Tester — Playwright test scripts, end-to-end flows\n' +
+      '• @POM Architect — Page Object Model class generation\n' +
+      '• @Bug Triager — failure analysis, structured bug reports\n' +
+      '• @A11y Expert — WCAG 2.1 AA accessibility audits\n' +
+      '• @CI Engineer — GitHub Actions pipelines, Docker, sharding\n' +
+      '• @Locator Healer — self-healing broken selectors\n\n' +
+      'When you receive a task:\n' +
+      '1. Analyse the intent and decide which specialist(s) to involve.\n' +
+      '2. State your delegation plan clearly, using @Name to tag them exactly.\n' +
+      '3. Provide a brief rationale for each delegation choice.\n' +
+      '4. Keep your own response concise — your job is routing, not doing.\n\n' +
+      'If the user greets you or asks a general question, answer directly without delegating. ' +
+      'If execution commands appear (like /run-all), acknowledge them and confirm the action. ' +
+      'Always maintain a professional, decisive tone.',
   },
 ]
 
@@ -200,7 +264,7 @@ const DEFAULT_SETTINGS: GlobalSettings = {
 }
 
 const STORAGE_KEY    = 'open_qa_settings_v1'
-const MAX_MSG_STORED = 200   // cap history size in localStorage
+const MAX_MSG_STORED = 200
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
@@ -217,9 +281,7 @@ function loadFromStorage(): PersistedState {
     if (!raw) return { settings: DEFAULT_SETTINGS, agents: DEFAULT_AGENTS, layout: DEFAULT_LAYOUT, messages: [] }
     const parsed = JSON.parse(raw) as Partial<PersistedState>
 
-    // Merge: keep stored agents/desks, append any new defaults not yet present.
-    // This ensures existing users automatically receive newly added agents/desks
-    // on next page load without losing their own customisations.
+    // Merge: keep stored agents/desks, append newly added defaults
     const storedAgents = parsed.agents?.length ? parsed.agents : null
     const mergedAgents = storedAgents
       ? [
@@ -252,15 +314,13 @@ function loadFromStorage(): PersistedState {
 
 function saveToStorage(state: PersistedState) {
   try {
-    // Trim attachments from stored messages to avoid quota issues
     const safeMessages = state.messages.slice(-MAX_MSG_STORED).map(m => ({
       ...m,
-      // Keep text attachments; drop large image Base64 blobs
       attachments: m.attachments?.filter(a => !a.type.startsWith('image/')),
     }))
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, messages: safeMessages }))
   } catch {
-    // quota exceeded — silently ignore
+    // quota exceeded — ignore
   }
 }
 
@@ -278,7 +338,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [messages,      setMessages]      = useState<Message[]>(stored.messages)
   const [activeTypingAgents, setActiveTypingAgentsState] = useState<string[]>([])
 
-  // Persist whenever persisted state changes
   useEffect(() => {
     saveToStorage({ settings, agents, layout, messages })
   }, [settings, agents, layout, messages])
@@ -302,6 +361,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const removeAgent = useCallback((id: string) => {
+    // Prevent deleting the team manager
+    if (id === TEAM_MANAGER_ID) return
     setAgentsState(prev => prev.filter(a => a.id !== id))
   }, [])
 
@@ -315,15 +376,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // ── Chat setters ────────────────────────────────────────────────────────────
 
-  /** Add a complete message (user or empty model placeholder) */
   const appendMessage = useCallback((msg: Message) => {
     setMessages(prev => [...prev, msg])
   }, [])
 
-  /** Append a streaming text chunk to an existing message by id */
   const appendChunk = useCallback((msgId: string, chunk: string) => {
     setMessages(prev =>
       prev.map(m => m.id === msgId ? { ...m, content: m.content + chunk } : m),
+    )
+  }, [])
+
+  /** Patch any field (except id) on an existing message */
+  const updateMessage = useCallback((msgId: string, patch: Partial<Omit<Message, 'id'>>) => {
+    setMessages(prev =>
+      prev.map(m => m.id === msgId ? { ...m, ...patch } : m),
     )
   }, [])
 
@@ -331,12 +397,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setMessages([])
   }, [])
 
-  /** Mark a set of agents as currently typing (replaces the whole list) */
   const setActiveTyping = useCallback((agentIds: string[]) => {
     setActiveTypingAgentsState(agentIds)
   }, [])
 
-  /** Remove one agent from the active-typing list when their stream ends */
   const removeActiveTyping = useCallback((agentId: string) => {
     setActiveTypingAgentsState(prev => prev.filter(id => id !== agentId))
   }, [])
@@ -347,7 +411,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       agentStatuses, activeTypingAgents, messages,
       updateSettings, setAgents, updateAgent, addAgent, removeAgent,
       setAgentStatus, updateLayout,
-      appendMessage, appendChunk, clearHistory, setActiveTyping, removeActiveTyping,
+      appendMessage, appendChunk, updateMessage, clearHistory,
+      setActiveTyping, removeActiveTyping,
     }}>
       {children}
     </SettingsContext.Provider>

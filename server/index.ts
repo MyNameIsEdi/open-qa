@@ -904,19 +904,100 @@ app.post('/api/playwright/run', async (req, res) => {
   req.on('close', () => child.kill())
 })
 
-// POST /api/run-dynamic-test — write agent code to temp spec file and run it via Playwright SSE
+// ─── Dynamic test runner helpers ─────────────────────────────────────────────
+
+/** Edi M's system prompt for post-run QA summaries */
+const EDI_M_SUMMARY_SYSTEM =
+  'You are Edi M, Team Manager and QA Orchestrator for an elite software testing team. ' +
+  'You have just received the results of a Playwright test run executed by one of your specialist agents. ' +
+  'Provide an **Executive QA Summary** that is concise, technically precise, and actionable. ' +
+  'For EACH failing test:\n' +
+  '1. Classify the failure type: Timeout | Assertion | Locator | Network | Error\n' +
+  '2. Give a one-sentence root-cause analysis\n' +
+  '3. Assign priority: P0 (blocker) | P1 (critical) | P2 (major) | P3 (minor)\n' +
+  '4. Provide a ready-to-apply TypeScript fix in a fenced ```typescript block\n\n' +
+  'Structure your response with these Markdown sections:\n' +
+  '## Run Overview\n## Failure Analysis\n## Recommendations\n## Risk Assessment\n\n' +
+  'If all tests passed, celebrate briefly and suggest any coverage improvements. ' +
+  'Keep the tone professional and decisive.'
+
+interface DynamicTestBody {
+  code?:          string
+  agentName?:     string
+  // AI credentials for post-run Edi M summary
+  apiKey?:        string
+  model?:         string
+  provider?:      'gemini' | 'ollama'
+  ollamaBaseUrl?: string
+  ollamaModel?:   string
+}
+
+function buildSummaryPrompt(
+  normalized: ReturnType<typeof normalizePwResults>,
+  agentName?: string,
+): string {
+  const { suites, stats } = normalized
+  const allTests    = suites.flatMap(s => s.tests)
+  const failedTests = allTests.filter(t => (t as { status: string }).status === 'failed')
+
+  const header =
+    `## Test Run Results (authored by: ${agentName ?? 'agent'})\n` +
+    `- Total: ${stats.total} | Passed: ${stats.passed} | ` +
+    `Failed: ${stats.failed} | Skipped: ${stats.skipped}\n` +
+    `- Duration: ${(stats.duration / 1000).toFixed(2)}s\n\n`
+
+  if (failedTests.length === 0) {
+    return header + '**Result: All tests passed! ✅**\nNo failures to analyse.'
+  }
+
+  const details = failedTests.map((t, i) => {
+    const typed = t as { id: string; title: string; error?: string; duration: number }
+    const suite  = suites.find(s =>
+      s.tests.some((st: { id: string }) => st.id === typed.id),
+    )
+    return (
+      `### Failure ${i + 1}: "${typed.title}"\n` +
+      `**Suite:** ${suite?.title ?? 'unknown'}\n` +
+      `**Error:** ${typed.error ?? 'No error message captured'}\n` +
+      `**Duration:** ${typed.duration}ms\n`
+    )
+  }).join('\n')
+
+  return header + '## Failures\n\n' + details
+}
+
+// POST /api/run-dynamic-test — write agent code, run Playwright, then stream
+// Edi M's AI summary as a second SSE phase.
+//
+// SSE event protocol:
+//   Phase 1 (test run):   data: "<string>"  — JSON-stringified log lines
+//   Phase 2 (AI summary): data: {"evt":"summary_start"}
+//                         data: {"evt":"summary_chunk","text":"..."}
+//                         data: {"evt":"summary_done","failures":[...]}
 app.post('/api/run-dynamic-test', async (req, res) => {
-  const { code, agentName } = req.body as { code?: string; agentName?: string }
+  const {
+    code,
+    agentName,
+    apiKey,
+    model         = 'gemini-2.0-flash',
+    provider      = 'gemini',
+    ollamaBaseUrl = 'http://localhost:11434',
+    ollamaModel   = 'llama3.2',
+  } = req.body as DynamicTestBody
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
 
-  const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
+  /** Send a plain log-line string (phase 1) */
+  const sendStr = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
+  /** Send a structured summary event (phase 2) */
+  const sendEvt = (payload: Record<string, unknown>) =>
+    res.write(`data: ${JSON.stringify(payload)}\n\n`)
 
-  if (!code || !code.trim()) {
-    send('[ERROR] No test code provided')
-    send('[DONE]')
+  if (!code?.trim()) {
+    sendStr('[ERROR] No test code provided')
+    sendStr('[DONE] Finished with exit code 1')
     res.end()
     return
   }
@@ -926,11 +1007,11 @@ app.post('/api/run-dynamic-test', async (req, res) => {
 
   try {
     await fs.writeFile(tmpFile, authorLine + code, 'utf-8')
-    send(`[INFO] Dynamic test written by ${agentName ?? 'agent'}`)
-    send('[INFO] Running: npx playwright test _dynamic_agent_test.spec.ts')
+    sendStr(`[INFO] Dynamic spec written by ${agentName ?? 'agent'}`)
+    sendStr('[INFO] Running: npx playwright test _dynamic_agent_test.spec.ts')
   } catch (err: unknown) {
-    send(`[ERROR] Failed to write test file: ${String(err)}`)
-    send('[DONE]')
+    sendStr(`[ERROR] Failed to write test file: ${String(err)}`)
+    sendStr('[DONE] Finished with exit code 1')
     res.end()
     return
   }
@@ -942,27 +1023,125 @@ app.post('/api/run-dynamic-test', async (req, res) => {
   }
 
   const child = spawn('npx', ['playwright', 'test'], {
-    cwd: root,
+    cwd:   root,
     env,
     shell: process.platform === 'win32',
   })
 
-  const stream = (chunk: Buffer) =>
-    chunk.toString().split('\n').filter(Boolean).forEach(line => send(line))
+  const streamLine = (chunk: Buffer) =>
+    chunk.toString().split('\n').filter(Boolean).forEach(line => sendStr(line))
 
-  child.stdout.on('data', stream)
-  child.stderr.on('data', stream)
+  child.stdout.on('data', streamLine)
+  child.stderr.on('data', streamLine)
 
   child.on('close', async exitCode => {
+    // Archive run first, then clean up temp file
     try { await archiveRun(`agent:${agentName ?? 'dynamic'}`) } catch { /* non-fatal */ }
     try { await fs.unlink(tmpFile) } catch { /* non-fatal */ }
-    send(`[DONE] Finished with exit code ${exitCode ?? 0}`)
+
+    sendStr(`[DONE] Finished with exit code ${exitCode ?? 0}`)
+
+    // ── Phase 2: Edi M AI Summary ─────────────────────────────────────────────
+    if (!existsSync(RESULTS_PATH)) {
+      sendEvt({ evt: 'summary_done', failures: [] })
+      res.end()
+      return
+    }
+
+    // Extract failure data for structured summary_done event
+    let failures: Array<{ testTitle: string; suiteName: string; error: string; errorType: string }> = []
+    let summaryPrompt = ''
+
+    try {
+      const rawResults  = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
+      const normalized  = normalizePwResults(rawResults)
+      summaryPrompt     = buildSummaryPrompt(normalized, agentName)
+
+      // Build structured failure list for the client
+      failures = normalized.suites.flatMap(s =>
+        (s.tests as Array<{ status: string; title: string; error?: string }>)
+          .filter(t => t.status === 'failed')
+          .map(t => {
+            const err = t.error ?? ''
+            const errorType =
+              /timeout/i.test(err)                          ? 'Timeout'   :
+              /toHave|toBe|toContain|expect/i.test(err)    ? 'Assertion' :
+              /locator|strict mode|resolved/i.test(err)    ? 'Locator'   :
+              /net::|ERR_|fetch|request/i.test(err)        ? 'Network'   : 'Error'
+            return { testTitle: t.title, suiteName: s.title, error: err, errorType }
+          }),
+      )
+    } catch {
+      sendEvt({ evt: 'summary_done', failures: [] })
+      res.end()
+      return
+    }
+
+    sendEvt({ evt: 'summary_start' })
+
+    // Guard: skip AI call if no credentials
+    if (!apiKey && provider === 'gemini') {
+      sendEvt({ evt: 'summary_chunk', text: '⚠️ No Gemini API key configured — set it in **Settings** to enable AI summaries.\n\nTest run completed. Check the dashboard for full results.' })
+      sendEvt({ evt: 'summary_done', failures })
+      res.end()
+      return
+    }
+
+    try {
+      if (provider === 'ollama') {
+        // ── Ollama summary path ─────────────────────────────────────────────
+        const ollamaMessages = [
+          { role: 'system',    content: EDI_M_SUMMARY_SYSTEM },
+          { role: 'user',      content: summaryPrompt },
+        ]
+        const ollamaRes = await fetch(`${ollamaBaseUrl}/api/chat`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ model: ollamaModel, messages: ollamaMessages, stream: true }),
+          signal:  AbortSignal.timeout(90_000),
+        })
+        if (!ollamaRes.ok || !ollamaRes.body) throw new Error(`Ollama HTTP ${ollamaRes.status}`)
+        const reader  = (ollamaRes.body as ReadableStream<Uint8Array>).getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const p = JSON.parse(line) as { message?: { content?: string }; done?: boolean }
+              if (p.message?.content) sendEvt({ evt: 'summary_chunk', text: p.message.content })
+              if (p.done) break
+            } catch { /* skip malformed */ }
+          }
+        }
+      } else {
+        // ── Gemini summary path ─────────────────────────────────────────────
+        const { GoogleGenerativeAI } = await import('@google/generative-ai')
+        const genAI    = new GoogleGenerativeAI(apiKey!)
+        const genModel = genAI.getGenerativeModel({ model, systemInstruction: EDI_M_SUMMARY_SYSTEM })
+        const chat     = genModel.startChat({ history: [] })
+        const result   = await chat.sendMessageStream([{ text: summaryPrompt }])
+        for await (const chunk of result.stream) {
+          const text = chunk.text()
+          if (text) sendEvt({ evt: 'summary_chunk', text })
+        }
+      }
+    } catch (err: unknown) {
+      sendEvt({ evt: 'summary_chunk', text: `\n\n[Summary error: ${String(err)}]` })
+    }
+
+    sendEvt({ evt: 'summary_done', failures })
     res.end()
   })
 
   child.on('error', err => {
-    send(`[ERROR] ${err.message}`)
-    send('[DONE]')
+    sendStr(`[ERROR] ${err.message}`)
+    sendStr('[DONE] Finished with exit code 1')
+    sendEvt({ evt: 'summary_done', failures: [] })
     res.end()
   })
 

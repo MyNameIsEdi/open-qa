@@ -13,8 +13,8 @@ import {
 import { OfficeCanvas }                        from '../office/components/OfficeCanvas'
 import { OfficeState }                         from '../office/engine/officeState'
 import { loadDefaultLayout, loadOfficeAssets } from '../office/assetLoader'
-import { useSettings }                         from '../context/SettingsContext'
-import type { AgentConfig, Attachment, Message, SpriteType } from '../context/SettingsContext'
+import { useSettings, TEAM_MANAGER_ID }        from '../context/SettingsContext'
+import type { AgentConfig, Attachment, Message, SpriteType, QASummaryData } from '../context/SettingsContext'
 import type { OfficeLayout }                   from '../office/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -2833,6 +2833,15 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
+  // ── Global settings + chat context ─────────────────────────────────────────
+  const {
+    settings,
+    appendMessage,
+    appendChunk,
+    updateMessage,
+    agents: allAgents,
+  } = useSettings()
+
   const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
   const [activeTab, setActiveTab]         = useState<FilterKey>('active')
@@ -3151,11 +3160,25 @@ export default function PlaywrightDashboard() {
     setExpandedErrors({})
     setSearchQuery('')
     setActiveView('dashboard')
+
+    // Phase 2 tracking — AI summary streamed into chat
+    let summaryMsgId: string | null = null
+    let inSummaryPhase = false
+
     try {
       const response = await fetch(`${API_BASE}/api/run-dynamic-test`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ code, agentName }),
+        body:    JSON.stringify({
+          code,
+          agentName,
+          // AI credentials for post-run summarization
+          apiKey:        settings.geminiApiKey,
+          model:         settings.defaultModel,
+          provider:      settings.provider,
+          ollamaBaseUrl: settings.ollamaBaseUrl,
+          ollamaModel:   settings.ollamaModel,
+        }),
         signal:  controller.signal,
       })
       if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
@@ -3170,12 +3193,75 @@ export default function PlaywrightDashboard() {
         buffer = parts.pop() ?? ''
         for (const line of parts) {
           if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6)
+
+          // Try parsing as a structured event object first
+          let evt: Record<string, unknown> | null = null
+          try {
+            const parsed = JSON.parse(raw)
+            if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
+              evt = parsed as Record<string, unknown>
+            }
+          } catch { /* not JSON — plain string */ }
+
+          if (evt) {
+            // ── Phase 2: structured summary events ──────────────────────────
+            if (evt.evt === 'summary_start') {
+              inSummaryPhase = true
+              setRunning(false)   // stop spinner — tests are done
+
+              // Find Edi M agent config for display name / agentId
+              const mgrAgent = allAgents.find(a => a.id === TEAM_MANAGER_ID)
+              const mgrName  = mgrAgent?.name ?? 'Edi M'
+              const newMsgId = `dyn-summary-${Date.now()}`
+              summaryMsgId   = newMsgId
+
+              appendMessage({
+                id:         newMsgId,
+                role:       'model',
+                content:    '',
+                senderName: mgrName,
+                agentId:    TEAM_MANAGER_ID,
+                timestamp:  Date.now(),
+                type:       'qa_summary',
+              })
+            } else if (evt.evt === 'summary_chunk' && summaryMsgId) {
+              const chunk = typeof evt.text === 'string' ? evt.text : ''
+              if (chunk) appendChunk(summaryMsgId, chunk)
+            } else if (evt.evt === 'summary_done') {
+              // Attach structured failure data if provided
+              if (summaryMsgId && evt.failures) {
+                updateMessage(summaryMsgId, {
+                  summaryData: {
+                    total:    typeof evt.total    === 'number' ? evt.total    : 0,
+                    passed:   typeof evt.passed   === 'number' ? evt.passed   : 0,
+                    failed:   typeof evt.failed   === 'number' ? evt.failed   : 0,
+                    duration: typeof evt.duration === 'number' ? evt.duration : 0,
+                    failures: evt.failures as QASummaryData['failures'],
+                  },
+                })
+              }
+              break outer
+            }
+            // skip other evt types
+            continue
+          }
+
+          // ── Phase 1: plain string log lines ─────────────────────────────
+          if (inSummaryPhase) continue   // ignore stray strings after phase 2 starts
           let msg: string
-          try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
-          if (msg.startsWith('[DONE]')) { break outer }
+          try { msg = JSON.parse(raw) as string } catch { msg = raw }
+          if (msg.startsWith('[DONE]')) {
+            // [DONE] signals end of Phase 1 — wait for summary events unless none coming
+            // (If AI credentials missing the server may skip summary phase entirely)
+            if (!settings.geminiApiKey && settings.provider === 'gemini') break outer
+            // else keep reading for summary_start
+            continue
+          }
           setRunLog(prev => [...prev.slice(-999), msg])
         }
       }
+
       await fetchResults()
       await new Promise(r => setTimeout(r, 120))
       await fetchHistory()
@@ -3189,7 +3275,7 @@ export default function PlaywrightDashboard() {
       clearTimeout(timeoutId)
       setRunning(false)
     }
-  }, [serverOnline, fetchResults, fetchHistory])  // eslint-disable-line
+  }, [serverOnline, fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])  // eslint-disable-line
 
   // ── Run tests (real SSE when server online, show offline message otherwise) ─
   const runTests = useCallback(async () => {
