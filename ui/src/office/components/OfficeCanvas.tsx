@@ -61,6 +61,12 @@ export function OfficeCanvas({
    * re-centres whenever the container resizes.
    */
   const fitZoomRef = useRef(zoom)
+  /**
+   * Track the last-seen layout dimensions so the render loop can detect when
+   * rebuildFromLayout() is called asynchronously (e.g. after default-layout.json
+   * loads) and re-run resizeCanvas() to correct fitZoom + container height.
+   */
+  const lastLayoutDimsRef = useRef({ cols: 0, rows: 0 })
 
   // ── Effective zoom used by the render loop ────────────────────────────────
   // Interactive mode: use the prop value. Locked mode: use auto-fit value.
@@ -153,6 +159,18 @@ export function OfficeCanvas({
     const stop = startGameLoop(canvas, {
       update: (dt) => { officeState.update(dt) },
       render: (ctx) => {
+        // ── Detect async layout changes (e.g. after default-layout.json loads)
+        // rebuildFromLayout() changes cols/rows but doesn't call resizeCanvas().
+        // We detect the change here and re-run resize so fitZoom + container
+        // height are corrected before this frame is drawn.
+        if (locked) {
+          const lyt = officeState.getLayout()
+          if (lyt.cols !== lastLayoutDimsRef.current.cols || lyt.rows !== lastLayoutDimsRef.current.rows) {
+            lastLayoutDimsRef.current = { cols: lyt.cols, rows: lyt.rows }
+            resizeCanvas()
+          }
+        }
+
         const w  = canvas.width
         const h  = canvas.height
         const ez = effectiveZoom()
