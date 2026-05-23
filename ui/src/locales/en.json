@@ -16,6 +16,7 @@
   "common": {
     "copy": "Copy",
     "copied": "Copied!",
+    "copy_failed": "Failed to copy",
     "add_to_claude": "Add to Claude",
     "active": "Active",
     "planned": "Planned",

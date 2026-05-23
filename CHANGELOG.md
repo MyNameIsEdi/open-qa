@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Migrated AI logic from numbered demo folders into `src/`; shared LLM client at `src/core/llm-client.ts`.
 - Moved marketplace HTML to `docs/` with `css/` and `js/` assets; updated all script paths and README links.
+- Code snippet copy buttons now show a failure state if browser clipboard access is denied.
 
 ### Removed
 - Deleted legacy folders `01-Self-Healing-Tests`, `02-Smart-Data-Gen`, `03-Automated-Bug-Report`, `04-AI-Agents-QA`, `05-Visual-Regression`, and `lib/`.

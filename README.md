@@ -124,7 +124,7 @@ Fill in a form at `/submit` — name, system prompt, category, run command — a
 
 <img src="assets/screenshots/cheatsheet.png" width="900" alt="Cheatsheet" />
 
-One-click copy reference with **10 collapsible sections** — all your go-to patterns in one place:
+One-click copy reference with **10 collapsible sections** — all your go-to patterns in one place. Copy buttons show a failure state if browser clipboard access is denied.
 
 | Section | Contents |
 |---------|----------|
