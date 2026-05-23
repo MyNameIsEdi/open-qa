@@ -50,8 +50,6 @@ All notable changes to this project will be documented in this file.
   layout JSON are untouched (`ui/src/pages/PlaywrightDashboard.tsx`).
 - `archiveRun()` now logs success/failure to the console — silent
   archive failures are no longer invisible.
-- Migrated AI logic from numbered demo folders into `src/`; shared LLM client at `src/core/llm-client.ts`.
-- Moved marketplace HTML to `docs/` with `css/` and `js/` assets; updated all script paths and README links.
 
 ### Changed
 
