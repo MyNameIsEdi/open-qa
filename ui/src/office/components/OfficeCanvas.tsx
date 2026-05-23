@@ -98,30 +98,44 @@ export function OfficeCanvas({
     const container = containerRef.current
     if (!canvas || !container) return
 
-    // Use offsetWidth/Height (integer CSS px) as a stable fallback when
-    // getBoundingClientRect returns 0 during the first synchronous layout pass.
-    const rect = container.getBoundingClientRect()
-    const cssW = rect.width  || container.offsetWidth  || 1
-    const cssH = rect.height || container.offsetHeight || 1
-    const dpr  = window.devicePixelRatio || 1
+    const dpr = window.devicePixelRatio || 1
 
-    canvas.width  = Math.round(cssW * dpr)
-    canvas.height = Math.round(cssH * dpr)
-    // Keep CSS display size = container size (1:1 CSS px mapping)
-    canvas.style.width  = `${cssW}px`
-    canvas.style.height = `${cssH}px`
-
-    // Recalculate fit-zoom whenever the buffer dimensions change.
-    // 0.95 margin keeps a subtle breathing gap so the map never touches the edge.
     if (locked) {
+      // ── Locked (sidebar) mode: WIDTH-DRIVEN sizing ────────────────────────
+      // The container width is fixed by the parent flex layout.
+      // We derive the correct CSS height from the map's aspect ratio so the map
+      // fills the container edge-to-edge with ZERO dead space — regardless of
+      // what cols/rows the runtime layout actually has.
       const layout = officeState.getLayout()
       const cols = layout.cols || 1
       const rows = layout.rows || 1
-      const maxScaleX = canvas.width  / (cols * TILE_SIZE)
-      const maxScaleY = canvas.height / (rows * TILE_SIZE)
-      fitZoomRef.current = Math.min(maxScaleX, maxScaleY) * 0.95
-      // Reset pan to zero so the map stays centred after resize
+
+      const cssW = Math.round(container.getBoundingClientRect().width || container.offsetWidth || 1)
+      const cssH = Math.round(cssW * rows / cols)
+
+      // Imperatively set the container height to match the map's aspect ratio.
+      // Guard against infinite ResizeObserver loops: only write if changed.
+      const wantedH = `${cssH}px`
+      if (container.style.height !== wantedH) container.style.height = wantedH
+
+      canvas.width  = Math.round(cssW * dpr)
+      canvas.height = Math.round(cssH * dpr)
+      canvas.style.width  = `${cssW}px`
+      canvas.style.height = `${cssH}px`
+
+      // fitZoom: map fills the full width exactly (no margin factor needed)
+      fitZoomRef.current = canvas.width / (cols * TILE_SIZE)
       panRef.current = { x: 0, y: 0 }
+    } else {
+      // ── Interactive mode: use the CSS dimensions as-is ────────────────────
+      const rect = container.getBoundingClientRect()
+      const cssW = rect.width  || container.offsetWidth  || 1
+      const cssH = rect.height || container.offsetHeight || 1
+
+      canvas.width  = Math.round(cssW * dpr)
+      canvas.height = Math.round(cssH * dpr)
+      canvas.style.width  = `${cssW}px`
+      canvas.style.height = `${cssH}px`
     }
   }, [locked, officeState, panRef])
 

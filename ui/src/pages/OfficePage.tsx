@@ -1087,7 +1087,7 @@ export default function OfficePage() {
           </div>
 
           {/* Canvas */}
-          <div className="w-full shrink-0 relative overflow-hidden" style={{ aspectRatio: '20/11', background: '#1a1a2e' }}>
+          <div className="w-full shrink-0 relative overflow-hidden" style={{ background: '#1a1a2e' }}>
             {!assetsReady && (
               <div className="absolute inset-0 flex items-center justify-center z-10"
                 style={{ background: '#1a1a2e' }}>
