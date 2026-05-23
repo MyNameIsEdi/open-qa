@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Pixel-agents office font */
+@font-face {
+  font-family: 'FSPixelSans';
+  src: url('/fonts/FSPixelSansUnicode-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --bg-body:   #EEE8DC;
   --bg-card:   #FAF7F2;

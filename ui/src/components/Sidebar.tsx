@@ -1,34 +1,35 @@
+/**
+ * Sidebar — app-wide navigation.
+ *
+ * "Office" is the primary hub at the top.  It has an expandable sub-menu
+ * showing the tool pages.  Clicking a desk in OfficeCanvas also navigates
+ * to these same routes, so they're available both ways.
+ */
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Home, Target, Bot, Zap, FileCode2, MessageSquare, Wrench,
+  Home, Target, Bot,
   BookOpen, LayoutList, Activity, FileText, PlusCircle,
   X, ChevronLeft, ChevronRight,
+  Settings,
 } from 'lucide-react'
 import { useRtl } from '../hooks/useRtl'
+
+// ─── Route definitions ────────────────────────────────────────────────────────
 
 const GROUPS = [
   {
     label: 'Main',
     items: [
-      { to: '/',         label: 'Home',         Icon: Home },
-      { to: '/missions', label: 'Missions',      Icon: Target },
-    ],
-  },
-  {
-    label: 'Toolkit',
-    items: [
-      { to: '/agents',     label: 'Agents',      Icon: Bot },
-      { to: '/playground', label: 'Playground',  Icon: Zap },
-      { to: '/generate',   label: 'Generate',    Icon: FileCode2 },
-      { to: '/prompts',    label: 'Prompts',     Icon: MessageSquare },
-      { to: '/skills',     label: 'Skills',      Icon: Wrench },
+      { to: '/',         label: 'Home',      Icon: Home        },
+      { to: '/missions', label: 'Missions',  Icon: Target      },
+      { to: '/office',   label: 'QA Office', Icon: Bot         },
     ],
   },
   {
     label: 'Learning',
     items: [
-      { to: '/guides',     label: 'Guides',      Icon: BookOpen },
-      { to: '/cheatsheet', label: 'Cheatsheet',  Icon: LayoutList },
+      { to: '/guides',     label: 'Guides',     Icon: BookOpen  },
+      { to: '/cheatsheet', label: 'Cheatsheet', Icon: LayoutList },
     ],
   },
   {
@@ -46,16 +47,30 @@ const GROUPS = [
   },
 ] as const
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface SidebarProps {
-  open: boolean
-  collapsed: boolean
-  onClose: () => void
+  open:             boolean
+  collapsed:        boolean
+  onClose:          () => void
   onToggleCollapse: () => void
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: SidebarProps) {
   const location = useLocation()
-  const isRtl = useRtl()
+  const isRtl    = useRtl()
+
+  const navLinkCls = (active: boolean) => `
+    flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+    transition-all duration-150
+    ${collapsed ? 'justify-center' : ''}
+    ${active
+      ? 'bg-zinc-700 text-white font-semibold'
+      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+    }
+  `
 
   return (
     <>
@@ -90,6 +105,8 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
 
         {/* Scrollable nav */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-4">
+
+          {/* ── STANDARD GROUPS ────────────────────────────────────────────── */}
           {GROUPS.map(({ label, items }) => (
             <div key={label}>
               <div
@@ -114,15 +131,7 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
                       end={to === '/'}
                       onClick={onClose}
                       title={collapsed ? itemLabel : undefined}
-                      className={`
-                        flex items-center gap-3 px-3 py-2 rounded-lg text-sm
-                        transition-all duration-150
-                        ${collapsed ? 'justify-center' : ''}
-                        ${isActive
-                          ? 'bg-zinc-700 text-white font-semibold'
-                          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
-                        }
-                      `}
+                      className={navLinkCls(isActive)}
                     >
                       <Icon size={16} className="shrink-0" />
                       <span
@@ -138,6 +147,35 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
               </div>
             </div>
           ))}
+
+          {/* ── SETTINGS (bottom of scrollable area) ───────────────────────── */}
+          <div>
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                collapsed ? 'max-h-0 opacity-0 mb-0' : 'max-h-8 opacity-100 mb-1'
+              }`}
+            >
+              <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                Config
+              </p>
+            </div>
+            <NavLink
+              to="/settings"
+              onClick={onClose}
+              title={collapsed ? 'Settings' : undefined}
+              className={navLinkCls(location.pathname === '/settings')}
+            >
+              <Settings size={16} className="shrink-0" />
+              <span
+                className={`truncate transition-all duration-200 ${
+                  collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
+                }`}
+              >
+                Settings
+              </span>
+            </NavLink>
+          </div>
+
         </nav>
 
         {/* Desktop collapse toggle */}

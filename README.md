@@ -3,7 +3,7 @@
 
 # OPEN-QA — The QA Toolkit AI Is Missing
 
-**Production-ready Playwright + Claude toolkit with a React marketplace UI**
+**Production-ready Playwright + Claude toolkit with a pixel-art AI office, live chat, and React marketplace UI**
 
 [![Claude AI](https://img.shields.io/badge/Claude_AI-D97757?style=flat-square&logo=anthropic&logoColor=white)](https://anthropic.com)
 [![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
@@ -14,7 +14,6 @@
 
 🚀 **[Try the Live Demo Here](https://mynameisedi.github.io/open-qa/#/)**
 
-
 <img src="assets/screenshots/home.jpeg" width="900" alt="open-qa home page" />
 
 </div>
@@ -23,11 +22,49 @@
 
 ## What is open-qa?
 
-open-qa combines a Node.js AI agent core (self-healing tests, data generation, bug triage, accessibility scanning, visual regression, POM generation) with a React/Vite/Tailwind marketplace UI. Every agent and skill runs with **no API key needed** in MOCK mode — swap in your `ANTHROPIC_API_KEY` to go live.
+open-qa combines a Node.js AI agent core (self-healing tests, data generation, bug triage, accessibility scanning, visual regression, POM generation) with a React/Vite/Tailwind marketplace UI and a **pixel-art QA Office** where six specialist AI agents live and respond to your messages in real time. Every agent and skill runs with **no API key needed** in MOCK mode — swap in your Gemini API key or point it at a local **Ollama** model to go fully live.
 
 ---
 
 ## Features
+
+### 🏢 QA Office — Live AI Chat with Your Team
+
+<img src="assets/screenshots/qa-office.png" width="900" alt="QA Office — pixel-art office with 6 AI agents and integrated chat panel" />
+
+A pixel-art office where six specialist QA agents sit at their desks and answer your questions in real time. Click any agent on the canvas or `@mention` them in the chat to direct a question. Responses stream word-by-word via SSE.
+
+| Agent | Desk | Speciality |
+|-------|------|-----------|
+| E2E Tester | E2E Station | Playwright tests, Page Object Models, locator best practices |
+| POM Architect | Architecture | Typed POM classes from DOM snapshots |
+| Bug Triager | Triage Hub | Structured bug reports: P0–P3, RCA, steps to reproduce |
+| A11y Expert | A11y Lab | WCAG 2.1 AA violations with element-level fixes |
+| CI Engineer | CI Pipeline | GitHub Actions pipelines, sharding, Docker, artefact upload |
+| Locator Healer | Healer Lab | Self-healing broken Playwright locators — ranked candidate table |
+
+**Chat features:**
+- `@mention` autocomplete to target specific agents
+- File & image attachments (paste or 📎 button)
+- Inline Gemini ↔ Ollama provider toggle — switch models without leaving the page
+- Shared conversation history across all pages (persisted in localStorage)
+- Markdown rendering with copy-ready code blocks
+
+---
+
+### 📊 Playwright Dashboard — Run Tests + Office in One View
+
+<img src="assets/screenshots/playwright.png" width="900" alt="Playwright Dashboard with integrated QA Office and chat" />
+
+Run your Playwright suite, watch live output stream in, and discuss failures with the AI team — all in the same panel. The integrated QA Office panel sits alongside the test runner:
+
+- **Live test output** streams line-by-line as tests execute
+- **Run History** — every run archived with pass/fail counts and duration
+- **Spec filter** — select individual spec files to run
+- **All 6 agents animate** when tests are running; Bug Triager + Locator Healer stay active after a run with failures
+- **Full AI chat** — same @mention, file attachment, and streaming as the QA Office
+
+---
 
 ### Autonomous Agents
 
@@ -150,14 +187,12 @@ git clone https://github.com/MyNameIsEdi/open-qa.git
 cd open-qa
 npm install
 npx playwright install chromium
-
 ```
 
 ### 2. Start the full app (no API key needed)
 
 ```bash
 npm run dev
-
 ```
 
 Opens the UI at **http://localhost:5174** and starts the API server on port 3001.
@@ -169,31 +204,46 @@ All agents and the playground run in **MOCK mode** by default.
 ```bash
 npm test          # Playwright end-to-end specs
 npm run typecheck # TypeScript strict check
-
 ```
 
-### 4. Enable live Claude (optional)
+### 4a. Enable live Gemini (optional)
+
+Go to **Settings** in the app, enter your Gemini API key, and select a model. Or set it in the QA Office chat header directly.
 
 ```bash
-cp .env.example .env
-# Edit .env and add: ANTHROPIC_API_KEY=sk-ant-...
-npm run dev
-
+# Or set via environment variable:
+GEMINI_API_KEY=your-key npm run dev
 ```
+
+### 4b. Enable local Ollama (optional)
+
+```bash
+# Install Ollama: https://ollama.com
+ollama pull llama3.2   # or mistral, codellama, etc.
+ollama serve           # starts on http://localhost:11434
+```
+
+Then open the app → **Settings** → switch provider to **Ollama** and choose your model. Or use the **✨ / 🦙** toggle in the QA Office chat header for instant switching.
 
 ---
 
-## CLI Scripts
-
-Run agents directly from the terminal:
+## CLI
 
 ```bash
+# Run agents directly from the terminal:
 npm run run:healing            # Self-healing locator agent
 npm run run:datagen            # Smart edge-case data generator
 npm run run:bugreport          # Automated bug triage → output/AI_BUG_REPORT.md
 npm run run:visual-regression  # Visual regression → output/visual-regression/
 npm run run:auto-pom           # Auto-POM Builder → output/auto-pom/
 npm run run:visual-a11y        # Visual A11y Scanner → output/A11Y_REPORT.md
+
+# Global CLI (install once):
+npm install -g .
+open-qa start        # start the full app
+open-qa explore <url> # crawl a URL and generate a QA report
+open-qa heal         # run the self-healing locator agent
+open-qa help         # list all commands
 ```
 
 ---
@@ -215,34 +265,32 @@ open-qa/
 │       └── llm-client.ts       # Anthropic SDK wrapper (MOCK + live)
 ├── ui/                         # React 18 + Vite + Tailwind marketplace
 │   └── src/
-│       ├── components/         # Navbar, AgentCard, SkillCard, PromptCard…
-│       └── pages/              # Home, Agents, Skills, Prompts, Playground…
+│       ├── components/         # Navbar, AgentCard, SkillCard, Sidebar…
+│       ├── context/            # SettingsContext (agents, chat, provider)
+│       ├── office/             # Pixel-art engine (game loop, renderer, sprites)
+│       └── pages/
+│           ├── OfficePage.tsx          # QA Office — canvas + 6 agents + chat
+│           ├── PlaywrightDashboard.tsx # Test runner + integrated office chat
+│           ├── SettingsPage.tsx        # API keys, Gemini/Ollama config
+│           └── …                       # Agents, Skills, Prompts, Playground…
 ├── server/                     # Express 4 API (port 3001)
-│   └── index.ts                # /api/agents, /api/skills, /api/run/:id, SSE
+│   └── index.ts                # /api/qa-agent (SSE), /api/playwright/run, …
 ├── tests/                      # Playwright test suite
 ├── docs/                       # HTML documentation site
 ├── examples/                   # Usage examples & skill template
-│   ├── api-integration-test.ts
-│   ├── ecommerce-checkout.ts
-│   └── skill-template/         # Starter template for new skills
 ├── assets/
 │   └── screenshots/            # README & documentation images
 ├── output/                     # Generated artifacts from agent runs
-│   ├── api-tests/              # API test bug reports
-│   ├── checkout-tests/         # Checkout flow bug reports
-│   ├── visual-regression/      # Visual regression reports
-│   └── AI_BUG_REPORT.md        # Latest bug triage report
-├── scripts/                    # Developer utility scripts
-├── test-results/               # Playwright run results & archived runs
-└── playwright-report/          # Playwright HTML report
+└── test-results/               # Playwright run results & archived runs
 ```
 
 ### Tech stack
 
 | Layer | Technology |
 | --- | --- |
-| AI | Anthropic Claude (`claude-3-5-sonnet-20241022`) |
-| UI | React 18 · Vite 6 · Tailwind CSS 3 · Material UI icons |
+| AI | Google Gemini (`gemini-2.0-flash`) · Ollama (any local model) |
+| Office | Pixel-art canvas engine — sprites, game loop, SSE streaming |
+| UI | React 18 · Vite 6 · Tailwind CSS 3 |
 | Server | Express 4 · CORS · SSE streaming |
 | Testing | Playwright Test |
 | Language | TypeScript (strict) |
@@ -269,7 +317,6 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
   },
   "run_command": "npx tsx src/agents/self-healing/index.ts"
 }
-
 ```
 
 ---
@@ -286,7 +333,11 @@ Every agent and skill card copies a complete tool payload for Claude Desktop or 
 * [x] QA Automation Guides (12-chapter course)
 * [x] Submit an Agent page
 * [x] Skills-IL inspired warm-palette redesign
-
+* [x] **QA Office** — pixel-art office with 6 live AI agents + chat
+* [x] **Playwright Dashboard** — integrated test runner + office chat
+* [x] **Ollama support** — run agents against any local LLM
+* [x] **Locator Healer agent** — self-healing ranked locator table
+* [x] **Global CLI** (`open-qa start`, `explore`, `heal`)
 
 ---
 
