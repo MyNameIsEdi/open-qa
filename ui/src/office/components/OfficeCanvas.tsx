@@ -48,6 +48,26 @@ export function OfficeCanvas({
   const isPanningRef   = useRef(false)
   const panStartRef    = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })
   const zoomAccumRef   = useRef(0)
+  /**
+   * When locked=true we ignore the `zoom` prop and instead auto-compute a
+   * "fit zoom" so the map always fills the container pixel-perfectly,
+   * regardless of devicePixelRatio or container size.
+   *
+   * Formula (device pixels):
+   *   fitZoom = min(canvas.width  / (cols * TILE_SIZE),
+   *                 canvas.height / (rows * TILE_SIZE))
+   *
+   * This is recalculated every time resizeCanvas() fires so the map
+   * re-centres whenever the container resizes.
+   */
+  const fitZoomRef = useRef(zoom)
+
+  // ── Effective zoom used by the render loop ────────────────────────────────
+  // Interactive mode: use the prop value. Locked mode: use auto-fit value.
+  const effectiveZoom = useCallback(
+    () => (locked ? fitZoomRef.current : zoom),
+    [locked, zoom],
+  )
 
   // ── pan clamping ─────────────────────────────────────────────────────────────
 
@@ -55,9 +75,10 @@ export function OfficeCanvas({
     (px: number, py: number): { x: number; y: number } => {
       const canvas = canvasRef.current
       if (!canvas) return { x: px, y: py }
+      const ez     = effectiveZoom()
       const layout = officeState.getLayout()
-      const mapW = layout.cols * TILE_SIZE * zoom
-      const mapH = layout.rows * TILE_SIZE * zoom
+      const mapW = layout.cols * TILE_SIZE * ez
+      const mapH = layout.rows * TILE_SIZE * ez
       const marginX = canvas.width  * PAN_MARGIN_FRACTION
       const marginY = canvas.height * PAN_MARGIN_FRACTION
       const maxX = mapW / 2 + canvas.width  / 2 - marginX
@@ -67,7 +88,7 @@ export function OfficeCanvas({
         y: Math.max(-maxY, Math.min(maxY, py)),
       }
     },
-    [officeState, zoom],
+    [officeState, effectiveZoom],
   )
 
   // ── canvas resize ─────────────────────────────────────────────────────────────
@@ -76,13 +97,33 @@ export function OfficeCanvas({
     const canvas    = canvasRef.current
     const container = containerRef.current
     if (!canvas || !container) return
+
+    // Use offsetWidth/Height (integer CSS px) as a stable fallback when
+    // getBoundingClientRect returns 0 during the first synchronous layout pass.
     const rect = container.getBoundingClientRect()
+    const cssW = rect.width  || container.offsetWidth  || 1
+    const cssH = rect.height || container.offsetHeight || 1
     const dpr  = window.devicePixelRatio || 1
-    canvas.width  = Math.round(rect.width  * dpr)
-    canvas.height = Math.round(rect.height * dpr)
-    canvas.style.width  = `${rect.width}px`
-    canvas.style.height = `${rect.height}px`
-  }, [])
+
+    canvas.width  = Math.round(cssW * dpr)
+    canvas.height = Math.round(cssH * dpr)
+    // Keep CSS display size = container size (1:1 CSS px mapping)
+    canvas.style.width  = `${cssW}px`
+    canvas.style.height = `${cssH}px`
+
+    // Recalculate fit-zoom whenever the buffer dimensions change
+    if (locked) {
+      const layout = officeState.getLayout()
+      const cols = layout.cols || 1
+      const rows = layout.rows || 1
+      fitZoomRef.current = Math.min(
+        canvas.width  / (cols * TILE_SIZE),
+        canvas.height / (rows * TILE_SIZE),
+      )
+      // Reset pan to zero so the map stays centered after resize
+      panRef.current = { x: 0, y: 0 }
+    }
+  }, [locked, officeState, panRef])
 
   // ── game loop ─────────────────────────────────────────────────────────────────
 
@@ -98,18 +139,25 @@ export function OfficeCanvas({
     const stop = startGameLoop(canvas, {
       update: (dt) => { officeState.update(dt) },
       render: (ctx) => {
-        const w = canvas.width
-        const h = canvas.height
+        const w  = canvas.width
+        const h  = canvas.height
+        const ez = effectiveZoom()
 
-        // Camera follow
-        if (officeState.cameraFollowId !== null) {
+        // ── Background fill ────────────────────────────────────────────────
+        // Ensures no raw-black void outside the artboard at any DPR / size.
+        ctx.imageSmoothingEnabled = false
+        ctx.fillStyle = '#13131f'
+        ctx.fillRect(0, 0, w, h)
+
+        // Camera follow (interactive mode only — locked maps stay centered)
+        if (!locked && officeState.cameraFollowId !== null) {
           const ch = officeState.characters.get(officeState.cameraFollowId)
           if (ch) {
             const layout = officeState.getLayout()
-            const mapW = layout.cols * TILE_SIZE * zoom
-            const mapH = layout.rows * TILE_SIZE * zoom
-            const targetX = mapW / 2 - ch.x * zoom
-            const targetY = mapH / 2 - ch.y * zoom
+            const mapW = layout.cols * TILE_SIZE * ez
+            const mapH = layout.rows * TILE_SIZE * ez
+            const targetX = mapW / 2 - ch.x * ez
+            const targetY = mapH / 2 - ch.y * ez
             const dx = targetX - panRef.current.x
             const dy = targetY - panRef.current.y
             if (
@@ -133,9 +181,9 @@ export function OfficeCanvas({
           officeState.tileMap,
           officeState.furniture,
           officeState.getCharacters(),
-          zoom,
-          panRef.current.x,
-          panRef.current.y,
+          ez,                        // ← auto-fit zoom when locked
+          locked ? 0 : panRef.current.x,
+          locked ? 0 : panRef.current.y,
           {
             selectedAgentId: officeState.selectedAgentId,
             hoveredAgentId:  officeState.hoveredAgentId,
@@ -153,7 +201,7 @@ export function OfficeCanvas({
     })
 
     return () => { stop(); observer.disconnect() }
-  }, [officeState, resizeCanvas, zoom, panRef])
+  }, [officeState, resizeCanvas, zoom, panRef, locked, effectiveZoom])
 
   // ── coordinate utils ──────────────────────────────────────────────────────────
 
@@ -167,11 +215,13 @@ export function OfficeCanvas({
       const cssY = clientY - rect.top
       const devX = cssX * dpr
       const devY = cssY * dpr
-      const worldX = (devX - offsetRef.current.x) / zoom
-      const worldY = (devY - offsetRef.current.y) / zoom
+      // Use effectiveZoom() so hit-testing is correct in both free and locked modes
+      const ez     = effectiveZoom()
+      const worldX = (devX - offsetRef.current.x) / ez
+      const worldY = (devY - offsetRef.current.y) / ez
       return { worldX, worldY }
     },
-    [zoom],
+    [effectiveZoom],
   )
 
   const screenToTile = useCallback(

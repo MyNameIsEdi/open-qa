@@ -13,8 +13,8 @@ import {
 import { OfficeCanvas }                        from '../office/components/OfficeCanvas'
 import { OfficeState }                         from '../office/engine/officeState'
 import { loadDefaultLayout, loadOfficeAssets } from '../office/assetLoader'
-import { useSettings }                         from '../context/SettingsContext'
-import type { AgentConfig, Attachment, Message, SpriteType } from '../context/SettingsContext'
+import { useSettings, TEAM_MANAGER_ID }        from '../context/SettingsContext'
+import type { AgentConfig, Attachment, Message, SpriteType, QASummaryData } from '../context/SettingsContext'
 import type { OfficeLayout }                   from '../office/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -2134,8 +2134,13 @@ function EditorView({
 
 // ─── PW Office Panel — helper components ─────────────────────────────────────
 
-function PwMarkdownContent({ text }: { text: string }) {
-  const [copied, setCopied] = useState<number | null>(null)
+function PwMarkdownContent({ text, onRunCode, agentName }: {
+  text: string
+  onRunCode?: (code: string, agentName?: string) => void
+  agentName?: string
+}) {
+  const [copied,  setCopied]  = useState<number | null>(null)
+  const [running, setRunning] = useState<number | null>(null)
   const copyCode = useCallback((code: string, idx: number) => {
     void navigator.clipboard.writeText(code).then(() => {
       setCopied(idx); setTimeout(() => setCopied(null), 2000)
@@ -2148,16 +2153,37 @@ function PwMarkdownContent({ text }: { text: string }) {
         const fm = /^```([\w]*)\n([\s\S]*?)```$/.exec(part)
         if (fm) {
           const lang = fm[1] || 'text'; const code = fm[2].trimEnd()
+          const isRunnable = !!onRunCode && /^(typescript|javascript|ts|js)$/i.test(lang)
           return (
             <div key={i} className="relative my-1.5 rounded-lg overflow-hidden"
               style={{ background: '#0d1117', border: '1px solid #30363d' }}>
               <div className="flex items-center justify-between px-2 py-1"
                 style={{ background: '#161b22', borderBottom: '1px solid #30363d' }}>
                 <span className="text-[9px] font-mono uppercase" style={{ color: '#8b949e' }}>{lang}</span>
-                <button onClick={() => copyCode(code, i)} className="text-[9px] px-1.5 py-0.5 rounded transition-colors"
-                  style={{ color: copied === i ? '#3fb950' : '#8b949e', background: copied === i ? 'rgba(63,185,80,0.1)' : 'transparent' }}>
-                  {copied === i ? '✓ Copied' : 'Copy'}
-                </button>
+                <div className="flex items-center gap-1">
+                  {isRunnable && (
+                    <button
+                      onClick={() => {
+                        setRunning(i)
+                        onRunCode!(code, agentName)
+                        setTimeout(() => setRunning(null), 3000)
+                      }}
+                      disabled={running === i}
+                      className="text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-0.5"
+                      style={{
+                        color:      running === i ? '#58a6ff' : '#3fb950',
+                        background: running === i ? 'rgba(88,166,255,0.1)' : 'rgba(63,185,80,0.08)',
+                        border:     `1px solid ${running === i ? 'rgba(88,166,255,0.3)' : 'rgba(63,185,80,0.25)'}`,
+                        opacity: running !== null && running !== i ? 0.5 : 1,
+                      }}>
+                      {running === i ? '⟳ Queued' : '▶ Run in Dashboard'}
+                    </button>
+                  )}
+                  <button onClick={() => copyCode(code, i)} className="text-[9px] px-1.5 py-0.5 rounded transition-colors"
+                    style={{ color: copied === i ? '#3fb950' : '#8b949e', background: copied === i ? 'rgba(63,185,80,0.1)' : 'transparent' }}>
+                    {copied === i ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
               </div>
               <pre className="px-3 py-2 overflow-x-auto font-mono text-[10px]" style={{ color: '#e6edf3', margin: 0 }}>
                 <code>{code}</code>
@@ -2189,8 +2215,9 @@ function PwMarkdownContent({ text }: { text: string }) {
   )
 }
 
-function PwMessageBubble({ msg, isStreaming, agents }: {
+function PwMessageBubble({ msg, isStreaming, agents, onRunCode }: {
   msg: Message; isStreaming: boolean; agents: AgentConfig[]
+  onRunCode?: (code: string, agentName?: string) => void
 }) {
   const isUser  = msg.role === 'user'
   const agent   = msg.agentId ? agents.find(a => a.id === msg.agentId) : null
@@ -2231,7 +2258,7 @@ function PwMessageBubble({ msg, isStreaming, agents }: {
           {isUser
             ? <span className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.content}</span>
             : (msg.content
-                ? <PwMarkdownContent text={msg.content} />
+                ? <PwMarkdownContent text={msg.content} onRunCode={onRunCode} agentName={agent?.name} />
                 : <span className="flex gap-0.5 items-center py-0.5">
                     {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
                   </span>
@@ -2250,11 +2277,13 @@ function PwMessageBubble({ msg, isStreaming, agents }: {
 // ─── PW Office Panel ─────────────────────────────────────────────────────────
 
 interface PwOfficePanelProps {
-  running: boolean
-  suites:  TestSuite[]
+  running:      boolean
+  suites:       TestSuite[]
+  onRunCode?:   (code: string, agentName?: string) => void
+  onRunAll?:    () => void
 }
 
-function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
+function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelProps) {
   const {
     agents, settings, updateSettings,
     messages, appendMessage, appendChunk, clearHistory,
@@ -2432,6 +2461,29 @@ function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
     setInputText('')
     setPendingFiles([])
 
+    // ── Slash-command interception: @AgentName /command ────────────────────
+    const slashMatch = /^@([\w][\w ]*?)\s+\/([\w-]+)/i.exec(text.trim())
+    if (slashMatch) {
+      const [, mentionedName, command] = slashMatch
+      const cmdAgent = agents.find(a =>
+        a.name.toLowerCase() === mentionedName.toLowerCase().trim(),
+      )
+      if (cmdAgent && ['run', 'run-all', 'fix-failures'].includes(command.toLowerCase())) {
+        setAgentStatus(cmdAgent.id, 'working')
+        const cmdMsg: Message = {
+          id: crypto.randomUUID(), role: 'model',
+          content: `▶ Command \`/${command}\` received — triggering automation suite…`,
+          senderName: cmdAgent.name, agentId: cmdAgent.id, timestamp: Date.now(),
+        }
+        appendMessage(cmdMsg)
+        // Kick off test run and restore idle state when done
+        onRunAll?.()
+        setTimeout(() => setAgentStatus(cmdAgent.id, 'idle'), 5000)
+        setStreamingMsgId(null)
+        return
+      }
+    }
+
     const tagged  = parseTaggedAgents(text)
     const targets = tagged.length > 0
       ? tagged
@@ -2529,6 +2581,7 @@ function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
     inputText, pendingFiles, streamingMsgId, settings, agents, messages, selectedAgentId,
     appendMessage, appendChunk, parseTaggedAgents,
     setActiveTyping, setAgentStatus, removeActiveTyping,
+    onRunAll,
   ])
 
   const handleStop = () => {
@@ -2700,7 +2753,7 @@ function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
           </div>
         )}
         {messages.map(msg => (
-          <PwMessageBubble key={msg.id} msg={msg} isStreaming={msg.id === streamingMsgId} agents={agents} />
+          <PwMessageBubble key={msg.id} msg={msg} isStreaming={msg.id === streamingMsgId} agents={agents} onRunCode={onRunCode} />
         ))}
         <div ref={chatEndRef} />
       </div>
@@ -2780,6 +2833,15 @@ function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
+  // ── Global settings + chat context ─────────────────────────────────────────
+  const {
+    settings,
+    appendMessage,
+    appendChunk,
+    updateMessage,
+    agents: allAgents,
+  } = useSettings()
+
   const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
   const [activeTab, setActiveTab]         = useState<FilterKey>('active')
@@ -3083,6 +3145,138 @@ export default function PlaywrightDashboard() {
     runWithSSE({ spec, config })
   }, [runWithSSE, config])
 
+  // ── Run an agent-generated code block via dynamic test endpoint ────────────
+  const runDynamicTest = useCallback(async (code: string, agentName?: string) => {
+    if (!serverOnline) {
+      setShowLog(true)
+      setRunLog([`[OFFLINE] Server not running — cannot execute dynamic test from ${agentName ?? 'agent'}`])
+      return
+    }
+    const controller = new AbortController()
+    const timeoutId  = setTimeout(() => controller.abort(), 10 * 60 * 1000)
+    setRunning(true)
+    setShowLog(true)
+    setRunLog([`[INFO] Dynamic test from ${agentName ?? 'agent'} — executing…`])
+    setExpandedErrors({})
+    setSearchQuery('')
+    setActiveView('dashboard')
+
+    // Phase 2 tracking — AI summary streamed into chat
+    let summaryMsgId: string | null = null
+    let inSummaryPhase = false
+
+    try {
+      const response = await fetch(`${API_BASE}/api/run-dynamic-test`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          code,
+          agentName,
+          // AI credentials for post-run summarization
+          apiKey:        settings.geminiApiKey,
+          model:         settings.defaultModel,
+          provider:      settings.provider,
+          ollamaBaseUrl: settings.ollamaBaseUrl,
+          ollamaModel:   settings.ollamaModel,
+        }),
+        signal:  controller.signal,
+      })
+      if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
+      const reader  = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      outer: while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n')
+        buffer = parts.pop() ?? ''
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6)
+
+          // Try parsing as a structured event object first
+          let evt: Record<string, unknown> | null = null
+          try {
+            const parsed = JSON.parse(raw)
+            if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
+              evt = parsed as Record<string, unknown>
+            }
+          } catch { /* not JSON — plain string */ }
+
+          if (evt) {
+            // ── Phase 2: structured summary events ──────────────────────────
+            if (evt.evt === 'summary_start') {
+              inSummaryPhase = true
+              setRunning(false)   // stop spinner — tests are done
+
+              // Find Edi M agent config for display name / agentId
+              const mgrAgent = allAgents.find(a => a.id === TEAM_MANAGER_ID)
+              const mgrName  = mgrAgent?.name ?? 'Edi M'
+              const newMsgId = `dyn-summary-${Date.now()}`
+              summaryMsgId   = newMsgId
+
+              appendMessage({
+                id:         newMsgId,
+                role:       'model',
+                content:    '',
+                senderName: mgrName,
+                agentId:    TEAM_MANAGER_ID,
+                timestamp:  Date.now(),
+                type:       'qa_summary',
+              })
+            } else if (evt.evt === 'summary_chunk' && summaryMsgId) {
+              const chunk = typeof evt.text === 'string' ? evt.text : ''
+              if (chunk) appendChunk(summaryMsgId, chunk)
+            } else if (evt.evt === 'summary_done') {
+              // Attach structured failure data if provided
+              if (summaryMsgId && evt.failures) {
+                updateMessage(summaryMsgId, {
+                  summaryData: {
+                    total:    typeof evt.total    === 'number' ? evt.total    : 0,
+                    passed:   typeof evt.passed   === 'number' ? evt.passed   : 0,
+                    failed:   typeof evt.failed   === 'number' ? evt.failed   : 0,
+                    duration: typeof evt.duration === 'number' ? evt.duration : 0,
+                    failures: evt.failures as QASummaryData['failures'],
+                  },
+                })
+              }
+              break outer
+            }
+            // skip other evt types
+            continue
+          }
+
+          // ── Phase 1: plain string log lines ─────────────────────────────
+          if (inSummaryPhase) continue   // ignore stray strings after phase 2 starts
+          let msg: string
+          try { msg = JSON.parse(raw) as string } catch { msg = raw }
+          if (msg.startsWith('[DONE]')) {
+            // [DONE] signals end of Phase 1 — wait for summary events unless none coming
+            // (If AI credentials missing the server may skip summary phase entirely)
+            if (!settings.geminiApiKey && settings.provider === 'gemini') break outer
+            // else keep reading for summary_start
+            continue
+          }
+          setRunLog(prev => [...prev.slice(-999), msg])
+        }
+      }
+
+      await fetchResults()
+      await new Promise(r => setTimeout(r, 120))
+      await fetchHistory()
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setRunLog(prev => [...prev, '[TIMEOUT] Dynamic test exceeded 10 minutes and was cancelled.'])
+      } else {
+        setRunLog(prev => [...prev, `[ERROR] ${err instanceof Error ? err.message : String(err)}`])
+      }
+    } finally {
+      clearTimeout(timeoutId)
+      setRunning(false)
+    }
+  }, [serverOnline, fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])  // eslint-disable-line
+
   // ── Run tests (real SSE when server online, show offline message otherwise) ─
   const runTests = useCallback(async () => {
     if (!serverOnline) {
@@ -3133,7 +3327,12 @@ export default function PlaywrightDashboard() {
         className="hidden lg:flex flex-col shrink-0 sticky top-14 overflow-hidden"
         style={{ width: 360, height: 'calc(100vh - 3.5rem)', borderRight: '1px solid var(--border)' }}
       >
-        <PwOfficePanel running={running} suites={suites} />
+        <PwOfficePanel
+          running={running}
+          suites={suites}
+          onRunCode={runDynamicTest}
+          onRunAll={() => { void runTests() }}
+        />
       </aside>
 
       {/* ── Right: existing scrollable dashboard content ──────────────────── */}

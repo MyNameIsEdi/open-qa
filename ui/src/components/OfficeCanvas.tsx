@@ -1,24 +1,39 @@
 /**
  * OfficeCanvas — pixel-art 2D office rendered on an HTML5 Canvas.
  *
- * No VS Code bindings. Reads everything from props supplied by OfficePage
- * (which reads from SettingsContext). Click a desk to fire onDeskClick(deskId).
- *
- * Visual stack per desk station (back → front):
- *   floor tiles → desk body → monitor → keyboard → character → halo → labels
+ * Rendering model:
+ *  • The canvas buffer is sized to fill its parent container (ResizeObserver).
+ *  • The 960×672 "artboard" (12 col × 8 row office map) is always centered
+ *    inside that buffer via ctx.translate(offsetX, offsetY).
+ *  • All draw helpers work in artboard-local coordinates; the translate handles
+ *    placement automatically — no per-function offset threading needed.
+ *  • Background outside the artboard is filled with the app dark theme color.
+ *  • Click / mousemove handlers subtract the live offset (stored in a ref) so
+ *    hit-testing still works in artboard coordinates.
  */
 import { useRef, useEffect, useCallback } from 'react'
-import type { AgentConfig, AgentStatus, DeskConfig, OfficeLayout, SpriteType } from '../context/SettingsContext'
+import type {
+  AgentConfig, AgentStatus, DeskConfig, OfficeLayout, SpriteType,
+} from '../context/SettingsContext'
 
-// ─── Canvas constants ─────────────────────────────────────────────────────────
+// ─── Artboard constants ───────────────────────────────────────────────────────
 
-const TILE   = 72   // canvas px per grid cell
-const PAD    = 48   // canvas outer padding
-const SC     = 2    // pixel-art scale factor (1 art-pixel = 2 canvas-px)
-const COLS   = 12
-const ROWS   = 8
-export const CANVAS_W = COLS * TILE + PAD * 2  // 960
-export const CANVAS_H = ROWS * TILE + PAD * 2  // 672
+const TILE = 72   // canvas px per grid cell
+const PAD  = 48   // outer padding inside the artboard
+const SC   = 2    // pixel-art scale (1 art-pixel = 2 canvas-px)
+const COLS = 12
+const ROWS = 8
+
+/** Fixed artboard dimensions — the "natural" size of the office map */
+const MAP_W = COLS * TILE + PAD * 2  // 960
+const MAP_H = ROWS * TILE + PAD * 2  // 672
+
+/** Exported for any external layout calculations */
+export const CANVAS_W = MAP_W
+export const CANVAS_H = MAP_H
+
+/** Background color used outside the artboard */
+const BG_COLOR = '#13131f'
 
 // ─── Color palettes ───────────────────────────────────────────────────────────
 
@@ -43,7 +58,7 @@ const STATUS_COLOR: Record<AgentStatus, string> = {
   error:   '#ef4444',
 }
 
-// ─── Low-level draw helpers ───────────────────────────────────────────────────
+// ─── Low-level draw helpers (all coords in artboard space) ───────────────────
 
 function drawFloor(ctx: CanvasRenderingContext2D) {
   for (let row = 0; row < ROWS; row++) {
@@ -52,108 +67,88 @@ function drawFloor(ctx: CanvasRenderingContext2D) {
       const y = row * TILE + PAD
       ctx.fillStyle = (row + col) % 2 === 0 ? FLOOR_A : FLOOR_B
       ctx.fillRect(x, y, TILE, TILE)
-      // subtle grid line
       ctx.strokeStyle = FLOOR_G
-      ctx.lineWidth = 1
+      ctx.lineWidth   = 1
       ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1)
     }
   }
 }
 
 function drawWallStrip(ctx: CanvasRenderingContext2D) {
-  // Top "wall" strip (1 row above PAD) — dark background
   ctx.fillStyle = '#0b0b1a'
-  ctx.fillRect(0, 0, CANVAS_W, PAD)
-  ctx.fillRect(0, 0, PAD, CANVAS_H)
-  ctx.fillRect(CANVAS_W - PAD, 0, PAD, CANVAS_H)
-  ctx.fillRect(0, CANVAS_H - PAD, CANVAS_W, PAD)
+  ctx.fillRect(0,           0,           MAP_W,       PAD)
+  ctx.fillRect(0,           0,           PAD,         MAP_H)
+  ctx.fillRect(MAP_W - PAD, 0,           PAD,         MAP_H)
+  ctx.fillRect(0,           MAP_H - PAD, MAP_W,       PAD)
 
-  // Wall baseboard
+  // baseboard
   ctx.fillStyle = '#1c1c38'
-  ctx.fillRect(0, PAD - 4, CANVAS_W, 4)
-  ctx.fillRect(0, CANVAS_H - PAD, CANVAS_W, 4)
+  ctx.fillRect(0, PAD - 4,       MAP_W, 4)
+  ctx.fillRect(0, MAP_H - PAD,   MAP_W, 4)
 
-  // Corner plants (pixel art)
-  drawPlant(ctx, PAD + 6, PAD + 6)
-  drawPlant(ctx, CANVAS_W - PAD - 22, PAD + 6)
+  // corner plants
+  drawPlant(ctx, PAD + 6,          PAD + 6)
+  drawPlant(ctx, MAP_W - PAD - 22, PAD + 6)
 }
 
 function drawPlant(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  // pot
   ctx.fillStyle = '#7c3f28'
   ctx.fillRect(x + 4, y + 12, 14, 10)
   ctx.fillStyle = '#6b3421'
   ctx.fillRect(x + 6, y + 18, 10, 4)
-  // stem + leaves
   ctx.fillStyle = '#166534'
   ctx.fillRect(x + 10, y + 4, 2, 10)
   ctx.fillStyle = '#16a34a'
-  ctx.fillRect(x + 2, y, 10, 8)
+  ctx.fillRect(x + 2,  y,     10, 8)
   ctx.fillRect(x + 10, y + 2, 10, 6)
   ctx.fillStyle = '#4ade80'
-  ctx.fillRect(x + 4, y + 1, 4, 3)
+  ctx.fillRect(x + 4,  y + 1, 4, 3)
   ctx.fillRect(x + 12, y + 3, 4, 3)
 }
 
 function drawDesk(ctx: CanvasRenderingContext2D, left: number, top: number) {
-  const W = 2 * TILE   // 144
-  const H = TILE       // 72
+  const W = 2 * TILE
+  const H = TILE
 
-  // drop shadow
   ctx.fillStyle = 'rgba(0,0,0,0.55)'
   ctx.fillRect(left + 5, top + 5, W, H)
 
-  // desk body (dark wood)
   ctx.fillStyle = '#3d2b1f'
   ctx.fillRect(left, top, W, H)
-
-  // desk surface (medium wood)
   ctx.fillStyle = '#5c3d2e'
   ctx.fillRect(left + 3, top + 3, W - 6, H - 3)
-
-  // top edge highlight
   ctx.fillStyle = '#8b6347'
   ctx.fillRect(left + 3, top + 3, W - 6, 2)
-
-  // right/left shadow edges
   ctx.fillStyle = '#2e1c10'
   ctx.fillRect(left + W - 3, top + 3, 3, H - 3)
-  ctx.fillRect(left + 3, top + 3, 3, H - 3)
+  ctx.fillRect(left + 3,     top + 3, 3, H - 3)
 
   // ── monitor ──────────────────────────────────────────────────────────────
-  const mCX  = left + W / 2
-  const mW   = 60, mH = 38
-  const mT   = top - 44  // monitor screen top (above desk top)
+  const mCX = left + W / 2
+  const mW  = 60, mH = 38
+  const mT  = top - 44
 
-  // stand
   ctx.fillStyle = '#111122'
   ctx.fillRect(mCX - 4, top - 8, 8, 14)
-  // base plate
   ctx.fillStyle = '#1a1a2e'
   ctx.fillRect(mCX - 12, top - 4, 24, 6)
 
-  // bezel
   ctx.fillStyle = '#1e1e2e'
   ctx.fillRect(mCX - mW / 2 - 3, mT - 3, mW + 6, mH + 6)
 
-  // screen gradient
   const grad = ctx.createLinearGradient(0, mT, 0, mT + mH)
-  grad.addColorStop(0, '#00d4ff')
+  grad.addColorStop(0,    '#00d4ff')
   grad.addColorStop(0.45, '#0ea5e9')
-  grad.addColorStop(1, '#0369a1')
+  grad.addColorStop(1,    '#0369a1')
   ctx.fillStyle = grad
   ctx.fillRect(mCX - mW / 2, mT, mW, mH)
 
-  // screen glow bloom
   ctx.save()
-  ctx.shadowColor   = '#0ea5e9'
-  ctx.shadowBlur    = 10
-  ctx.globalAlpha   = 0.2
-  ctx.fillStyle     = '#0ea5e9'
+  ctx.shadowColor = '#0ea5e9'; ctx.shadowBlur = 10; ctx.globalAlpha = 0.2
+  ctx.fillStyle   = '#0ea5e9'
   ctx.fillRect(mCX - mW / 2 - 3, mT - 3, mW + 6, mH + 6)
   ctx.restore()
 
-  // code lines on screen
   const lines: [number, string][] = [
     [16, 'rgba(255,255,255,0.85)'],
     [26, 'rgba(255,255,255,0.55)'],
@@ -181,63 +176,48 @@ function drawDesk(ctx: CanvasRenderingContext2D, left: number, top: number) {
 
 function drawCharacter(
   ctx: CanvasRenderingContext2D,
-  cx: number, cy: number,    // waist-center in canvas px
+  cx: number, cy: number,
   colors: { hair: string; skin: string; shirt: string; pants: string },
 ) {
-  const s = SC   // pixel-art scale (= 2)
+  const s = SC
 
-  // shadow ellipse
   ctx.fillStyle = 'rgba(0,0,0,0.35)'
   ctx.beginPath()
   ctx.ellipse(cx, cy + 18 * s, 7 * s, 2 * s, 0, 0, Math.PI * 2)
   ctx.fill()
 
-  // ── legs ─────────────────────────────────────────────────────────────────
   ctx.fillStyle = colors.pants
-  ctx.fillRect(cx - 4 * s, cy + 8 * s,  4 * s, 8 * s)   // left leg
-  ctx.fillRect(cx + 1 * s, cy + 8 * s,  4 * s, 8 * s)   // right leg
-  ctx.fillRect(cx - 5 * s, cy + 14 * s, 5 * s, 2 * s)   // left shoe
-  ctx.fillRect(cx + 1 * s, cy + 14 * s, 5 * s, 2 * s)   // right shoe
+  ctx.fillRect(cx - 4 * s, cy +  8 * s, 4 * s, 8 * s)
+  ctx.fillRect(cx + 1 * s, cy +  8 * s, 4 * s, 8 * s)
+  ctx.fillRect(cx - 5 * s, cy + 14 * s, 5 * s, 2 * s)
+  ctx.fillRect(cx + 1 * s, cy + 14 * s, 5 * s, 2 * s)
 
-  // belt
   ctx.fillStyle = '#2a2a2a'
   ctx.fillRect(cx - 5 * s, cy + 6 * s, 10 * s, 2 * s)
 
-  // ── torso ─────────────────────────────────────────────────────────────────
   ctx.fillStyle = colors.shirt
   ctx.fillRect(cx - 5 * s, cy - 5 * s, 10 * s, 13 * s)
 
-  // arms (skin-coloured)
   ctx.fillStyle = colors.skin
-  ctx.fillRect(cx - 8 * s, cy - 4 * s,  3 * s, 10 * s)  // left
-  ctx.fillRect(cx + 5 * s, cy - 4 * s,  3 * s, 10 * s)  // right
-
-  // neck
-  ctx.fillStyle = colors.skin
-  ctx.fillRect(cx - 2 * s, cy - 8 * s,  4 * s, 4 * s)
-
-  // ── head ──────────────────────────────────────────────────────────────────
-  ctx.fillStyle = colors.skin
+  ctx.fillRect(cx - 8 * s, cy - 4 * s, 3 * s, 10 * s)
+  ctx.fillRect(cx + 5 * s, cy - 4 * s, 3 * s, 10 * s)
+  ctx.fillRect(cx - 2 * s, cy - 8 * s, 4 * s,  4 * s)
   ctx.fillRect(cx - 5 * s, cy - 16 * s, 10 * s, 10 * s)
 
-  // hair
   ctx.fillStyle = colors.hair
-  ctx.fillRect(cx - 5 * s, cy - 16 * s, 10 * s, 4 * s)   // crown
-  ctx.fillRect(cx - 6 * s, cy - 16 * s,  2 * s, 8 * s)   // left side
-  ctx.fillRect(cx + 4 * s, cy - 16 * s,  2 * s, 8 * s)   // right side
+  ctx.fillRect(cx - 5 * s, cy - 16 * s, 10 * s, 4 * s)
+  ctx.fillRect(cx - 6 * s, cy - 16 * s,  2 * s, 8 * s)
+  ctx.fillRect(cx + 4 * s, cy - 16 * s,  2 * s, 8 * s)
 
-  // eyes
   ctx.fillStyle = '#1a1a2e'
-  ctx.fillRect(cx - 3 * s, cy - 11 * s, 2 * s, 2 * s)   // left
-  ctx.fillRect(cx + 1 * s, cy - 11 * s, 2 * s, 2 * s)   // right
-  // eye shine
+  ctx.fillRect(cx - 3 * s, cy - 11 * s, 2 * s, 2 * s)
+  ctx.fillRect(cx + 1 * s, cy - 11 * s, 2 * s, 2 * s)
   ctx.fillStyle = 'rgba(255,255,255,0.7)'
-  ctx.fillRect(cx - 2 * s, cy - 11 * s, s,     s)
-  ctx.fillRect(cx + 2 * s, cy - 11 * s, s,     s)
+  ctx.fillRect(cx - 2 * s, cy - 11 * s, s, s)
+  ctx.fillRect(cx + 2 * s, cy - 11 * s, s, s)
 
-  // slight smile
   ctx.fillStyle = '#c87070'
-  ctx.fillRect(cx - 2 * s, cy - 7 * s,  4 * s, s)
+  ctx.fillRect(cx - 2 * s, cy - 7 * s, 4 * s, s)
 }
 
 function drawStatusHalo(
@@ -246,31 +226,24 @@ function drawStatusHalo(
   status: AgentStatus, t: number,
 ) {
   const color = STATUS_COLOR[status]
-  const pulse = status === 'working'
-    ? Math.sin(t * 5) * 3
-    : status === 'waiting'
-    ? Math.sin(t * 2) * 2
-    : status === 'error'
-    ? Math.sin(t * 8) * 2
-    : 0
-
+  const pulse =
+    status === 'working' ? Math.sin(t * 5) * 3 :
+    status === 'waiting' ? Math.sin(t * 2) * 2 :
+    status === 'error'   ? Math.sin(t * 8) * 2 : 0
   const r     = 18 + pulse
-  const alpha = status === 'working'
-    ? 0.55 + Math.sin(t * 5) * 0.25
-    : 0.75
+  const alpha = status === 'working' ? 0.55 + Math.sin(t * 5) * 0.25 : 0.75
 
   ctx.save()
-  ctx.strokeStyle   = color
-  ctx.lineWidth     = status === 'working' ? 2.5 : 2
-  ctx.globalAlpha   = alpha
-  ctx.shadowColor   = color
-  ctx.shadowBlur    = status === 'working' ? 8 : 4
+  ctx.strokeStyle = color
+  ctx.lineWidth   = status === 'working' ? 2.5 : 2
+  ctx.globalAlpha = alpha
+  ctx.shadowColor = color
+  ctx.shadowBlur  = status === 'working' ? 8 : 4
   ctx.beginPath()
   ctx.arc(cx, headCY, r, 0, Math.PI * 2)
   ctx.stroke()
   ctx.restore()
 
-  // solid status dot (top-right of halo)
   ctx.save()
   ctx.fillStyle   = color
   ctx.shadowColor = color
@@ -284,7 +257,7 @@ function drawStatusHalo(
 function drawLabel(
   ctx: CanvasRenderingContext2D,
   text: string, x: number, y: number,
-  color = 'rgba(255,255,255,0.75)',
+  color   = 'rgba(255,255,255,0.75)',
   fontSize = 8,
 ) {
   ctx.font      = `${fontSize}px "Silkscreen", monospace`
@@ -294,29 +267,26 @@ function drawLabel(
 }
 
 function drawDeskStation(
-  ctx: CanvasRenderingContext2D,
-  desk: DeskConfig,
-  agent: AgentConfig | null,
+  ctx:    CanvasRenderingContext2D,
+  desk:   DeskConfig,
+  agent:  AgentConfig | null,
   status: AgentStatus | null,
-  t: number,
+  t:      number,
 ) {
   const left = desk.x * TILE + PAD
   const top  = desk.y * TILE + PAD
-  const W    = 2 * TILE    // 144
-  const H    = TILE        // 72
+  const W    = 2 * TILE
+  const H    = TILE
   const mCX  = left + W / 2
 
-  // desk + monitor + keyboard
   drawDesk(ctx, left, top)
 
-  // desk label (bottom of tile, small + muted)
   ctx.font      = '6px "Silkscreen", monospace'
   ctx.fillStyle = 'rgba(255,255,255,0.28)'
   ctx.textAlign = 'center'
   ctx.fillText(desk.label.toUpperCase(), mCX, top + H - 5)
 
   if (!agent) {
-    // vacant indicator
     ctx.font      = '7px "Silkscreen", monospace'
     ctx.fillStyle = 'rgba(255,255,255,0.18)'
     ctx.textAlign = 'center'
@@ -324,24 +294,16 @@ function drawDeskStation(
     return
   }
 
-  // ── character, positioned at front/bottom of desk ─────────────────────────
-  const charCY = top + H - 4   // waist center
-  const headCY = charCY - 12 * SC  // head center (12 art-px above waist)
-  const colors = SPRITE_COLORS[agent.characterSprite]
-  drawCharacter(ctx, mCX, charCY, colors)
+  const charCY = top + H - 4
+  const headCY = charCY - 12 * SC
+  drawCharacter(ctx, mCX, charCY, SPRITE_COLORS[agent.characterSprite])
 
-  // ── status halo ───────────────────────────────────────────────────────────
   const resolvedStatus: AgentStatus = status ?? 'idle'
   drawStatusHalo(ctx, mCX, headCY, resolvedStatus, t)
 
-  // ── agent name ────────────────────────────────────────────────────────────
-  drawLabel(ctx, agent.name, mCX, charCY + 20 * SC + 14, 'rgba(255,255,255,0.88)', 8)
+  drawLabel(ctx, agent.name,            mCX, charCY + 20 * SC + 14, 'rgba(255,255,255,0.88)', 8)
+  drawLabel(ctx, agent.role.toUpperCase(), mCX, charCY + 20 * SC + 25, STATUS_COLOR[resolvedStatus], 6)
 
-  // role in status colour
-  const roleColor = STATUS_COLOR[resolvedStatus]
-  drawLabel(ctx, agent.role.toUpperCase(), mCX, charCY + 20 * SC + 25, roleColor, 6)
-
-  // ── "● WORKING" blinking badge ────────────────────────────────────────────
   if (resolvedStatus === 'working' && Math.floor(t * 2) % 2 === 0) {
     ctx.font      = '7px "Silkscreen", monospace'
     ctx.fillStyle = STATUS_COLOR.working
@@ -351,18 +313,16 @@ function drawDeskStation(
 }
 
 function drawRoomDivider(ctx: CanvasRenderingContext2D) {
-  // horizontal divider between row 3 and row 4 (walkway)
   const y = 3 * TILE + PAD + TILE / 2
   ctx.strokeStyle = '#2a2a44'
   ctx.lineWidth   = 2
   ctx.setLineDash([6, 6])
   ctx.beginPath()
-  ctx.moveTo(PAD, y)
-  ctx.lineTo(CANVAS_W - PAD, y)
+  ctx.moveTo(PAD,          y)
+  ctx.lineTo(MAP_W - PAD, y)
   ctx.stroke()
   ctx.setLineDash([])
-
-  drawLabel(ctx, 'QA OFFICE — OPEN-QA', CANVAS_W / 2, y - 8, 'rgba(255,255,255,0.18)', 7)
+  drawLabel(ctx, 'QA OFFICE — OPEN-QA', MAP_W / 2, y - 8, 'rgba(255,255,255,0.18)', 7)
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -375,36 +335,75 @@ interface Props {
 }
 
 export default function OfficeCanvas({ agents, agentStatuses, layout, onDeskClick }: Props) {
+  const wrapRef   = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef   = useRef<number>(0)
+  /** Live artboard-to-canvas offset — read by event handlers without stale closure */
+  const offsetRef = useRef({ x: 0, y: 0 })
 
-  // ── render loop ────────────────────────────────────────────────────────────
+  // ── ResizeObserver: keep canvas buffer = container dimensions ──────────────
+  useEffect(() => {
+    const wrap   = wrapRef.current
+    const canvas = canvasRef.current
+    if (!wrap || !canvas) return
+
+    const applySize = (w: number, h: number) => {
+      canvas.width  = Math.max(1, Math.floor(w))
+      canvas.height = Math.max(1, Math.floor(h))
+    }
+
+    // Set initial size immediately so the first frame renders correctly
+    applySize(wrap.clientWidth || MAP_W, wrap.clientHeight || MAP_H)
+
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect
+      applySize(width, height)
+    })
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [])
+
+  // ── Render loop ────────────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Non-null assertion: ctx is verified above; closure captures it safely.
-    const c = ctx as CanvasRenderingContext2D
     const origin = performance.now()
 
     function draw(now: number) {
-      const t = (now - origin) / 1000   // seconds
+      const t  = (now - origin) / 1000
+      const cw = canvas!.width
+      const ch = canvas!.height
 
-      c.clearRect(0, 0, CANVAS_W, CANVAS_H)
+      // ── 1. Crisp pixel art — disable smoothing every frame ───────────────
+      ctx!.imageSmoothingEnabled = false
 
-      // ── layers ─────────────────────────────────────────────────────────
-      drawFloor(c)
-      drawWallStrip(c)
-      drawRoomDivider(c)
+      // ── 2. Clear and fill background outside the artboard ────────────────
+      ctx!.clearRect(0, 0, cw, ch)
+      ctx!.fillStyle = BG_COLOR
+      ctx!.fillRect(0, 0, cw, ch)
 
-      // back-to-front: desks in upper rows, then lower rows
+      // ── 3. Center artboard in container ──────────────────────────────────
+      const ox = Math.round((cw - MAP_W) / 2)
+      const oy = Math.round((ch - MAP_H) / 2)
+      offsetRef.current = { x: ox, y: oy }
+
+      ctx!.save()
+      ctx!.translate(ox, oy)
+
+      // ── 4. Draw all office layers in artboard space ───────────────────────
+      drawFloor(ctx!)
+      drawWallStrip(ctx!)
+      drawRoomDivider(ctx!)
       for (const desk of layout.desks) {
         const agent  = agents.find(a => a.deskId === desk.id) ?? null
         const status = agent ? (agentStatuses[agent.id] ?? 'idle') : null
-        drawDeskStation(c, desk, agent, status, t)
+        drawDeskStation(ctx!, desk, agent, status, t)
       }
+
+      ctx!.restore()
 
       animRef.current = requestAnimationFrame(draw)
     }
@@ -413,19 +412,23 @@ export default function OfficeCanvas({ agents, agentStatuses, layout, onDeskClic
     return () => cancelAnimationFrame(animRef.current)
   }, [agents, agentStatuses, layout])
 
-  // ── click hit-test ─────────────────────────────────────────────────────────
+  // ── Click hit-test ─────────────────────────────────────────────────────────
+  // Since canvas buffer == container size at all times (ResizeObserver),
+  // devicePixel ratio is handled by CSS and the canvas is 1:1 with its DOM rect.
+  // We only need to subtract the artboard offset to work in artboard coordinates.
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect  = canvasRef.current!.getBoundingClientRect()
-    const scaleX = CANVAS_W / rect.width
-    const scaleY = CANVAS_H / rect.height
-    const mx = (e.clientX - rect.left) * scaleX
-    const my = (e.clientY - rect.top)  * scaleY
+    const rect = canvasRef.current!.getBoundingClientRect()
+    // Map from CSS pixels → canvas buffer pixels (handles devicePixelRatio if any)
+    const scaleX = canvasRef.current!.width  / rect.width
+    const scaleY = canvasRef.current!.height / rect.height
+    const mx = (e.clientX - rect.left) * scaleX - offsetRef.current.x
+    const my = (e.clientY - rect.top)  * scaleY - offsetRef.current.y
 
     for (const desk of layout.desks) {
       const dl = desk.x * TILE + PAD
       const dt = desk.y * TILE + PAD
       const dw = 2 * TILE
-      const dh = TILE + 20 * SC + 30   // extend hit area to include labels below
+      const dh = TILE + 20 * SC + 30   // extends below desk to cover labels
       if (mx >= dl && mx <= dl + dw && my >= dt && my <= dt + dh) {
         onDeskClick?.(desk.id)
         return
@@ -433,13 +436,13 @@ export default function OfficeCanvas({ agents, agentStatuses, layout, onDeskClic
     }
   }, [layout, onDeskClick])
 
-  // ── cursor ─────────────────────────────────────────────────────────────────
+  // ── Cursor ─────────────────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect  = canvasRef.current!.getBoundingClientRect()
-    const scaleX = CANVAS_W / rect.width
-    const scaleY = CANVAS_H / rect.height
-    const mx = (e.clientX - rect.left) * scaleX
-    const my = (e.clientY - rect.top)  * scaleY
+    const rect   = canvasRef.current!.getBoundingClientRect()
+    const scaleX = canvasRef.current!.width  / rect.width
+    const scaleY = canvasRef.current!.height / rect.height
+    const mx = (e.clientX - rect.left) * scaleX - offsetRef.current.x
+    const my = (e.clientY - rect.top)  * scaleY - offsetRef.current.y
 
     const hit = layout.desks.some(d => {
       const dl = d.x * TILE + PAD
@@ -452,22 +455,23 @@ export default function OfficeCanvas({ agents, agentStatuses, layout, onDeskClic
     }
   }, [layout])
 
+  // ── DOM ────────────────────────────────────────────────────────────────────
   return (
-    <canvas
-      ref={canvasRef}
-      width={CANVAS_W}
-      height={CANVAS_H}
-      onClick={handleClick}
-      onMouseMove={handleMouseMove}
-      style={{
-        display:         'block',
-        maxWidth:        '100%',
-        height:          'auto',
-        imageRendering:  'pixelated',
-        borderRadius:    '12px',
-        border:          '2px solid #1e1e30',
-        boxShadow:       '0 8px 32px rgba(0,0,0,0.6)',
-      }}
-    />
+    <div
+      ref={wrapRef}
+      style={{ width: '100%', height: '100%', overflow: 'hidden', display: 'block' }}
+    >
+      <canvas
+        ref={canvasRef}
+        onClick={handleClick}
+        onMouseMove={handleMouseMove}
+        style={{
+          display:        'block',
+          width:          '100%',
+          height:         '100%',
+          imageRendering: 'pixelated',
+        }}
+      />
+    </div>
   )
 }
