@@ -160,6 +160,270 @@ Automate TC-001 through TC-003 with Playwright APIRequestContext for fast CI fee
   }
 })
 
+// ─── Gemini QA-Agent Chat endpoint ────────────────────────────────────────────
+//
+// POST /api/qa-agent
+//   Headers:  Authorization: Bearer <geminiApiKey>
+//   Body:     {
+//               message:   string,          // current user turn text
+//               history:   HistoryItem[],   // prior turns { role, content }
+//               agentIds:  string[],        // IDs of tagged agents
+//               agents:    AgentMeta[],     // name + systemPrompt for each agent
+//               imageAttachments?: ImageAttachment[],  // Base64 images for vision
+//               model?:    string,
+//             }
+//   Response: text/event-stream (SSE)
+//               data: {"chunk": "..."}\n\n  — incremental token
+//               data: {"done": true}\n\n    — stream complete
+//               data: {"error": "..."}\n\n  — error
+//
+// The API key is passed from the client's localStorage in the Authorization header.
+
+interface HistoryItem {
+  role:    'user' | 'model'
+  content: string
+}
+
+interface AgentMeta {
+  id:           string
+  name:         string
+  systemPrompt: string
+}
+
+interface ImageAttachment {
+  name:    string
+  type:    string   // MIME, e.g. "image/png"
+  content: string   // Base64 data-URL or raw Base64
+}
+
+interface QaAgentBody {
+  message:           string
+  history?:          HistoryItem[]
+  agentIds?:         string[]
+  agents?:           AgentMeta[]
+  imageAttachments?: ImageAttachment[]
+  model?:            string
+  /** 'gemini' (default) or 'ollama' */
+  provider?:         'gemini' | 'ollama'
+  /** Base URL for Ollama server, e.g. http://localhost:11434 */
+  ollamaBaseUrl?:    string
+}
+
+/** Strip data-URL prefix (data:image/png;base64,…) leaving only the raw Base64 */
+function stripDataUrl(b64: string): string {
+  const comma = b64.indexOf(',')
+  return comma !== -1 ? b64.slice(comma + 1) : b64
+}
+
+/** Map our HistoryItem[] to the Gemini SDK Content[] type */
+function toGeminiHistory(
+  history: HistoryItem[],
+): Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> {
+  // Gemini requires alternating user/model turns; skip leading model turns
+  const cleaned: HistoryItem[] = []
+  for (const item of history) {
+    const last = cleaned[cleaned.length - 1]
+    if (last && last.role === item.role) {
+      // Merge consecutive same-role turns
+      last.content += '\n\n' + item.content
+    } else {
+      cleaned.push({ ...item })
+    }
+  }
+  return cleaned.map(item => ({
+    role:  item.role,
+    parts: [{ text: item.content }],
+  }))
+}
+
+app.post('/api/qa-agent', async (req, res) => {
+  const authHeader = req.headers.authorization as string | undefined
+  const apiKey     = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+
+  const {
+    message,
+    history           = [],
+    agentIds          = [],
+    agents            = [],
+    imageAttachments  = [],
+    model             = 'gemini-2.0-flash',
+    provider          = 'gemini',
+    ollamaBaseUrl     = 'http://localhost:11434',
+  } = req.body as QaAgentBody
+
+  // SSE setup — do this before any early returns so errors arrive as SSE too
+  res.setHeader('Content-Type',  'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection',    'keep-alive')
+  res.flushHeaders()
+
+  const send = (payload: Record<string, unknown>) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`)
+  }
+
+  // Auth: only Gemini needs an API key
+  if (provider === 'gemini' && !apiKey) {
+    send({ error: 'Missing Gemini API key — add it in Settings' })
+    res.end()
+    return
+  }
+
+  if (!message?.trim() && imageAttachments.length === 0) {
+    send({ error: 'Body field "message" is required.' })
+    res.end()
+    return
+  }
+
+  // Build combined system instruction from all tagged agents
+  const taggedAgents = agentIds
+    .map(id => agents.find(a => a.id === id))
+    .filter((a): a is AgentMeta => a !== undefined)
+
+  const systemInstruction = taggedAgents.length > 0
+    ? taggedAgents.map(a => `## ${a.name}\n${a.systemPrompt}`).join('\n\n---\n\n')
+    : agents[0]?.systemPrompt ?? 'You are a helpful QA assistant.'
+
+  // ── Ollama path ───────────────────────────────────────────────────────────────
+  if (provider === 'ollama') {
+    try {
+      const ollamaMessages: Array<{ role: string; content: string }> = [
+        { role: 'system', content: systemInstruction },
+        ...history.map(h => ({
+          role:    h.role === 'model' ? 'assistant' : 'user',
+          content: h.content,
+        })),
+        { role: 'user', content: message.trim() || '(image attached — vision not supported by Ollama in this integration)' },
+      ]
+
+      const ollamaRes = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ model, messages: ollamaMessages, stream: true }),
+        signal:  AbortSignal.timeout(120_000),
+      })
+
+      if (!ollamaRes.ok) {
+        const errText = await ollamaRes.text().catch(() => `HTTP ${ollamaRes.status}`)
+        send({ error: `Ollama error: ${errText}` })
+        res.end()
+        return
+      }
+
+      if (!ollamaRes.body) {
+        send({ error: 'Ollama returned no response body' })
+        res.end()
+        return
+      }
+
+      // Read Ollama's NDJSON stream (one JSON object per line)
+      const reader  = (ollamaRes.body as ReadableStream<Uint8Array>).getReader()
+      const decoder = new TextDecoder()
+      let buffer    = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const parsed = JSON.parse(line) as {
+              message?: { content?: string }
+              done?:    boolean
+              error?:   string
+            }
+            if (parsed.error) throw new Error(parsed.error)
+            if (parsed.message?.content) send({ chunk: parsed.message.content })
+            if (parsed.done) { send({ done: true }); res.end(); return }
+          } catch (lineErr: unknown) {
+            if (lineErr instanceof SyntaxError) continue  // skip malformed NDJSON
+            throw lineErr
+          }
+        }
+      }
+      send({ done: true })
+      res.end()
+    } catch (err: unknown) {
+      const msg  = err instanceof Error ? err.message : String(err)
+      const hint = /ECONNREFUSED|fetch failed|Failed to fetch/i.test(msg)
+        ? ' — is Ollama running? Run: ollama serve'
+        : /timeout/i.test(msg)
+        ? ' — Ollama timed out (model may still be loading)'
+        : ''
+      send({ error: msg + hint })
+      res.end()
+    }
+    return
+  }
+
+  // ── Gemini path ───────────────────────────────────────────────────────────────
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const genAI    = new GoogleGenerativeAI(apiKey!)
+    const genModel = genAI.getGenerativeModel({ model, systemInstruction })
+    const chatHistory = toGeminiHistory(history)
+    const chat = genModel.startChat({ history: chatHistory })
+
+    type GeminiPart =
+      | { text: string }
+      | { inlineData: { mimeType: string; data: string } }
+
+    const parts: GeminiPart[] = []
+    if (message.trim()) parts.push({ text: message })
+    for (const img of imageAttachments) {
+      parts.push({ inlineData: { mimeType: img.type, data: stripDataUrl(img.content) } })
+    }
+
+    const streamResult = await chat.sendMessageStream(parts)
+    for await (const chunk of streamResult.stream) {
+      const text = chunk.text()
+      if (text) send({ chunk: text })
+    }
+
+    send({ done: true })
+    res.end()
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    const hint   = /API_KEY_INVALID|invalid api key/i.test(errMsg)
+      ? ' — check your Gemini key in Settings'
+      : /quota/i.test(errMsg)
+      ? ' — free-tier quota exceeded; wait or upgrade'
+      : ''
+    send({ error: errMsg + hint })
+    res.end()
+  }
+})
+
+// ─── Ollama helper endpoints ──────────────────────────────────────────────────
+
+// GET /api/ollama/test?baseUrl=... — verify Ollama is reachable
+app.get('/api/ollama/test', async (req, res) => {
+  const baseUrl = (req.query.baseUrl as string | undefined)?.trim() || 'http://localhost:11434'
+  try {
+    const r = await fetch(`${baseUrl}/api/version`, { signal: AbortSignal.timeout(5_000) })
+    if (!r.ok) return res.json({ ok: false, detail: `HTTP ${r.status}` })
+    const body = await r.json() as { version?: string }
+    res.json({ ok: true, version: body.version ?? 'unknown' })
+  } catch (err: unknown) {
+    res.json({ ok: false, detail: String(err) })
+  }
+})
+
+// GET /api/ollama/models?baseUrl=... — list installed Ollama models
+app.get('/api/ollama/models', async (req, res) => {
+  const baseUrl = (req.query.baseUrl as string | undefined)?.trim() || 'http://localhost:11434'
+  try {
+    const r = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5_000) })
+    if (!r.ok) return res.json({ models: [], error: `HTTP ${r.status}` })
+    const body = await r.json() as { models?: Array<{ name: string }> }
+    res.json({ models: (body.models ?? []).map(m => m.name) })
+  } catch (err: unknown) {
+    res.json({ models: [], error: String(err) })
+  }
+})
+
 // ─── Playwright helpers ───────────────────────────────────────────────────────
 
 const RESULTS_PATH = path.join(root, 'test-results', 'pw-results.json')
@@ -203,6 +467,10 @@ function normalizePwResults(raw: Record<string, unknown>) {
         let primaryBrowser  = 'chromium'
         let retries         = 0
 
+        // Worst status wins: a single failing browser makes the whole test fail.
+        // Priority: failed(0) > pending(1) > skipped(2) > passed(3)
+        const STATUS_RANK: Record<string, number> = { failed: 0, pending: 1, skipped: 2, passed: 3 }
+
         for (const t of tests) {
           const browser  = ((t.projectName as string | undefined) ?? 'chromium').toLowerCase()
           const results  = (t.results ?? []) as Record<string, unknown>[]
@@ -224,11 +492,17 @@ function normalizePwResults(raw: Record<string, unknown>) {
 
           browserResults.push({ browser, status, duration })
 
+          // Always track Chromium as the display browser when present (for icon/badge),
+          // but let the WORST status from any browser win (so a Firefox failure surfaces).
           if (browser === 'chromium' || browserResults.length === 1) {
+            primaryBrowser = browser
+          }
+          const rank     = STATUS_RANK[status]     ?? 4
+          const prevRank = STATUS_RANK[primaryStatus] ?? 4
+          if (browserResults.length === 1 || rank < prevRank) {
             primaryStatus   = status
             primaryDuration = duration
             primaryError    = errorMsg
-            primaryBrowser  = browser
           }
 
           retries = Math.max(retries, results.length - 1)
@@ -388,6 +662,7 @@ app.delete('/api/playwright/file', async (req, res) => {
 
 // GET /api/playwright/results — read + normalize pw-results.json
 app.get('/api/playwright/results', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   try {
     if (!existsSync(RESULTS_PATH)) {
       return res.status(404).json({ error: 'No results file found. Run tests first.' })
@@ -401,6 +676,8 @@ app.get('/api/playwright/results', async (_req, res) => {
 
 // GET /api/playwright/history — list all archived runs (newest first, max 30)
 app.get('/api/playwright/history', async (_req, res) => {
+  // Prevent browser caching so a fresh fetch always returns the latest run list
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   try {
     // NOTE: no auto-seed — if the user cleared history it should stay empty.
     if (!existsSync(RUNS_DIR)) return res.json({ runs: [] })
@@ -416,11 +693,22 @@ app.get('/api/playwright/history', async (_req, res) => {
           try {
             const raw  = JSON.parse(await fs.readFile(path.join(RUNS_DIR, f), 'utf-8')) as Record<string, unknown>
             const n    = normalizePwResults(raw)
+            // Use normalized test counts (same logic as the dashboard) so history
+            // totals match the suite list — important for multi-browser runs where
+            // Playwright's raw stats.expected counts per-project instead of per-test.
+            type NormTest = { status: string }
+            type NormSuite = { tests: NormTest[] }
+            const allTests = (n.suites as NormSuite[]).flatMap(s => s.tests)
             return {
-              id:   f.replace('.json', ''),
-              runAt: n.runAt,
-              spec: (raw._spec as string | null | undefined) ?? null,
-              ...n.stats,
+              id:       f.replace('.json', ''),
+              runAt:    n.runAt,
+              spec:     (raw._spec as string | null | undefined) ?? null,
+              total:    allTests.length,
+              passed:   allTests.filter(t => t.status === 'passed').length,
+              failed:   allTests.filter(t => t.status === 'failed').length,
+              skipped:  allTests.filter(t => t.status === 'skipped').length,
+              flaky:    n.stats.flaky,
+              duration: n.stats.duration,
             }
           } catch {
             return null
@@ -461,6 +749,21 @@ app.delete('/api/playwright/history', async (_req, res) => {
   }
 })
 
+// GET /api/playwright/browser-check — verify Chromium binary is installed
+app.get('/api/playwright/browser-check', async (_req, res) => {
+  try {
+    // Dynamically import chromium from the playwright package to get its executable path.
+    // We cannot static-import at the top of the file because `playwright` (not @playwright/test)
+    // is in dependencies and shares the same browser store.
+    const { chromium } = await import('playwright')
+    const execPath = chromium.executablePath()
+    const exists   = existsSync(execPath)
+    res.json({ ok: exists, execPath })
+  } catch (err: unknown) {
+    res.json({ ok: false, detail: String(err) })
+  }
+})
+
 // POST /api/playwright/run — spawn Playwright and stream stdout/stderr via SSE
 // ─── Artifacts endpoint — lists real screenshot/video/trace files from test-results/ ──
 app.get('/api/playwright/artifacts', (_req, res) => {
@@ -485,7 +788,7 @@ app.get('/api/playwright/artifacts', (_req, res) => {
   }
 })
 
-app.post('/api/playwright/run', (req, res) => {
+app.post('/api/playwright/run', async (req, res) => {
   const { spec, specs, config } = req.body as {
     spec?: string
     specs?: string[]           // multi-run: array of spec filenames
@@ -498,19 +801,37 @@ app.post('/api/playwright/run', (req, res) => {
 
   const send = (data: string) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
-  const args = ['playwright', 'test', '--reporter=list,json']
+  // Do NOT pass --reporter here: playwright.config.ts already configures
+  // list + html + json (with outputFile: 'test-results/pw-results.json').
+  // Overriding on the CLI would give the json reporter no outputFile, causing
+  // it to dump raw JSON to stdout (breaking the SSE stream) and leaving
+  // pw-results.json stale so archiveRun() always reads the old results.
+  const args = ['test']
 
-  // Multi-spec support — push each spec as a positional argument.
-  // Playwright matches positional args as path-substring patterns against
-  // the files it discovers in testDir.  Bare filenames work because
-  // 'sv-api.spec.ts' is a substring of 'tests/sv-api.spec.ts'.
-  // Absolute paths with Windows backslashes do NOT match (different
-  // path separator from Playwright's internal forward-slash paths).
+  // ── Spec filtering via testMatch (cross-platform, no CLI arg escaping) ──────
+  // We receive bare filenames (e.g. 'sv-api.spec.ts') from the dashboard.
+  //
+  // Past approaches using CLI positional args all failed on Windows:
+  //   • forward-slash paths  → cmd.exe interprets '/' as switch prefix
+  //   • absolute backslash   → unreliable matching inside Playwright
+  //
+  // Current approach: inject testMatch into PW_RUNTIME_CONFIG.
+  //   playwright.config.ts reads rc.testMatch and sets Playwright's testMatch.
+  //   The glob '**/sv-api.spec.ts' matches only that file, regardless of OS.
+  //   No CLI arg needed — no shell escaping issues.
   const specList = (specs && specs.length > 0) ? specs : (spec ? [spec] : [])
-  for (const s of specList) args.push(s)
 
-  if (specList.length > 0) {
-    send(`[FILTER] spec(s): ${specList.join(', ')}`)
+  // Strip any stale 'tests/' prefix, keep basename only
+  const cleanName = (s: string) =>
+    s.replace(/^tests[\\/]/, '').replace(/^.*[\\/]/, '')
+  const bareNames = specList.map(s => cleanName(s))
+
+  // Build the runtime config, injecting testMatch when specific specs are chosen
+  const runtimeConfig: Record<string, unknown> = { ...(config ?? {}) }
+  if (bareNames.length > 0) {
+    // '**/sv-api.spec.ts' matches the file in any directory — OS-independent
+    runtimeConfig.testMatch = bareNames.map(s => `**/${s}`)
+    send(`[FILTER] spec(s): ${bareNames.join(', ')}`)
   }
 
   // Test-title filters — passed as CLI flags
@@ -519,21 +840,44 @@ app.post('/api/playwright/run', (req, res) => {
   if (typeof config?.grepInvert === 'string' && config.grepInvert.trim())
     args.push(`--grep-invert=${config.grepInvert.trim()}`)
 
-  // Inject full config into playwright.config.ts via PW_RUNTIME_CONFIG env var
+  // Inject config (including testMatch) into playwright.config.ts via env var
   const env: Record<string, string> = { ...process.env as Record<string, string>, FORCE_COLOR: '0' }
-  if (config) env.PW_RUNTIME_CONFIG = JSON.stringify(config)
+  env.PW_RUNTIME_CONFIG = JSON.stringify(runtimeConfig)
 
-  send(`[INFO] npx ${args.join(' ')}`)
-  if (config?.baseUrl)  send(`[INFO] baseUrl  → ${config.baseUrl}`)
-  if (config?.timeout)  send(`[INFO] timeout  → ${config.timeout}ms`)
-  if (config?.workers)  send(`[INFO] workers  → ${config.workers}`)
-  if (config?.grep)     send(`[INFO] grep     → ${config.grep}`)
+  send(`[INFO] Running: npx playwright ${args.join(' ')}`)
+  if (runtimeConfig.baseUrl)  send(`[INFO] baseUrl  → ${runtimeConfig.baseUrl}`)
+  if (runtimeConfig.timeout)  send(`[INFO] timeout  → ${runtimeConfig.timeout}ms`)
+  if (runtimeConfig.workers)  send(`[INFO] workers  → ${runtimeConfig.workers}`)
+  if (runtimeConfig.grep)     send(`[INFO] grep     → ${runtimeConfig.grep}`)
+  if (bareNames.length > 0)   send(`[INFO] testMatch → ${(runtimeConfig.testMatch as string[]).join(', ')}`)
 
-  // Archive key: join spec names for multi-run
-  const archiveSpec = specList.length === 1 ? specList[0] : (specList.length > 1 ? specList.join(',') : spec)
+  // Archive key: bare filenames joined (clean display in Run History)
+  const archiveSpec = bareNames.length > 0 ? bareNames.join(',') : spec
 
-  const child = spawn('npx', args, {
-    cwd: root,
+  // ── Remote server warmup ──────────────────────────────────────────────────────
+  // Render free-tier sleeps after ~15 min of inactivity.  A single HTTP GET
+  // before spawning Playwright wakes the dyno so tests don't cold-start timeout.
+  const targetUrl = (runtimeConfig.baseUrl as string | undefined) ?? ''
+  if (targetUrl && !/localhost|127\.0\.0\.1/.test(targetUrl)) {
+    send(`[INFO] Warming up ${targetUrl} …`)
+    try {
+      const httpMod = await import(targetUrl.startsWith('https') ? 'https' : 'http')
+      await new Promise<void>((resolve, reject) => {
+        const req = httpMod.default.get(
+          targetUrl,
+          (r: { resume: () => void }) => { r.resume(); resolve() }
+        )
+        req.setTimeout(55_000, () => { req.destroy(); reject(new Error('warmup timeout')) })
+        req.on('error', (e: Error) => reject(e))
+      })
+      send(`[INFO] Server is awake ✓`)
+    } catch (err: unknown) {
+      send(`[WARN] Warmup failed: ${String(err)} — tests will proceed but may be slow`)
+    }
+  }
+
+  const child = spawn('npx', ['playwright', ...args], {
+    cwd:   root,
     env,
     shell: process.platform === 'win32',
   })

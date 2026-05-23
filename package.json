@@ -28,7 +28,9 @@
     "ui:build": "cd ui && npx vite build",
     "ui:preview": "cd ui && npx vite preview",
     "server:dev": "npx tsx server/index.ts",
-    "dev": "npx concurrently \"npm run server:dev\" \"npm run ui:dev\""
+    "dev": "npx concurrently \"npm run server:dev\" \"npm run ui:dev\"",
+    "setup": "npx playwright install",
+    "postinstall": "npx playwright install chromium"
   },
   "keywords": [
     "open-qa",
@@ -46,6 +48,7 @@
     "@anthropic-ai/sdk": "^0.96.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
     "@playwright/test": "^1.60.0",

@@ -4,16 +4,23 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, XCircle, MinusCircle,
   Circle, AlertTriangle, X, Settings, LayoutDashboard,
   Globe, Monitor, Film, FileText, Code2, Copy, Check,
-  Search, Clock, TrendingUp, Zap, Smartphone, FolderOpen, Save,
+  Search, Clock, TrendingUp, Zap, FolderOpen, Save,
   BookOpen, Terminal, MousePointer2, FlaskConical, Layers,
   ExternalLink, Hash, Grid3x3, List, Tag,
   PenLine, Plus, Trash2, RefreshCw, CheckSquare,
+  Send, Paperclip,
 } from 'lucide-react'
+import { OfficeCanvas }                        from '../office/components/OfficeCanvas'
+import { OfficeState }                         from '../office/engine/officeState'
+import { loadDefaultLayout, loadOfficeAssets } from '../office/assetLoader'
+import { useSettings }                         from '../context/SettingsContext'
+import type { AgentConfig, Attachment, Message, SpriteType } from '../context/SettingsContext'
+import type { OfficeLayout }                   from '../office/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Status       = 'passed' | 'failed' | 'skipped' | 'pending' | 'running'
-type FilterKey    = 'all' | 'passed' | 'failed' | 'skipped'
+type FilterKey    = 'all' | 'active' | 'passed' | 'failed' | 'skipped'
 type ViewKey      = 'dashboard' | 'docs'
 type DashboardMode = 'list' | 'matrix'
 type BrowserKey   = 'chromium' | 'firefox' | 'webkit'
@@ -111,12 +118,32 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   grepInvert: '',
 }
 
-const STORAGE_KEY = 'pw_dashboard_config_v1'
-const API_BASE    = 'http://localhost:3001'
+const STORAGE_KEY     = 'pw_dashboard_config_v1'
+const RUN_HISTORY_KEY = 'pw_run_history_v1'
+const API_BASE        = 'http://localhost:3001'
+
+const PW_TEXT_EXTENSIONS = new Set([
+  'ts', 'tsx', 'js', 'jsx', 'json', 'log', 'txt', 'md',
+  'css', 'html', 'xml', 'yaml', 'yml', 'sh', 'py', 'java', 'cs',
+])
+
+/** Per-sprite accent palette for PW panel agent cards */
+const PW_SPRITE_ACCENT: Record<SpriteType, { bg: string; ring: string; text: string; bar: string }> = {
+  tester:  { bg: '#0d2a1a', ring: '#166534', text: '#4ade80', bar: '#22c55e' },
+  dev:     { bg: '#0f1f3d', ring: '#1d4ed8', text: '#60a5fa', bar: '#3b82f6' },
+  analyst: { bg: '#1e0a40', ring: '#7c3aed', text: '#c084fc', bar: '#a855f7' },
+  devops:  { bg: '#2a0e02', ring: '#c2410c', text: '#fb923c', bar: '#f97316' },
+  manager: { bg: '#2a1200', ring: '#d97706', text: '#fbbf24', bar: '#f59e0b' },
+}
+
+// ─── PW-Dashboard OfficeState singleton ──────────────────────────────────────
+// Separate from OfficePage's _officeState — same cached assets, different instance.
+let _pwOfficeState: OfficeState | null = null
+function pwAgentNumId(idx: number) { return idx + 1 }
 
 // ─── Run History ──────────────────────────────────────────────────────────────
 
-const CHART_H = 56
+const CHART_H = 32
 
 /** Format a runAt ISO string into a short label */
 function fmtRunLabel(runAt: string): string {
@@ -144,8 +171,8 @@ function HistoryChart({
 
   if (runs.length === 0) {
     return (
-      <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
-        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+      <div className="rounded-2xl overflow-hidden mb-6"
+        style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
           <TrendingUp size={13} style={{ color: '#3b82f6' }} />
@@ -159,8 +186,8 @@ function HistoryChart({
   }
 
   return (
-    <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+    <div className="rounded-2xl overflow-hidden mb-6"
+      style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
       <div className="flex items-center justify-between px-4 py-2.5 border-b"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
         <div className="flex items-center gap-2">
@@ -180,7 +207,7 @@ function HistoryChart({
         </div>
       </div>
       <div className="px-5 py-3">
-        <div className="flex gap-1.5" style={{ height: CHART_H + 20 }}>
+        <div className="flex gap-2" style={{ height: CHART_H + 20 }}>
           {displayed.map(run => {
             const passH      = Math.round((run.passed  / maxTotal) * CHART_H)
             const failH      = Math.round((run.failed  / maxTotal) * CHART_H)
@@ -254,8 +281,8 @@ function RunsPanel({
   const total = runs.length  // used for #N numbering (newest = #total)
 
   return (
-    <div className="rounded-2xl border shadow-sm overflow-hidden mb-5"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+    <div className="rounded-2xl overflow-hidden mb-8"
+      style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
 
       {/* ── header ── */}
       <button
@@ -375,9 +402,15 @@ function RunsPanel({
                       </div>
                     </td>
                     {/* Spec */}
-                    <td className="px-2 py-2.5 max-w-[140px]">
+                    <td className="px-2 py-2.5 max-w-[160px]">
                       {run.spec
-                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>{run.spec.replace(/\.spec\.(ts|js)$/, '')}</span>
+                        ? <span className="font-mono text-[10px] truncate block" style={{ color: 'var(--text-muted)' }}>
+                            {run.spec
+                              .replace(/^tests[\\/]/g, '')          // strip leading tests/
+                              .replace(/,tests[\\/]/g, ', ')        // strip tests/ after comma
+                              .replace(/\.spec\.(ts|js)/g, '')      // strip .spec.ts extension
+                            }
+                          </span>
                         : <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>all</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono"                                                         style={{ color: 'var(--text-muted)' }}>{run.total}</td>
@@ -457,12 +490,12 @@ function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
 }
 
 function StatusBadge({ status }: { status: Status }) {
-  const base = 'text-[11px] font-semibold px-2 py-0.5 rounded-full'
-  if (status === 'passed')  return <span className={`${base} bg-emerald-50 text-emerald-700`}>passed</span>
-  if (status === 'failed')  return <span className={`${base} bg-red-50 text-red-600`}>failed</span>
-  if (status === 'skipped') return <span className={`${base} bg-amber-50 text-amber-600`}>skipped</span>
-  if (status === 'running') return <span className={`${base} bg-blue-50 text-blue-600`}>running…</span>
-  return <span className={`${base} bg-neutral-100 text-neutral-400`}>pending</span>
+  const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase'
+  if (status === 'passed')  return <span className={`${base}`} style={{ background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.2)' }}>pass</span>
+  if (status === 'failed')  return <span className={`${base}`} style={{ background: 'rgba(239,68,68,0.12)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)' }}>fail</span>
+  if (status === 'skipped') return <span className={`${base}`} style={{ background: 'rgba(251,191,36,0.12)', color: '#d97706', border: '1px solid rgba(251,191,36,0.2)' }}>skip</span>
+  if (status === 'running') return <span className={`${base}`} style={{ background: 'rgba(59,130,246,0.12)', color: '#2563eb', border: '1px solid rgba(59,130,246,0.2)' }}>running…</span>
+  return <span className={`${base}`} style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.15)' }}>pending</span>
 }
 
 // ─── Settings Sub-components ──────────────────────────────────────────────────
@@ -703,7 +736,7 @@ function SettingsView({ config, onChange, noPresets = false }: { config: Playwri
 
       {/* ── Quick Presets ── */}
       {!noPresets && (
-      <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
           <Zap size={13} style={{ color: '#8b5cf6' }} />
@@ -2099,12 +2132,657 @@ function EditorView({
   )
 }
 
+// ─── PW Office Panel — helper components ─────────────────────────────────────
+
+function PwMarkdownContent({ text }: { text: string }) {
+  const [copied, setCopied] = useState<number | null>(null)
+  const copyCode = useCallback((code: string, idx: number) => {
+    void navigator.clipboard.writeText(code).then(() => {
+      setCopied(idx); setTimeout(() => setCopied(null), 2000)
+    })
+  }, [])
+  const parts = text.split(/(```[\w]*\n[\s\S]*?```)/g)
+  return (
+    <div className="text-[11px] leading-relaxed">
+      {parts.map((part, i) => {
+        const fm = /^```([\w]*)\n([\s\S]*?)```$/.exec(part)
+        if (fm) {
+          const lang = fm[1] || 'text'; const code = fm[2].trimEnd()
+          return (
+            <div key={i} className="relative my-1.5 rounded-lg overflow-hidden"
+              style={{ background: '#0d1117', border: '1px solid #30363d' }}>
+              <div className="flex items-center justify-between px-2 py-1"
+                style={{ background: '#161b22', borderBottom: '1px solid #30363d' }}>
+                <span className="text-[9px] font-mono uppercase" style={{ color: '#8b949e' }}>{lang}</span>
+                <button onClick={() => copyCode(code, i)} className="text-[9px] px-1.5 py-0.5 rounded transition-colors"
+                  style={{ color: copied === i ? '#3fb950' : '#8b949e', background: copied === i ? 'rgba(63,185,80,0.1)' : 'transparent' }}>
+                  {copied === i ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <pre className="px-3 py-2 overflow-x-auto font-mono text-[10px]" style={{ color: '#e6edf3', margin: 0 }}>
+                <code>{code}</code>
+              </pre>
+            </div>
+          )
+        }
+        const lines = part.split('\n')
+        return (
+          <span key={i}>
+            {lines.map((line, li) => {
+              const segs = line.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g)
+              return (
+                <span key={li}>
+                  {segs.map((seg, si) => {
+                    if (/^`[^`]+`$/.test(seg)) return <code key={si} className="px-0.5 rounded text-[10px] font-mono" style={{ background: 'rgba(110,118,129,0.2)', color: '#f0883e' }}>{seg.slice(1,-1)}</code>
+                    if (/^\*\*[^*]+\*\*$/.test(seg)) return <strong key={si} style={{ color: '#e6edf3' }}>{seg.slice(2,-2)}</strong>
+                    if (/^\*[^*]+\*$/.test(seg)) return <em key={si}>{seg.slice(1,-1)}</em>
+                    return <span key={si}>{seg}</span>
+                  })}
+                  {li < lines.length - 1 && <br />}
+                </span>
+              )
+            })}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function PwMessageBubble({ msg, isStreaming, agents }: {
+  msg: Message; isStreaming: boolean; agents: AgentConfig[]
+}) {
+  const isUser  = msg.role === 'user'
+  const agent   = msg.agentId ? agents.find(a => a.id === msg.agentId) : null
+  const accent  = agent ? PW_SPRITE_ACCENT[agent.characterSprite] : null
+  const avatarBg   = isUser ? '#1e3a5f' : (accent?.bg   ?? '#0f2a1a')
+  const avatarRing = isUser ? '#1d4ed8' : (accent?.ring ?? '#166534')
+  const avatarText = isUser ? '#93c5fd' : (accent?.text ?? '#4ade80')
+  const initials   = isUser ? 'U'       : (msg.senderName?.slice(0,2).toUpperCase() ?? 'AI')
+  return (
+    <div className={`flex gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end`}>
+      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
+        style={{ background: avatarBg, color: avatarText, border: `1.5px solid ${avatarRing}` }}>
+        {initials}
+      </div>
+      <div className={`flex flex-col gap-0.5 max-w-[88%] ${isUser ? 'items-end' : 'items-start'}`}>
+        <span className="text-[9px] font-medium px-0.5" style={{ color: 'var(--text-muted)' }}>
+          {msg.senderName}
+          <span className="ml-1 font-normal opacity-60">
+            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </span>
+        <div className="rounded-xl px-2.5 py-2"
+          style={{
+            background: isUser ? 'linear-gradient(135deg,#1e3a5f,#1a3050)' : 'var(--bg-card)',
+            border: `1px solid ${isUser ? '#1e4080' : 'var(--border)'}`,
+            color: 'var(--text-main)', wordBreak: 'break-word',
+          }}>
+          {msg.attachments?.filter(a => !a.type.startsWith('image/')).map((att, i) => (
+            <span key={i} className="inline-flex items-center gap-1 mr-1 mb-1.5 px-1.5 py-0.5 rounded text-[9px]"
+              style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              <FileText size={8} />{att.name}
+            </span>
+          ))}
+          {msg.attachments?.filter(a => a.type.startsWith('image/')).map((att, i) => (
+            <img key={i} src={att.content} alt={att.name} className="max-w-full rounded-lg mb-1.5 block"
+              style={{ border: '1px solid var(--border)', maxHeight: 150, objectFit: 'cover' }} />
+          ))}
+          {isUser
+            ? <span className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.content}</span>
+            : (msg.content
+                ? <PwMarkdownContent text={msg.content} />
+                : <span className="flex gap-0.5 items-center py-0.5">
+                    {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+                  </span>
+              )
+          }
+          {isStreaming && msg.content && (
+            <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse rounded-sm align-middle"
+              style={{ background: accent?.bar ?? '#4ade80', verticalAlign: 'middle' }} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── PW Office Panel ─────────────────────────────────────────────────────────
+
+interface PwOfficePanelProps {
+  running: boolean
+  suites:  TestSuite[]
+}
+
+function PwOfficePanel({ running, suites }: PwOfficePanelProps) {
+  const {
+    agents, settings, updateSettings,
+    messages, appendMessage, appendChunk, clearHistory,
+    activeTypingAgents,
+    setAgentStatus, setActiveTyping, removeActiveTyping,
+  } = useSettings()
+
+  const panRef       = useRef({ x: 0, y: 0 })
+  const chatEndRef   = useRef<HTMLDivElement>(null)
+  const textareaRef  = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const abortRef     = useRef<AbortController | null>(null)
+
+  const [assetsReady,    setAssetsReady]    = useState(false)
+  const [inputText,      setInputText]      = useState('')
+  const [pendingFiles,   setPendingFiles]   = useState<Attachment[]>([])
+  const [mentionQuery,   setMentionQuery]   = useState<string | null>(null)
+  const [mentionIndex,   setMentionIndex]   = useState(0)
+  const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
+  const [errorBanner,    setErrorBanner]    = useState<string | null>(null)
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('')
+
+  // Default selected agent to first available
+  useEffect(() => {
+    if (!selectedAgentId && agents.length > 0) setSelectedAgentId(agents[0].id)
+  }, [agents, selectedAgentId])
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, streamingMsgId])
+
+  // ── Mount: init singleton + load assets ──────────────────────────────────
+  useEffect(() => {
+    if (!_pwOfficeState) _pwOfficeState = new OfficeState()
+    const os = _pwOfficeState
+    Promise.all([loadOfficeAssets(), loadDefaultLayout()])
+      .then(([, rawLayout]) => {
+        if (rawLayout) os.rebuildFromLayout(rawLayout as OfficeLayout)
+        agents.forEach((_agent, idx) => {
+          const numId = pwAgentNumId(idx)
+          if (!os.characters.has(numId)) {
+            os.addAgent(numId, undefined, undefined, undefined, true)
+          }
+          const active =
+            running ||
+            (hasFailures && (_agent.id === 'agent-triage' || _agent.id === 'agent-healer'))
+          os.setAgentActive(numId, active)
+        })
+        setAssetsReady(true)
+      })
+      .catch(() => setAssetsReady(true))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Derive failure flag ───────────────────────────────────────────────────
+  const hasFailures = suites.some(s => s.tests.some(t => t.status === 'failed'))
+
+  // ── Sync: drive animations from test state ────────────────────────────────
+  useEffect(() => {
+    if (!_pwOfficeState) return
+    agents.forEach((agent, idx) => {
+      const numId  = pwAgentNumId(idx)
+      const active =
+        running ||
+        (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'))
+      _pwOfficeState!.setAgentActive(numId, active)
+    })
+  }, [agents, running, hasFailures])
+
+  const handleAgentClick = (charId: number) => {
+    const agent = agents[charId - 1]
+    if (!agent) return
+    setSelectedAgentId(agent.id)
+  }
+
+  // ── @-mention autocomplete ────────────────────────────────────────────────
+
+  const mentionMatches = mentionQuery !== null
+    ? agents.filter(a =>
+        a.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+        a.role.toLowerCase().includes(mentionQuery.toLowerCase()),
+      )
+    : []
+
+  const insertMention = useCallback((agentName: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const pos   = textarea.selectionStart
+    const text  = inputText
+    const atIdx = text.lastIndexOf('@', pos - 1)
+    if (atIdx === -1) return
+    const next = `${text.slice(0, atIdx)}@${agentName} ${text.slice(pos)}`
+    setInputText(next)
+    setMentionQuery(null)
+    requestAnimationFrame(() => {
+      const newPos = atIdx + agentName.length + 2
+      textarea.setSelectionRange(newPos, newPos)
+      textarea.focus()
+    })
+  }, [inputText])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setInputText(val)
+    const atMatch = /@([\w ]*)$/.exec(val.slice(0, e.target.selectionStart))
+    if (atMatch) { setMentionQuery(atMatch[1]); setMentionIndex(0) }
+    else setMentionQuery(null)
+  }
+
+  const handleKeyDownChat = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery !== null && mentionMatches.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => (i+1) % mentionMatches.length); return }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setMentionIndex(i => (i-1+mentionMatches.length) % mentionMatches.length); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionMatches[mentionIndex].name); return }
+      if (e.key === 'Escape')    { setMentionQuery(null); return }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend() }
+  }
+
+  // ── File attachment ───────────────────────────────────────────────────────
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    files.forEach(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = () => setPendingFiles(prev => [...prev, { name: file.name, type: file.type, content: reader.result as string }])
+        reader.readAsDataURL(file)
+      } else if (PW_TEXT_EXTENSIONS.has(ext)) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const text    = reader.result as string
+          const inlined = `[File: ${file.name}]\n\`\`\`\n${text}\n\`\`\``
+          setInputText(prev => prev ? `${prev}\n\n${inlined}` : inlined)
+          setPendingFiles(prev => [...prev, { name: file.name, type: 'text/plain', content: text }])
+        }
+        reader.readAsText(file)
+      }
+    })
+    e.target.value = ''
+  }
+
+  // ── Parse @-mentions ──────────────────────────────────────────────────────
+
+  const parseTaggedAgents = useCallback((text: string) => {
+    const names   = [...text.matchAll(/@([\w]+(?:\s[\w]+)*)/g)].map(m => m[1].trim())
+    const matched = names
+      .map(name => agents.find(a => a.name.toLowerCase() === name.toLowerCase()))
+      .filter((a): a is AgentConfig => a !== undefined)
+    return [...new Map(matched.map(a => [a.id, a])).values()]
+  }, [agents])
+
+  // ── Send message ──────────────────────────────────────────────────────────
+
+  const handleSend = useCallback(async () => {
+    const text = inputText.trim()
+    if (!text && pendingFiles.length === 0) return
+    if (streamingMsgId) return
+
+    setMentionQuery(null)
+    setErrorBanner(null)
+
+    const imageAtts = pendingFiles.filter(f => f.type.startsWith('image/'))
+    const allAtts   = pendingFiles
+
+    const userMsg: Message = {
+      id: crypto.randomUUID(), role: 'user', content: text,
+      senderName: 'User', timestamp: Date.now(),
+      attachments: allAtts.length > 0 ? allAtts : undefined,
+    }
+    appendMessage(userMsg)
+    setInputText('')
+    setPendingFiles([])
+
+    const tagged  = parseTaggedAgents(text)
+    const targets = tagged.length > 0
+      ? tagged
+      : (selectedAgentId
+          ? agents.filter(a => a.id === selectedAgentId)
+          : agents.length > 0 ? [agents[0]] : [])
+    if (targets.length === 0) return
+
+    setActiveTyping(targets.map(a => a.id))
+    targets.forEach(a => setAgentStatus(a.id, 'working'))
+
+    const modelMsgId     = crypto.randomUUID()
+    const respondentName = targets.length === 1 ? targets[0].name : targets.map(a => a.name).join(' + ')
+
+    const modelMsg: Message = {
+      id: modelMsgId, role: 'model', content: '',
+      senderName: respondentName,
+      agentId:    targets.length === 1 ? targets[0].id : undefined,
+      timestamp:  Date.now(),
+    }
+    appendMessage(modelMsg)
+    setStreamingMsgId(modelMsgId)
+
+    const priorMessages = messages.map(m => ({ role: m.role, content: m.content }))
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const isOllama = settings.provider === 'ollama'
+      const resp = await fetch(`${API_BASE}/api/qa-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${settings.geminiApiKey}`,
+        },
+        body: JSON.stringify({
+          message:          text,
+          history:          priorMessages,
+          agentIds:         targets.map(a => a.id),
+          agents:           agents.map(a => ({ id: a.id, name: a.name, systemPrompt: a.systemPrompt })),
+          imageAttachments: isOllama ? [] : imageAtts.map(att => ({ name: att.name, type: att.type, content: att.content })),
+          model:            isOllama ? settings.ollamaModel : settings.defaultModel,
+          provider:         settings.provider,
+          ollamaBaseUrl:    settings.ollamaBaseUrl,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!resp.ok || !resp.body) {
+        const errData = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` })) as { error?: string }
+        appendChunk(modelMsgId, `\n\n[Error: ${errData.error ?? 'Unknown error'}]`)
+        targets.forEach(a => setAgentStatus(a.id, 'error'))
+        setActiveTyping([]); setStreamingMsgId(null); return
+      }
+
+      const reader  = resp.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer    = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          try {
+            const payload = JSON.parse(raw) as { chunk?: string; done?: boolean; error?: string }
+            if (payload.error) {
+              appendChunk(modelMsgId, `\n\n[Error: ${payload.error}]`)
+              targets.forEach(a => setAgentStatus(a.id, 'error'))
+              setActiveTyping([]); setStreamingMsgId(null); return
+            }
+            if (payload.chunk) appendChunk(modelMsgId, payload.chunk)
+            if (payload.done) {
+              targets.forEach(a => { setAgentStatus(a.id, 'idle'); removeActiveTyping(a.id) })
+              setStreamingMsgId(null); return
+            }
+          } catch { /* malformed line */ }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      const errMsg = err instanceof Error ? err.message : 'Network error'
+      appendChunk(modelMsgId, `\n\n[Error: ${errMsg}]`)
+      targets.forEach(a => setAgentStatus(a.id, 'error'))
+      setActiveTyping([]); setStreamingMsgId(null)
+    }
+  }, [
+    inputText, pendingFiles, streamingMsgId, settings, agents, messages, selectedAgentId,
+    appendMessage, appendChunk, parseTaggedAgents,
+    setActiveTyping, setAgentStatus, removeActiveTyping,
+  ])
+
+  const handleStop = () => {
+    abortRef.current?.abort()
+    setStreamingMsgId(null)
+    setActiveTyping([])
+    agents.forEach(a => { if (activeTypingAgents.includes(a.id)) setAgentStatus(a.id, 'idle') })
+  }
+
+  const anyTyping = activeTypingAgents.length > 0
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between px-3"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-body)', height: 34 }}>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm leading-none">🏢</span>
+          <span className="text-[11px] font-bold" style={{ color: 'var(--text-main)' }}>QA Office</span>
+          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>· {agents.length} agents</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {running && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold" style={{ color: '#60a5fa' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" /> Running
+            </span>
+          )}
+          {!running && hasFailures && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold" style={{ color: '#f87171' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" /> Failures
+            </span>
+          )}
+          {!running && !hasFailures && agents.length > 0 && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold" style={{ color: '#34d399' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> All idle
+            </span>
+          )}
+          {/* Provider toggle */}
+          <div className="flex items-center rounded overflow-hidden"
+            style={{ border: '1px solid var(--border)', fontSize: 8 }}>
+            {(['gemini', 'ollama'] as const).map(p => (
+              <button key={p} onClick={() => updateSettings({ provider: p })}
+                className="px-1.5 py-0.5 font-bold transition-colors"
+                style={{
+                  background: settings.provider === p ? (p === 'gemini' ? '#1d4ed8' : '#065f46') : 'transparent',
+                  color: settings.provider === p ? '#fff' : 'var(--text-muted)',
+                }}>
+                {p === 'gemini' ? '✨' : '🦙'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Canvas (fixed height) ─────────────────────────────────────────── */}
+      <div className="shrink-0 relative" style={{ height: 155, background: '#1a1a2e' }}>
+        {assetsReady && _pwOfficeState ? (
+          <OfficeCanvas officeState={_pwOfficeState} onAgentClick={handleAgentClick}
+            zoom={1} onZoomChange={() => {}} panRef={panRef} locked />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+      </div>
+
+      {/* ── Compact agent strip ───────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center gap-1 px-2 py-1.5 overflow-x-auto"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-body)', scrollbarWidth: 'none' }}>
+        {agents.map(agent => {
+          const accent     = PW_SPRITE_ACCENT[agent.characterSprite]
+          const active     = running || (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'))
+          const isTyping   = activeTypingAgents.includes(agent.id)
+          const isSelected = agent.id === selectedAgentId
+          return (
+            <button key={agent.id} onClick={() => setSelectedAgentId(agent.id)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium shrink-0 transition-all"
+              style={{
+                background:  isSelected ? accent.bg    : 'transparent',
+                border:      `1px solid ${isSelected ? accent.ring : 'var(--border)'}`,
+                color:       isSelected ? accent.text  : 'var(--text-muted)',
+                boxShadow:   isSelected ? `0 0 0 1px ${accent.ring}40` : undefined,
+              }}
+              title={agent.role}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active || isTyping ? 'animate-pulse' : ''}`}
+                style={{ backgroundColor: active || isTyping ? '#60a5fa' : accent.bar }} />
+              {agent.name.split(' ')[0]}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Chat toolbar ─────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b"
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-body)' }}>
+        {/* Full agent selector (synced with strip above) */}
+        <select value={selectedAgentId} onChange={e => setSelectedAgentId(e.target.value)}
+          className="flex-1 min-w-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
+          style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)', outline: 'none' }}>
+          {agents.map(a => <option key={a.id} value={a.id}>{a.name} — {a.role}</option>)}
+        </select>
+        <button onClick={clearHistory}
+          className="shrink-0 p-1 rounded hover:text-red-400 transition-colors"
+          style={{ color: 'var(--text-muted)' }} title="Clear history">
+          <Trash2 size={10} />
+        </button>
+      </div>
+
+      {/* ── Hints / banners ──────────────────────────────────────────────── */}
+      {settings.provider === 'ollama' && settings.ollamaModel && (
+        <div className="shrink-0 px-2 py-0.5 text-[9px]" style={{ background: '#052e16', color: '#4ade80' }}>
+          🦙 {settings.ollamaModel} · local
+        </div>
+      )}
+      {settings.provider === 'ollama' && !settings.ollamaModel.trim() && (
+        <div className="shrink-0 px-2 py-0.5 text-[9px]" style={{ background: '#451a03', color: '#fbbf24' }}>
+          ⚠ No Ollama model — configure in Settings
+        </div>
+      )}
+      {settings.provider === 'gemini' && !settings.geminiApiKey.trim() && (
+        <div className="shrink-0 px-2 py-0.5 text-[9px]" style={{ background: '#451a03', color: '#fbbf24' }}>
+          ⚠ No Gemini API key — configure in Settings
+        </div>
+      )}
+      {errorBanner && (
+        <div className="shrink-0 flex items-center gap-1 px-2 py-0.5 text-[9px]" style={{ background: '#2d0a0a', color: '#fca5a5' }}>
+          <span className="flex-1">{errorBanner}</span>
+          <button onClick={() => setErrorBanner(null)}><X size={9} /></button>
+        </div>
+      )}
+
+      {/* ── Pending file chips ────────────────────────────────────────────── */}
+      {pendingFiles.length > 0 && (
+        <div className="shrink-0 flex flex-wrap gap-1 px-2 py-1 border-b" style={{ borderColor: 'var(--border)' }}>
+          {pendingFiles.map((f, i) => (
+            <span key={i} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px]"
+              style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              <FileText size={8} />{f.name}
+              <button onClick={() => setPendingFiles(prev => prev.filter((_,j) => j !== i))} className="hover:text-red-400">
+                <X size={8} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Messages (scrollable, fills remaining height) ─────────────────── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-2"
+        style={{ background: 'var(--bg-body)' }}>
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-center select-none">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>Chat with your team</p>
+            <p className="text-[10px] max-w-[240px]" style={{ color: 'var(--text-muted)' }}>
+              Select an agent above or type <code style={{ fontFamily: 'monospace', background: 'var(--bg-muted)', padding: '0 3px', borderRadius: 3 }}>@Name</code> to target them
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center max-w-[280px]">
+              {agents.map(a => {
+                const ac = PW_SPRITE_ACCENT[a.characterSprite]
+                return (
+                  <button key={a.id} onClick={() => setSelectedAgentId(a.id)}
+                    className="px-1.5 py-0.5 rounded-full text-[9px] font-medium transition-opacity hover:opacity-80"
+                    style={{ background: ac.bg, color: ac.text, border: `1px solid ${ac.ring}` }}>
+                    @{a.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        {messages.map(msg => (
+          <PwMessageBubble key={msg.id} msg={msg} isStreaming={msg.id === streamingMsgId} agents={agents} />
+        ))}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* ── @mention autocomplete ─────────────────────────────────────────── */}
+      {mentionQuery !== null && mentionMatches.length > 0 && (
+        <div className="mx-2 mb-1 rounded-lg overflow-hidden border"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          {mentionMatches.map((a, i) => {
+            const ac = PW_SPRITE_ACCENT[a.characterSprite]
+            return (
+              <button key={a.id} onClick={() => insertMention(a.name)}
+                className="w-full flex items-center gap-2 px-2 py-1 text-left transition-colors"
+                style={{
+                  background: i === mentionIndex ? 'var(--bg-body)' : 'transparent',
+                  borderBottom: i < mentionMatches.length - 1 ? '1px solid var(--border)' : undefined,
+                }}>
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0"
+                  style={{ background: ac.bg, color: ac.text }}>{a.name.slice(0,2).toUpperCase()}</span>
+                <span className="text-[10px] font-semibold" style={{ color: 'var(--text-main)' }}>{a.name}</span>
+                <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{a.role}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Input ────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex flex-col gap-1 px-2 py-2 border-t"
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}>
+        <div className="flex items-end gap-1.5">
+          <textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDownChat}
+            placeholder={`Ask ${agents.find(a => a.id === selectedAgentId)?.name ?? 'agent'} or @mention…`}
+            rows={2}
+            className="flex-1 resize-none rounded-lg px-2 py-1.5 text-[11px] leading-relaxed outline-none"
+            style={{ background: 'var(--bg-body)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+          />
+          <input ref={fileInputRef} type="file" multiple className="hidden"
+            accept=".ts,.tsx,.js,.jsx,.json,.log,.txt,.md,.css,.html,.yaml,.yml,.py,.png,.jpg,.jpeg,.gif,.webp"
+            onChange={handleFileSelect} />
+          <button onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity"
+            style={{ background: 'var(--bg-body)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            title="Attach file">
+            <Paperclip size={11} />
+          </button>
+          {streamingMsgId ? (
+            <button onClick={handleStop}
+              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: '#374151', color: '#fff' }} title="Stop">
+              <Square size={10} />
+            </button>
+          ) : (
+            <button onClick={() => void handleSend()}
+              disabled={!inputText.trim() && pendingFiles.length === 0}
+              className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-40 transition-opacity"
+              style={{ background: '#2563eb', color: '#fff' }} title="Send (Enter)">
+              <Send size={11} />
+            </button>
+          )}
+        </div>
+        <p className="text-[8px] text-center" style={{ color: 'var(--text-muted)' }}>
+          {anyTyping
+            ? `${activeTypingAgents.map(id => agents.find(a => a.id === id)?.name ?? id).join(', ')} typing…`
+            : 'Enter · Shift+Enter for newline · @ to mention'}
+        </p>
+      </div>
+
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PlaywrightDashboard() {
   const [suites, setSuites]               = useState<TestSuite[]>([])
   const [running, setRunning]             = useState(false)
-  const [activeTab, setActiveTab]         = useState<FilterKey>('all')
+  const [activeTab, setActiveTab]         = useState<FilterKey>('active')
   const [activeView, setActiveView]       = useState<ViewKey>('dashboard')
   const [config, setConfig]               = useState<PlaywrightConfig>(DEFAULT_CONFIG)
   const [savedConfig, setSavedConfig]     = useState<PlaywrightConfig | null>(null)
@@ -2141,8 +2819,17 @@ export default function PlaywrightDashboard() {
     return () => document.removeEventListener('mousedown', handler)
   }, [specPickerOpen])
   // ── Multi-run history ────────────────────────────────────────────────────────
-  const [runHistory, setRunHistory]         = useState<RunRecord[]>([])
+  const [runHistory, setRunHistory]         = useState<RunRecord[]>(() => {
+    try {
+      const raw = localStorage.getItem(RUN_HISTORY_KEY)
+      return raw ? (JSON.parse(raw) as RunRecord[]) : []
+    } catch { return [] }
+  })
   const [selectedRunId, setSelectedRunId]   = useState<string | null>(null)
+  const [browsersOk, setBrowsersOk]         = useState<boolean | null>(null)
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => localStorage.getItem('pw_setup_banner_dismissed') === '1'
+  )
 
   // ── Derived counts ──────────────────────────────────────────────────────────
   const allTests = useMemo(() => suites.flatMap(s => s.tests), [suites])
@@ -2196,6 +2883,13 @@ export default function PlaywrightDashboard() {
       // ignore corrupt storage
     }
   }, [])
+
+  // ── Persist runHistory to localStorage so it survives page refresh ──────────
+  useEffect(() => {
+    try {
+      localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(runHistory.slice(0, 30)))
+    } catch { /* quota */ }
+  }, [runHistory])
 
   // ── isSaved: true when current config matches what's persisted ──────────────
   const isSaved = useMemo(() =>
@@ -2298,6 +2992,15 @@ export default function PlaywrightDashboard() {
     return () => clearInterval(id)
   }, [serverOnline, fetchResults, fetchSpecs, fetchHistory])
 
+  // ── Browser-binary check ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!serverOnline || demoMode) return
+    fetch(`${API_BASE}/api/playwright/browser-check`)
+      .then(r => r.json())
+      .then((d: { ok: boolean }) => setBrowsersOk(d.ok))
+      .catch(() => setBrowsersOk(null))
+  }, [serverOnline, demoMode])
+
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(() =>
     [...allTests].filter(t => t.duration > 0).sort((a, b) => b.duration - a.duration).slice(0, 3),
@@ -2310,7 +3013,10 @@ export default function PlaywrightDashboard() {
       .map(s => ({
         ...s,
         tests: s.tests.filter(t => {
-          const matchesTab    = activeTab === 'all' || t.status === activeTab
+          const matchesTab    =
+            activeTab === 'all'    ? true :
+            activeTab === 'active' ? (t.status === 'passed' || t.status === 'failed') :
+            t.status === activeTab
           const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
           return matchesTab && matchesSearch
         }),
@@ -2357,6 +3063,8 @@ export default function PlaywrightDashboard() {
         }
       }
       await fetchResults()
+      // Small delay to allow Windows NTFS to flush the archive file before readdir
+      await new Promise(r => setTimeout(r, 120))
       await fetchHistory()
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -2418,26 +3126,60 @@ export default function PlaywrightDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-body)' }}>
-      <div className="max-w-5xl mx-auto px-4 py-10 animate-fade-up">
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-body)' }}>
+
+      {/* ── Left: pixel-agents canvas sidebar (lg+) ──────────────────────── */}
+      <aside
+        className="hidden lg:flex flex-col shrink-0 sticky top-14 overflow-hidden"
+        style={{ width: 360, height: 'calc(100vh - 3.5rem)', borderRight: '1px solid var(--border)' }}
+      >
+        <PwOfficePanel running={running} suites={suites} />
+      </aside>
+
+      {/* ── Right: existing scrollable dashboard content ──────────────────── */}
+      <div className="flex-1 min-w-0 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-6 py-10 animate-fade-up">
 
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Playwright Dashboard</h1>
+              <h1 className="text-2xl font-black tracking-tight"
+              style={{ background: 'linear-gradient(135deg, var(--text-main) 0%, #3b82f6 60%, #8b5cf6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Playwright Dashboard
+            </h1>
               {serverOnline === true && !demoMode && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>Live</span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Live
+                </span>
               )}
               {demoMode && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>Demo</span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  Demo
+                </span>
+              )}
+              {serverOnline === false && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                  Offline
+                </span>
               )}
             </div>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {suites.length} suites · {counts.total} tests · {formatMs(totalDuration)}
-              {lastRunAt && ` · run at ${new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-              {serverOnline === false && <span className="ml-2 text-amber-500">· server offline</span>}
-              {isLoading && <span className="ml-2 text-blue-400">· loading…</span>}
+            <p className="text-xs mt-1.5 flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+              <span>{suites.length} suites</span>
+              <span style={{ color: 'var(--border)' }}>·</span>
+              <span>{counts.total} tests</span>
+              {totalDuration > 0 && <>
+                <span style={{ color: 'var(--border)' }}>·</span>
+                <span>{formatMs(totalDuration)}</span>
+              </>}
+              {lastRunAt && <>
+                <span style={{ color: 'var(--border)' }}>·</span>
+                <span>last run {new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </>}
+              {isLoading && <span className="text-blue-400 flex items-center gap-1"><RotateCcw size={10} className="animate-spin" /> loading…</span>}
             </p>
           </div>
 
@@ -2545,37 +3287,37 @@ export default function PlaywrightDashboard() {
                   )}
                 </div>
                 <button onClick={exportReport}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  style={{ color: 'var(--text-muted)', background: 'transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.background = 'var(--bg-card)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}>
                   <Download size={13} /> Export
                 </button>
                 <button onClick={() => fetchResults()} disabled={running || isLoading}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                  style={{ color: 'var(--text-muted)', background: 'transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.background = 'var(--bg-card)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}
                   title="Reload results from server">
                   <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} /> Refresh
                 </button>
                 <button onClick={reset} disabled={running}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm disabled:opacity-40"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                  style={{ color: 'var(--text-muted)', background: 'transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.background = 'var(--bg-card)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}
                   title="Reset to demo data">
                   Demo
                 </button>
                 <button
                   onClick={() => setSettingsOpen(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                   style={settingsOpen
-                    ? { borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', color: '#2563eb' }
-                    : { borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)' }
+                    ? { background: 'rgba(37,99,235,0.08)', color: '#2563eb' }
+                    : { background: 'transparent', color: 'var(--text-muted)' }
                   }
-                  onMouseEnter={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-body)' }}
-                  onMouseLeave={e => { if (!settingsOpen) e.currentTarget.style.backgroundColor = 'var(--bg-card)' }}
+                  onMouseEnter={e => { if (!settingsOpen) { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.background = 'var(--bg-card)' } }}
+                  onMouseLeave={e => { if (!settingsOpen) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' } }}
                   title="Toggle config panel">
                   <Settings size={13} />
                   Config
@@ -2586,7 +3328,11 @@ export default function PlaywrightDashboard() {
                 </button>
                 <button
                   onClick={running ? () => setRunning(false) : runTests}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 ${running ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? 'text-white' : 'text-white'}`}
+                  style={running
+                    ? { background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 0 0 3px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.3)' }
+                    : { background: 'linear-gradient(135deg,#3b82f6,#6366f1)', boxShadow: '0 0 0 3px rgba(59,130,246,0.2), 0 2px 8px rgba(99,102,241,0.3)' }
+                  }>
                   {running ? <><Square size={14} /> Stop</> : <><Play size={14} /> Run Tests</>}
                 </button>
               </>
@@ -2619,6 +3365,32 @@ export default function PlaywrightDashboard() {
               </div>
             )}
 
+            {/* Browser-not-installed banner */}
+            {browsersOk === false && !bannerDismissed && !demoMode && (
+              <div className="flex items-start gap-3 px-4 py-3 mb-4 rounded-xl border text-xs"
+                style={{ backgroundColor: '#451a03', borderColor: '#92400e', color: '#fde68a' }}>
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: '#fbbf24' }} />
+                <div className="flex-1">
+                  <p className="font-semibold mb-1">Playwright browsers not installed</p>
+                  <p className="mb-1.5" style={{ color: '#fcd34d' }}>Run this once in your terminal, then refresh the page:</p>
+                  <code className="block rounded px-2 py-1 font-mono select-all text-[11px]"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.35)', color: '#a5f3fc' }}>
+                    npx playwright install chromium
+                  </code>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('pw_setup_banner_dismissed', '1')
+                    setBannerDismissed(true)
+                  }}
+                  className="shrink-0 hover:opacity-70 transition-opacity"
+                  style={{ color: '#fde68a' }}
+                  title="Dismiss">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             {/* Historical-run banner */}
             {selectedRunId && !demoMode && (
               <div className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
@@ -2640,14 +3412,12 @@ export default function PlaywrightDashboard() {
             )}
 
             {/* ── Presets bar (always visible) ────────────────────────── */}
-            <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2 px-4 py-2 border-b"
-                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
-                <Zap size={12} style={{ color: '#8b5cf6' }} />
-                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Quick Presets</span>
-                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>— one click to apply a configuration</span>
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={11} style={{ color: '#8b5cf6' }} />
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Quick Presets</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 p-3" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <div className="flex flex-wrap gap-2">
                 {PRESETS.map(preset => {
                   const isActive = preset.specs
                     ? preset.specs.every(s => selectedSpecs.has(s)) && selectedSpecs.size === preset.specs.length
@@ -2659,19 +3429,27 @@ export default function PlaywrightDashboard() {
                         setConfig(c => ({ ...c, ...preset.config }))
                         if (preset.specs) setSelectedSpecs(new Set(preset.specs))
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-left transition-all duration-150"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
                       style={{
-                        borderColor: isActive ? preset.color : 'var(--border)',
-                        backgroundColor: isActive ? `${preset.color}15` : 'var(--bg-body)',
+                        backgroundColor: isActive ? `${preset.color}18` : 'var(--bg-card)',
+                        color: isActive ? preset.color : 'var(--text-muted)',
+                        boxShadow: isActive
+                          ? `0 0 0 1.5px ${preset.color}60`
+                          : '0 1px 3px rgba(0,0,0,0.06)',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = preset.color; e.currentTarget.style.backgroundColor = `${preset.color}10` }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = `${preset.color}14`
+                        e.currentTarget.style.color = preset.color
+                        e.currentTarget.style.boxShadow = `0 0 0 1.5px ${preset.color}50`
+                      }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = isActive ? preset.color : 'var(--border)'
-                        e.currentTarget.style.backgroundColor = isActive ? `${preset.color}15` : 'var(--bg-body)'
+                        e.currentTarget.style.backgroundColor = isActive ? `${preset.color}18` : 'var(--bg-card)'
+                        e.currentTarget.style.color = isActive ? preset.color : 'var(--text-muted)'
+                        e.currentTarget.style.boxShadow = isActive ? `0 0 0 1.5px ${preset.color}60` : '0 1px 3px rgba(0,0,0,0.06)'
                       }}
                     >
-                      <span style={{ color: preset.color }}>{preset.icon}</span>
-                      <span className="text-xs font-semibold truncate" style={{ color: 'var(--text-main)' }}>{preset.label}</span>
+                      <span>{preset.icon}</span>
+                      {preset.label}
                     </button>
                   )
                 })}
@@ -2680,7 +3458,7 @@ export default function PlaywrightDashboard() {
 
             {/* ── Collapsible config + editor panel ───────────────────── */}
             {settingsOpen && (
-              <div className="rounded-2xl border shadow-sm overflow-hidden mb-4" style={{ borderColor: '#93c5fd' }}>
+              <div className="rounded-2xl overflow-hidden mb-8" style={{ boxShadow: '0 2px 12px -4px rgba(37,99,235,0.18), 0 0 0 1px rgba(37,99,235,0.1)' }}>
                 {/* Panel header with Config | Editor tabs */}
                 <div className="flex items-center justify-between px-4 py-2.5 border-b"
                   style={{ borderColor: '#bfdbfe', backgroundColor: 'rgba(37,99,235,0.04)' }}>
@@ -2773,29 +3551,42 @@ export default function PlaywrightDashboard() {
             )}
 
             {/* Metric cards */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 mb-8">
               {([
-                { label: 'Total',     value: counts.total,            color: 'var(--text-main)' },
-                { label: 'Passed',    value: counts.passed,           color: '#059669' },
-                { label: 'Failed',    value: counts.failed,           color: '#ef4444' },
-                { label: 'Skipped',   value: counts.skipped,          color: '#d97706' },
-                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444' },
-                { label: 'Duration',  value: formatMs(totalDuration), color: 'var(--text-main)' },
-              ] as const).map(({ label, value, color }) => (
-                <div key={label} className="p-4 rounded-2xl border text-center shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                { label: 'Total',     value: counts.total,            color: '#6366f1', accent: '#6366f1', icon: <Hash size={13} /> },
+                { label: 'Passed',    value: counts.passed,           color: '#059669', accent: '#10b981', icon: <CheckCircle2 size={13} /> },
+                { label: 'Failed',    value: counts.failed,           color: '#ef4444', accent: '#ef4444', icon: <XCircle size={13} /> },
+                { label: 'Skipped',   value: counts.skipped,          color: '#d97706', accent: '#fbbf24', icon: <MinusCircle size={13} /> },
+                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444', accent: passRate >= 80 ? '#10b981' : '#ef4444', icon: <TrendingUp size={13} /> },
+                { label: 'Duration',  value: formatMs(totalDuration), color: '#8b5cf6', accent: '#8b5cf6', icon: <Clock size={13} /> },
+              ]).map(({ label, value, color, accent, icon }) => (
+                <div key={label} className="pt-4 pb-5 px-4 rounded-2xl text-center relative overflow-hidden"
+                  style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
+                  {/* Accent top bar */}
+                  <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ backgroundColor: accent }} />
+                  <div className="flex justify-center mb-2" style={{ color: accent }}>{icon}</div>
                   <p className="text-2xl font-black leading-none" style={{ color }}>{value}</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
                 </div>
               ))}
             </div>
 
             {/* Progress bar */}
-            <div className="mb-6 h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--border)' }}>
-              {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
-              {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
-              {counts.skipped > 0 && <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${(counts.skipped / counts.total) * 100}%` }} />}
-              {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
+            <div className="mb-8">
+              <div className="h-2.5 rounded-full overflow-hidden flex gap-px" style={{ backgroundColor: 'var(--border)' }}>
+                {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
+                {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
+                {counts.skipped > 0 && <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${(counts.skipped / counts.total) * 100}%` }} />}
+                {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
+              </div>
+              {counts.total > 0 && (
+                <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  <span className="text-emerald-600 font-semibold">{counts.passed} passed</span>
+                  {counts.failed > 0  && <span className="text-red-500 font-semibold">{counts.failed} failed</span>}
+                  {counts.skipped > 0 && <span className="text-amber-500">{counts.skipped} skipped</span>}
+                  <span className="font-semibold" style={{ color: passRate >= 80 ? '#059669' : '#ef4444' }}>{passRate}%</span>
+                </div>
+              )}
             </div>
 
             {/* History chart — real run records only */}
@@ -2816,7 +3607,7 @@ export default function PlaywrightDashboard() {
             />
 
             {/* Search + Filter + Mode toggle */}
-            <div className="flex items-center gap-3 mb-5 flex-wrap">
+            <div className="flex items-center gap-3 mb-8 flex-wrap">
               <div className="relative flex-1 min-w-44">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                 <input
@@ -2824,8 +3615,8 @@ export default function PlaywrightDashboard() {
                   placeholder="Search tests…"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', boxShadow: '0 1px 4px -1px rgba(0,0,0,0.06)' }}
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity">
@@ -2835,16 +3626,17 @@ export default function PlaywrightDashboard() {
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {([
-                  { key: 'all' as const,     label: `All (${counts.total})` },
-                  { key: 'passed' as const,  label: `Passed (${counts.passed})` },
-                  { key: 'failed' as const,  label: `Failed (${counts.failed})` },
-                  { key: 'skipped' as const, label: `Skipped (${counts.skipped})` },
-                ]).map(({ key, label }) => (
+                  { key: 'active' as const,  label: `Active (${counts.passed + counts.failed})`, activeColor: '#2563eb', activeBg: '#2563eb' },
+                  { key: 'all' as const,     label: `All (${counts.total})`,                     activeColor: '#6366f1', activeBg: '#6366f1' },
+                  { key: 'passed' as const,  label: `Passed (${counts.passed})`,                 activeColor: '#059669', activeBg: '#10b981' },
+                  { key: 'failed' as const,  label: `Failed (${counts.failed})`,                 activeColor: '#dc2626', activeBg: '#ef4444' },
+                  { key: 'skipped' as const, label: `Skipped (${counts.skipped})`,               activeColor: '#d97706', activeBg: '#fbbf24' },
+                ]).map(({ key, label, activeBg }) => (
                   <button key={key} onClick={() => setActiveTab(key)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 border"
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
                     style={activeTab === key
-                      ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
-                      : { background: 'var(--bg-card)', color: 'var(--text-muted)', borderColor: 'var(--border)' }
+                      ? { background: activeBg, color: '#fff' }
+                      : { color: 'var(--text-muted)' }
                     }>
                     {label}
                   </button>
@@ -2881,10 +3673,11 @@ export default function PlaywrightDashboard() {
                 const isOpen        = expandedSuites[suite.id]
                 const suiteDuration = suite.tests.reduce((a, t) => a + t.duration, 0)
                 const maxDuration   = Math.max(...suite.tests.map(t => t.duration), 1)
+                const statusAccent  = status === 'passed' ? '#10b981' : status === 'failed' ? '#ef4444' : status === 'running' ? '#3b82f6' : status === 'skipped' ? '#fbbf24' : 'var(--border)'
 
                 return (
-                  <div key={suite.id} className="rounded-2xl border shadow-sm overflow-hidden"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                  <div key={suite.id} className="rounded-2xl overflow-hidden"
+                    style={{ backgroundColor: 'var(--bg-card)', borderLeft: `3px solid ${statusAccent}`, boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
                     <button
                       onClick={() => toggleSuite(suite.id)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors"
@@ -2897,7 +3690,14 @@ export default function PlaywrightDashboard() {
                         <span className="ml-2 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{suite.file}</span>
                       </span>
                       {suiteDuration > 0 && <span className="text-xs font-mono shrink-0 hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{formatMs(suiteDuration)}</span>}
-                      <span className="text-xs shrink-0 font-medium" style={{ color: 'var(--text-muted)' }}>{passed}/{suite.tests.length} passed</span>
+                      {/* Mini pass rate pill */}
+                      <span className="text-[10px] shrink-0 font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: passed === suite.tests.length ? 'rgba(16,185,129,0.1)' : passed === 0 ? 'rgba(239,68,68,0.1)' : 'rgba(251,191,36,0.1)',
+                          color: passed === suite.tests.length ? '#059669' : passed === 0 ? '#dc2626' : '#d97706',
+                        }}>
+                        {passed}/{suite.tests.length}
+                      </span>
                       {isOpen ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />}
                     </button>
 
@@ -2913,7 +3713,7 @@ export default function PlaywrightDashboard() {
                           return (
                             <div key={test.id} className={i > 0 ? 'border-t' : ''} style={{ borderColor: 'var(--border)' }}>
                               <div
-                                className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${isFailed ? 'cursor-pointer' : ''}`}
+                                className={`flex items-center gap-3 px-6 py-3 transition-colors ${isFailed ? 'cursor-pointer' : ''}`}
                                 style={{ backgroundColor: isFailed && hoveredTest === test.id ? 'rgba(239,68,68,0.05)' : undefined }}
                                 onMouseEnter={() => isFailed && setHoveredTest(test.id)}
                                 onMouseLeave={() => setHoveredTest(null)}
@@ -2960,6 +3760,20 @@ export default function PlaywrightDashboard() {
                                   </div>
                                 )}
                                 <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>{formatMs(test.duration)}</span>
+                                {/* Browser status dots — only visible when multiple browsers ran */}
+                                {test.browserResults && test.browserResults.length > 1 && (
+                                  <span className="flex items-center gap-0.5 shrink-0" title={test.browserResults.map(r => `${r.browser}: ${r.status}`).join(' · ')}>
+                                    {test.browserResults.map(r => (
+                                      <span key={r.browser}
+                                        style={{
+                                          width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
+                                          backgroundColor: r.status === 'passed' ? '#10b981' : r.status === 'failed' ? '#ef4444' : '#fbbf24',
+                                          opacity: r.status === 'skipped' ? 0.6 : 1,
+                                        }}
+                                      />
+                                    ))}
+                                  </span>
+                                )}
                                 <StatusBadge status={test.status} />
                                 {isFailed && (errorOpen ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />)}
                               </div>
@@ -2983,13 +3797,18 @@ export default function PlaywrightDashboard() {
               })}
 
               {filteredSuites.length === 0 && (
-                <div className="text-center py-16 rounded-2xl border shadow-sm"
-                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+                <div className="text-center py-16 rounded-2xl"
+                  style={{ backgroundColor: 'var(--bg-card)',
+                    background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 70%)',
+                    boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
                   {suites.length === 0 ? (
                     <>
-                      <Play size={28} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
-                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-main)' }}>No test results yet</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                        <Play size={24} style={{ color: '#3b82f6', opacity: 0.6 }} />
+                      </div>
+                      <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>No test results yet</p>
+                      <p className="text-xs max-w-xs mx-auto" style={{ color: 'var(--text-muted)' }}>
                         {serverOnline === false
                           ? 'Server is offline — start it with: npm run dev'
                           : 'Click Run Tests to execute your Playwright specs.'}
@@ -2997,10 +3816,20 @@ export default function PlaywrightDashboard() {
                     </>
                   ) : (
                     <>
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match the current filter.'}
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.15)' }}>
+                        <Search size={22} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                      </div>
+                      <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--text-main)' }}>
+                        {searchQuery ? `No tests match "${searchQuery}"` : 'No tests match this filter'}
                       </p>
-                      {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-blue-500 hover:underline">Clear search</button>}
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')}
+                          className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-full"
+                          style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+                          Clear search
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -3009,7 +3838,7 @@ export default function PlaywrightDashboard() {
 
             {/* Slowest tests */}
             {slowestTests.length > 0 && !searchQuery && (
-              <div className="mt-4 rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+              <div className="mt-4 rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
                 <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
                   <Clock size={13} style={{ color: '#f59e0b' }} />
                   <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Slowest Tests</span>
@@ -3021,10 +3850,12 @@ export default function PlaywrightDashboard() {
                       <span className="text-xs font-bold w-5 shrink-0 text-center" style={{ color: 'var(--text-muted)' }}>#{i + 1}</span>
                       <StatusIcon status={test.status} size={13} />
                       <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-main)' }}>{test.title}</span>
-                      <div className="w-24 h-1.5 rounded-full overflow-hidden shrink-0 hidden sm:block" style={{ backgroundColor: 'var(--border)' }}>
-                        <div className="h-full rounded-full bg-amber-400" style={{ width: `${(test.duration / slowestTests[0].duration) * 100}%` }} />
+                      <div className="flex-1 h-2 rounded-full overflow-hidden shrink-0 hidden sm:block max-w-[160px]" style={{ backgroundColor: 'var(--border)' }}>
+                        <div className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                          style={{ width: `${(test.duration / slowestTests[0].duration) * 100}%`,
+                            background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }} />
                       </div>
-                      <span className="text-xs font-mono font-semibold shrink-0" style={{ color: '#d97706' }}>{formatMs(test.duration)}</span>
+                      <span className="text-xs font-mono font-bold shrink-0" style={{ color: '#d97706' }}>{formatMs(test.duration)}</span>
                     </div>
                   ))}
                 </div>
@@ -3033,23 +3864,34 @@ export default function PlaywrightDashboard() {
 
             {/* Run log terminal */}
             {showLog && runLog.length > 0 && (
-              <div className="mt-4 rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: 'var(--border)' }}>
+              <div className="mt-4 rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}>
                   <div className="flex items-center gap-2">
                     <Terminal size={13} style={{ color: '#10b981' }} />
                     <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run Output</span>
                     {running && <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
+                    <span className="text-[10px]" style={{ color: '#6c7086' }}>{runLog.length} lines</span>
                   </div>
                   <button onClick={() => setShowLog(false)} className="hover:opacity-70 transition-opacity">
                     <X size={13} style={{ color: 'var(--text-muted)' }} />
                   </button>
                 </div>
-                <pre
-                  className="text-[10.5px] font-mono px-4 py-3 overflow-auto leading-relaxed"
-                  style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', margin: 0, maxHeight: '280px' }}>
-                  {runLog.join('\n')}
-                </pre>
+                <div className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
+                  style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}>
+                  {runLog.map((line, i) => {
+                    const color =
+                      /✓|passed|\[PASS\]/i.test(line) ? '#a6e3a1' :
+                      /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line) ? '#f38ba8' :
+                      /\[FILTER\]|\[INFO\]/i.test(line) ? '#89b4fa' :
+                      /\[TIMEOUT\]|\[OFFLINE\]/i.test(line) ? '#fab387' :
+                      /skipped|pending/i.test(line) ? '#f9e2af' :
+                      '#cdd6f4'
+                    return (
+                      <div key={i} style={{ color, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{line}</div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
@@ -3064,6 +3906,7 @@ export default function PlaywrightDashboard() {
       </div>
 
       {artifactModal && <ArtifactModal state={artifactModal} onClose={() => setArtifactModal(null)} />}
+      </div>
     </div>
   )
 }
