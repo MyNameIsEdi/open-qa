@@ -69,9 +69,7 @@ Playwright timed out waiting for \`button[data-testid="submit-payment"]\` to bec
 `;
 }
 
-export async function analyzeLogAndCreateBugReport(
-  errorLog?: string,
-): Promise<string> {
+export async function analyzeLogAndCreateBugReport(errorLog?: string): Promise<string> {
   warnMockMode('Bug report generator');
   const log = errorLog ?? fs.readFileSync(LOG_FILE, 'utf-8');
   console.log('🔍 Analyzing Playwright failure log...');
@@ -106,8 +104,7 @@ export async function analyzeLogAndCreateBugReport(
 }
 
 const isMain =
-  process.argv[1]?.includes('log-analyzer') ||
-  process.argv[1]?.endsWith('log-analyzer.ts');
+  process.argv[1]?.includes('log-analyzer') || process.argv[1]?.endsWith('log-analyzer.ts');
 
 if (isMain) {
   analyzeLogAndCreateBugReport().catch(() => process.exit(1));

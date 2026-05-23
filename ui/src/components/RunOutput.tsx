@@ -1,30 +1,30 @@
-import { useRef, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import CheckIcon from '@mui/icons-material/Check'
+import { useRef, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 
 interface Props {
-  output: string
-  loading: boolean
-  error?: string
+  output: string;
+  loading: boolean;
+  error?: string;
 }
 
 export default function RunOutput({ output, loading, error }: Props) {
-  const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
-  const scrollRef = useRef<HTMLPreElement>(null)
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const scrollRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [output])
+  }, [output]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(output)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(output);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div
@@ -53,7 +53,11 @@ export default function RunOutput({ output, loading, error }: Props) {
             className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg hover:bg-sand-400 transition-colors"
             style={{ color: 'var(--text-muted)' }}
           >
-            {copied ? <CheckIcon sx={{ fontSize: 12 }} /> : <ContentCopyIcon sx={{ fontSize: 12 }} />}
+            {copied ? (
+              <CheckIcon sx={{ fontSize: 12 }} />
+            ) : (
+              <ContentCopyIcon sx={{ fontSize: 12 }} />
+            )}
             {copied ? t('common.copied') : t('common.copy')}
           </button>
         )}
@@ -66,5 +70,5 @@ export default function RunOutput({ output, loading, error }: Props) {
         {error || output || (loading ? '' : t('common.no_output'))}
       </pre>
     </div>
-  )
+  );
 }

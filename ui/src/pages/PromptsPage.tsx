@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
-import PromptCard, { PromptDef } from '../components/PromptCard'
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import PromptCard, { PromptDef } from '../components/PromptCard';
 
 interface PromptEntry extends PromptDef {
-  category: string
+  category: string;
 }
 
 const prompts: PromptEntry[] = [
@@ -174,23 +174,24 @@ Contract tests (fast, schema-only) vs E2E. Playwright APIRequestContext structur
 ## Constraints
 Reference operationIds. Flag # AMBIGUITY: for unclear specs. Include security cases: SQLi in query params, oversized payloads, Content-Type mismatch.`,
   },
-]
+];
 
-const ALL_CATEGORIES = ['all', ...Array.from(new Set(prompts.map((p) => p.category)))]
+const ALL_CATEGORIES = ['all', ...Array.from(new Set(prompts.map((p) => p.category)))];
 
 export default function PromptsPage() {
-  const { t } = useTranslation()
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('all')
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
+    const q = search.toLowerCase();
     return prompts.filter((p) => {
-      const matchesSearch = !q || p.name.toLowerCase().includes(q) || p.tagline.toLowerCase().includes(q)
-      const matchesCategory = activeCategory === 'all' || p.category === activeCategory
-      return matchesSearch && matchesCategory
-    })
-  }, [search, activeCategory])
+      const matchesSearch =
+        !q || p.name.toLowerCase().includes(q) || p.tagline.toLowerCase().includes(q);
+      const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, activeCategory]);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
@@ -254,5 +255,5 @@ export default function PromptsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

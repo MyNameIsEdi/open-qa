@@ -1,22 +1,22 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ScheduleIcon from '@mui/icons-material/Schedule'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import CheckIcon from '@mui/icons-material/Check'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 export interface SkillDef {
-  name: string
-  description: string
-  status: 'active' | 'planned'
-  runCommand: string
-  systemPrompt: string
-  inputSchema?: object
+  name: string;
+  description: string;
+  status: 'active' | 'planned';
+  runCommand: string;
+  systemPrompt: string;
+  inputSchema?: object;
 }
 
 interface Props {
-  skill: SkillDef
+  skill: SkillDef;
 }
 
 function buildClaudePayload(skill: SkillDef) {
@@ -34,18 +34,18 @@ function buildClaudePayload(skill: SkillDef) {
     },
     null,
     2,
-  )
+  );
 }
 
 export default function SkillCard({ skill }: Props) {
-  const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(buildClaudePayload(skill))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(buildClaudePayload(skill));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div
@@ -98,5 +98,5 @@ export default function SkillCard({ skill }: Props) {
         )}
       </button>
     </div>
-  )
+  );
 }

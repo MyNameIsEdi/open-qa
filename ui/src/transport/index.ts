@@ -4,11 +4,11 @@
  * In open-qa we persist via localStorage, so all sends are no-ops.
  */
 
-type MessageHandler = (msg: unknown) => void
+type MessageHandler = (msg: unknown) => void;
 
-const noop = () => {}
+const noop = () => {};
 
 export const transport = {
   send: noop,
   onMessage: (_handler: MessageHandler) => noop,
-}
+};

@@ -13,7 +13,7 @@ const css = `
   .qa-l3  { animation: qa-slideUp .5s ease 1.3s both; }
   .qa-ann { animation: qa-slideUp .4s ease 1.9s both; }
   .qa-bug { animation: qa-bugPop  .45s ease 2.4s both; }
-`
+`;
 
 export function PyramidAnimation() {
   return (
@@ -57,19 +57,40 @@ export function PyramidAnimation() {
 
         {/* ── Side annotations ──────────────────────────────────── */}
         <g className="qa-ann" fill="#9ca3af" fontSize="9.5">
-          <text x="6"   y="220">⚡ Fast</text>
-          <text x="6"   y="83" >🐢 Slow</text>
-          <text x="434" y="220" textAnchor="end">$ Cheap</text>
-          <text x="434" y="83"  textAnchor="end">$$ Costly</text>
+          <text x="6" y="220">
+            ⚡ Fast
+          </text>
+          <text x="6" y="83">
+            🐢 Slow
+          </text>
+          <text x="434" y="220" textAnchor="end">
+            $ Cheap
+          </text>
+          <text x="434" y="83" textAnchor="end">
+            $$ Costly
+          </text>
         </g>
 
         {/* ── Bug lifecycle badge ───────────────────────────────── */}
         <g className="qa-bug">
-          <rect x="2" y="2" width="134" height="38" rx="9" fill="#fff7ed" stroke="#fdba74" strokeWidth="1.2" />
-          <text x="11" y="15" fill="#9a3412" fontSize="8.5" fontWeight="600">Bug lifecycle</text>
-          <text x="11" y="29" fill="#c2410c" fontSize="8">New → Assigned → Fixed → Closed</text>
+          <rect
+            x="2"
+            y="2"
+            width="134"
+            height="38"
+            rx="9"
+            fill="#fff7ed"
+            stroke="#fdba74"
+            strokeWidth="1.2"
+          />
+          <text x="11" y="15" fill="#9a3412" fontSize="8.5" fontWeight="600">
+            Bug lifecycle
+          </text>
+          <text x="11" y="29" fill="#c2410c" fontSize="8">
+            New → Assigned → Fixed → Closed
+          </text>
         </g>
       </svg>
     </div>
-  )
+  );
 }

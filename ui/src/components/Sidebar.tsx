@@ -5,14 +5,22 @@
  * showing the tool pages.  Clicking a desk in OfficeCanvas also navigates
  * to these same routes, so they're available both ways.
  */
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, Target, Bot,
-  BookOpen, LayoutList, Activity, FileText, PlusCircle,
-  X, ChevronLeft, ChevronRight,
+  Home,
+  Target,
+  Bot,
+  BookOpen,
+  LayoutList,
+  Activity,
+  FileText,
+  PlusCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
   Settings,
-} from 'lucide-react'
-import { useRtl } from '../hooks/useRtl'
+} from 'lucide-react';
+import { useRtl } from '../hooks/useRtl';
 
 // ─── Route definitions ────────────────────────────────────────────────────────
 
@@ -20,15 +28,15 @@ const GROUPS = [
   {
     label: 'Main',
     items: [
-      { to: '/',         label: 'Home',      Icon: Home        },
-      { to: '/missions', label: 'Missions',  Icon: Target      },
-      { to: '/office',   label: 'QA Office', Icon: Bot         },
+      { to: '/', label: 'Home', Icon: Home },
+      { to: '/missions', label: 'Missions', Icon: Target },
+      { to: '/office', label: 'QA Office', Icon: Bot },
     ],
   },
   {
     label: 'Learning',
     items: [
-      { to: '/guides',     label: 'Guides',     Icon: BookOpen  },
+      { to: '/guides', label: 'Guides', Icon: BookOpen },
       { to: '/cheatsheet', label: 'Cheatsheet', Icon: LayoutList },
     ],
   },
@@ -36,41 +44,40 @@ const GROUPS = [
     label: 'Testing',
     items: [
       { to: '/playwright', label: 'PW Dashboard', Icon: Activity },
-      { to: '/docs',       label: 'Docs',          Icon: FileText },
+      { to: '/docs', label: 'Docs', Icon: FileText },
     ],
   },
   {
     label: 'Community',
-    items: [
-      { to: '/submit', label: 'Submit Agent', Icon: PlusCircle },
-    ],
+    items: [{ to: '/submit', label: 'Submit Agent', Icon: PlusCircle }],
   },
-] as const
+] as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
-  open:             boolean
-  collapsed:        boolean
-  onClose:          () => void
-  onToggleCollapse: () => void
+  open: boolean;
+  collapsed: boolean;
+  onClose: () => void;
+  onToggleCollapse: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: SidebarProps) {
-  const location = useLocation()
-  const isRtl    = useRtl()
+  const location = useLocation();
+  const isRtl = useRtl();
 
   const navLinkCls = (active: boolean) => `
     flex items-center gap-3 px-3 py-2 rounded-lg text-sm
     transition-all duration-150
     ${collapsed ? 'justify-center' : ''}
-    ${active
-      ? 'bg-zinc-700 text-white font-semibold'
-      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+    ${
+      active
+        ? 'bg-zinc-700 text-white font-semibold'
+        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
     }
-  `
+  `;
 
   return (
     <>
@@ -105,7 +112,6 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
 
         {/* Scrollable nav */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-4">
-
           {/* ── STANDARD GROUPS ────────────────────────────────────────────── */}
           {GROUPS.map(({ label, items }) => (
             <div key={label}>
@@ -122,7 +128,7 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
               <div className="space-y-0.5">
                 {items.map(({ to, label: itemLabel, Icon }) => {
                   const isActive =
-                    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+                    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
                   return (
                     <NavLink
@@ -142,7 +148,7 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
                         {itemLabel}
                       </span>
                     </NavLink>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -175,7 +181,6 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
               </span>
             </NavLink>
           </div>
-
         </nav>
 
         {/* Desktop collapse toggle */}
@@ -185,13 +190,20 @@ export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }: 
             className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed
-              ? (isRtl ? <ChevronLeft size={15} /> : <ChevronRight size={15} />)
-              : (isRtl ? <ChevronRight size={15} /> : <ChevronLeft size={15} />)
-            }
+            {collapsed ? (
+              isRtl ? (
+                <ChevronLeft size={15} />
+              ) : (
+                <ChevronRight size={15} />
+              )
+            ) : isRtl ? (
+              <ChevronRight size={15} />
+            ) : (
+              <ChevronLeft size={15} />
+            )}
           </button>
         </div>
       </aside>
     </>
-  )
+  );
 }

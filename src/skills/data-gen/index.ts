@@ -54,7 +54,10 @@ function loadSchemaDescription(): string {
 }
 
 function parsePayloadArray(raw: string): EdgeCasePayload[] {
-  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const cleaned = raw
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
   const parsed = JSON.parse(cleaned) as unknown;
   if (!Array.isArray(parsed)) {
     throw new Error('Claude response is not a JSON array');
@@ -95,8 +98,7 @@ export async function generateEdgeCaseData(count = 5): Promise<EdgeCasePayload[]
 }
 
 const isMain =
-  process.argv[1]?.includes('data-gen') ||
-  process.argv[1]?.includes('generate-test-data');
+  process.argv[1]?.includes('data-gen') || process.argv[1]?.includes('generate-test-data');
 
 if (isMain) {
   generateEdgeCaseData(5).catch(() => process.exit(1));

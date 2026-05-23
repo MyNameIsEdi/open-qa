@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
-import AgentCard, { AgentDef } from '../components/AgentCard'
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import AgentCard, { AgentDef } from '../components/AgentCard';
 
 interface AgentEntry extends AgentDef {
-  category: string
+  category: string;
 }
 
 const agents: AgentEntry[] = [
@@ -20,12 +20,16 @@ const agents: AgentEntry[] = [
       'You are a senior Playwright automation engineer. Given a failed locator and a DOM snapshot, suggest the single best alternative locator using getByRole, getByLabel, or getByTestId. Return only the locator string, no explanation.',
     toolSchema: {
       name: 'self_healing_locator',
-      description: 'Suggests a new Playwright locator when the current one fails due to UI changes.',
+      description:
+        'Suggests a new Playwright locator when the current one fails due to UI changes.',
       input_schema: {
         type: 'object',
         properties: {
           failed_locator: { type: 'string', description: 'The locator that failed' },
-          dom_snapshot: { type: 'string', description: 'Stripped DOM context around the target element' },
+          dom_snapshot: {
+            type: 'string',
+            description: 'Stripped DOM context around the target element',
+          },
         },
         required: ['failed_locator', 'dom_snapshot'],
       },
@@ -116,7 +120,11 @@ const agents: AgentEntry[] = [
         type: 'object',
         properties: {
           url: { type: 'string', description: 'URL to scan' },
-          standard: { type: 'string', enum: ['WCAG21AA', 'WCAG21A'], description: 'WCAG standard level' },
+          standard: {
+            type: 'string',
+            enum: ['WCAG21AA', 'WCAG21A'],
+            description: 'WCAG standard level',
+          },
         },
         required: ['url'],
       },
@@ -142,26 +150,27 @@ const agents: AgentEntry[] = [
     systemPrompt:
       'You are a chaos engineering agent. After each random UI interaction, evaluate whether any console errors, network failures, or visible anomalies occurred. Document each finding with a screenshot and reproduction path.',
   },
-]
+];
 
-const ALL_CATEGORIES = ['all', ...Array.from(new Set(agents.map((a) => a.category)))]
+const ALL_CATEGORIES = ['all', ...Array.from(new Set(agents.map((a) => a.category)))];
 
 export default function AgentsPage() {
-  const { t } = useTranslation()
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('all')
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
+    const q = search.toLowerCase();
     return agents.filter((a) => {
-      const matchesSearch = !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
-      const matchesCategory = activeCategory === 'all' || a.category === activeCategory
-      return matchesSearch && matchesCategory
-    })
-  }, [search, activeCategory])
+      const matchesSearch =
+        !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q);
+      const matchesCategory = activeCategory === 'all' || a.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, activeCategory]);
 
-  const active = agents.filter((a) => a.status === 'active')
-  const planned = agents.filter((a) => a.status === 'planned')
+  const active = agents.filter((a) => a.status === 'active');
+  const planned = agents.filter((a) => a.status === 'planned');
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
@@ -176,9 +185,7 @@ export default function AgentsPage() {
 
       {/* Search + filters */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3">
-        <div
-          className="relative flex-1"
-        >
+        <div className="relative flex-1">
           <SearchOutlinedIcon
             sx={{ fontSize: 16 }}
             className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -207,7 +214,11 @@ export default function AgentsPage() {
                   ? 'bg-primary-600 text-white shadow-soft'
                   : 'hover:bg-sand-400'
               }`}
-              style={activeCategory === cat ? {} : { color: 'var(--text-muted)', borderColor: 'var(--border)' }}
+              style={
+                activeCategory === cat
+                  ? {}
+                  : { color: 'var(--text-muted)', borderColor: 'var(--border)' }
+              }
             >
               {cat}
             </button>
@@ -227,5 +238,5 @@ export default function AgentsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

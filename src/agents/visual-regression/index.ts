@@ -68,7 +68,7 @@ export async function compareScreenshots(
       baseline: createMockScreenshotInfo('baseline'),
       current: createMockScreenshotInfo('current'),
       pixelDiffPercentage: parseFloat((pixelDiff * 100).toFixed(2)),
-      severity: isSevere ? (pixelDiff > 0.10 ? 'high' : 'medium') : 'low',
+      severity: isSevere ? (pixelDiff > 0.1 ? 'high' : 'medium') : 'low',
       description: `Detected change in ${change.elementChanged}: ${change.oldValue} → ${change.newValue}`,
       recommendation: isSevere
         ? 'Review with design team and approve intentional changes'
@@ -78,8 +78,18 @@ export async function compareScreenshots(
 
   return {
     pageUrl: 'https://example.com/test-page',
-    baseline: { path: baselinePath, timestamp: new Date(Date.now() - 86400000).toISOString(), hash: 'abc1234f', size: 425000 },
-    current: { path: currentPath, timestamp: new Date().toISOString(), hash: 'xyz9876f', size: 426500 },
+    baseline: {
+      path: baselinePath,
+      timestamp: new Date(Date.now() - 86400000).toISOString(),
+      hash: 'abc1234f',
+      size: 425000,
+    },
+    current: {
+      path: currentPath,
+      timestamp: new Date().toISOString(),
+      hash: 'xyz9876f',
+      size: 426500,
+    },
     pixelDiffPercentage: 3.5,
     severity: 'low',
     description: 'Detected spacing changes in navigation bar (2px margin increase)',
@@ -134,13 +144,21 @@ export async function runDemoTest(): Promise<void> {
   const outputDir = path.join(process.cwd(), 'output', 'visual-regression');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-  const pages = ['https://example.com/', 'https://example.com/checkout', 'https://example.com/account'];
+  const pages = [
+    'https://example.com/',
+    'https://example.com/checkout',
+    'https://example.com/account',
+  ];
   console.log('📸 Comparing baselines against current versions...\n');
 
   const reports: VisualChangeReport[] = [];
   for (const pageUrl of pages) {
     const idx = pages.indexOf(pageUrl);
-    const report = await compareScreenshots(`./screenshots/baseline-${idx}.png`, `./screenshots/current-${idx}.png`, { threshold: 0.05 });
+    const report = await compareScreenshots(
+      `./screenshots/baseline-${idx}.png`,
+      `./screenshots/current-${idx}.png`,
+      { threshold: 0.05 },
+    );
     reports.push(report);
     console.log(`${pageUrl}`);
     console.log(`  ├─ Pixel Difference: ${report.pixelDiffPercentage}%`);

@@ -8,7 +8,7 @@
  *
  * Based on pixel-agents webview-ui/src/office/components/OfficeCanvas.tsx (MIT)
  */
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react';
 
 import {
   CAMERA_FOLLOW_LERP,
@@ -17,21 +17,21 @@ import {
   ZOOM_MAX,
   ZOOM_MIN,
   ZOOM_SCROLL_THRESHOLD,
-} from '../../constants.js'
-import { startGameLoop } from '../engine/gameLoop.js'
-import type { OfficeState } from '../engine/officeState.js'
-import { renderFrame } from '../engine/renderer.js'
-import { TILE_SIZE } from '../types.js'
+} from '../../constants.js';
+import { startGameLoop } from '../engine/gameLoop.js';
+import type { OfficeState } from '../engine/officeState.js';
+import { renderFrame } from '../engine/renderer.js';
+import { TILE_SIZE } from '../types.js';
 
 interface OfficeCanvasProps {
-  officeState: OfficeState
-  onAgentClick?: (agentId: number) => void
-  zoom: number
-  onZoomChange: (zoom: number) => void
-  panRef: React.MutableRefObject<{ x: number; y: number }>
+  officeState: OfficeState;
+  onAgentClick?: (agentId: number) => void;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
+  panRef: React.MutableRefObject<{ x: number; y: number }>;
   /** When true, disables pan (middle-mouse drag + scroll) and zoom (Ctrl+wheel).
    *  The map renders at the fixed zoom/pan values passed in props. */
-  locked?: boolean
+  locked?: boolean;
 }
 
 export function OfficeCanvas({
@@ -42,12 +42,12 @@ export function OfficeCanvas({
   panRef,
   locked = false,
 }: OfficeCanvasProps) {
-  const canvasRef    = useRef<HTMLCanvasElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const offsetRef    = useRef({ x: 0, y: 0 })
-  const isPanningRef   = useRef(false)
-  const panStartRef    = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })
-  const zoomAccumRef   = useRef(0)
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 });
+  const zoomAccumRef = useRef(0);
   /**
    * When locked=true we ignore the `zoom` prop and instead auto-compute a
    * "fit zoom" so the map always fills the container pixel-perfectly,
@@ -60,51 +60,48 @@ export function OfficeCanvas({
    * This is recalculated every time resizeCanvas() fires so the map
    * re-centres whenever the container resizes.
    */
-  const fitZoomRef = useRef(zoom)
+  const fitZoomRef = useRef(zoom);
   /**
    * Track the last-seen layout dimensions so the render loop can detect when
    * rebuildFromLayout() is called asynchronously (e.g. after default-layout.json
    * loads) and re-run resizeCanvas() to correct fitZoom + container height.
    */
-  const lastLayoutDimsRef = useRef({ cols: 0, rows: 0 })
+  const lastLayoutDimsRef = useRef({ cols: 0, rows: 0 });
 
   // ── Effective zoom used by the render loop ────────────────────────────────
   // Interactive mode: use the prop value. Locked mode: use auto-fit value.
-  const effectiveZoom = useCallback(
-    () => (locked ? fitZoomRef.current : zoom),
-    [locked, zoom],
-  )
+  const effectiveZoom = useCallback(() => (locked ? fitZoomRef.current : zoom), [locked, zoom]);
 
   // ── pan clamping ─────────────────────────────────────────────────────────────
 
   const clampPan = useCallback(
     (px: number, py: number): { x: number; y: number } => {
-      const canvas = canvasRef.current
-      if (!canvas) return { x: px, y: py }
-      const ez     = effectiveZoom()
-      const layout = officeState.getLayout()
-      const mapW = layout.cols * TILE_SIZE * ez
-      const mapH = layout.rows * TILE_SIZE * ez
-      const marginX = canvas.width  * PAN_MARGIN_FRACTION
-      const marginY = canvas.height * PAN_MARGIN_FRACTION
-      const maxX = mapW / 2 + canvas.width  / 2 - marginX
-      const maxY = mapH / 2 + canvas.height / 2 - marginY
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: px, y: py };
+      const ez = effectiveZoom();
+      const layout = officeState.getLayout();
+      const mapW = layout.cols * TILE_SIZE * ez;
+      const mapH = layout.rows * TILE_SIZE * ez;
+      const marginX = canvas.width * PAN_MARGIN_FRACTION;
+      const marginY = canvas.height * PAN_MARGIN_FRACTION;
+      const maxX = mapW / 2 + canvas.width / 2 - marginX;
+      const maxY = mapH / 2 + canvas.height / 2 - marginY;
       return {
         x: Math.max(-maxX, Math.min(maxX, px)),
         y: Math.max(-maxY, Math.min(maxY, py)),
-      }
+      };
     },
     [officeState, effectiveZoom],
-  )
+  );
 
   // ── canvas resize ─────────────────────────────────────────────────────────────
 
   const resizeCanvas = useCallback(() => {
-    const canvas    = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    const dpr = window.devicePixelRatio || 1
+    const dpr = window.devicePixelRatio || 1;
 
     if (locked) {
       // ── Locked (sidebar) mode: WIDTH-DRIVEN sizing ────────────────────────
@@ -112,103 +109,110 @@ export function OfficeCanvas({
       // We derive the correct CSS height from the map's aspect ratio so the map
       // fills the container edge-to-edge with ZERO dead space — regardless of
       // what cols/rows the runtime layout actually has.
-      const layout = officeState.getLayout()
-      const cols = layout.cols || 1
-      const rows = layout.rows || 1
+      const layout = officeState.getLayout();
+      const cols = layout.cols || 1;
+      const rows = layout.rows || 1;
 
-      const cssW = Math.round(container.getBoundingClientRect().width || container.offsetWidth || 1)
-      const cssH = Math.round(cssW * rows / cols)
+      const cssW = Math.round(
+        container.getBoundingClientRect().width || container.offsetWidth || 1,
+      );
+      const cssH = Math.round((cssW * rows) / cols);
 
       // Imperatively set the container height to match the map's aspect ratio.
       // Guard against infinite ResizeObserver loops: only write if changed.
-      const wantedH = `${cssH}px`
-      if (container.style.height !== wantedH) container.style.height = wantedH
+      const wantedH = `${cssH}px`;
+      if (container.style.height !== wantedH) container.style.height = wantedH;
 
-      canvas.width  = Math.round(cssW * dpr)
-      canvas.height = Math.round(cssH * dpr)
-      canvas.style.width  = `${cssW}px`
-      canvas.style.height = `${cssH}px`
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
 
       // fitZoom: map fills the full width exactly (no margin factor needed)
-      fitZoomRef.current = canvas.width / (cols * TILE_SIZE)
-      panRef.current = { x: 0, y: 0 }
+      fitZoomRef.current = canvas.width / (cols * TILE_SIZE);
+      panRef.current = { x: 0, y: 0 };
     } else {
       // ── Interactive mode: use the CSS dimensions as-is ────────────────────
-      const rect = container.getBoundingClientRect()
-      const cssW = rect.width  || container.offsetWidth  || 1
-      const cssH = rect.height || container.offsetHeight || 1
+      const rect = container.getBoundingClientRect();
+      const cssW = rect.width || container.offsetWidth || 1;
+      const cssH = rect.height || container.offsetHeight || 1;
 
-      canvas.width  = Math.round(cssW * dpr)
-      canvas.height = Math.round(cssH * dpr)
-      canvas.style.width  = `${cssW}px`
-      canvas.style.height = `${cssH}px`
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
     }
-  }, [locked, officeState, panRef])
+  }, [locked, officeState, panRef]);
 
   // ── game loop ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    resizeCanvas()
+    resizeCanvas();
 
-    const observer = new ResizeObserver(() => resizeCanvas())
-    if (containerRef.current) observer.observe(containerRef.current)
+    const observer = new ResizeObserver(() => resizeCanvas());
+    if (containerRef.current) observer.observe(containerRef.current);
 
     const stop = startGameLoop(canvas, {
-      update: (dt) => { officeState.update(dt) },
+      update: (dt) => {
+        officeState.update(dt);
+      },
       render: (ctx) => {
         // ── Detect async layout changes (e.g. after default-layout.json loads)
         // rebuildFromLayout() changes cols/rows but doesn't call resizeCanvas().
         // We detect the change here and re-run resize so fitZoom + container
         // height are corrected before this frame is drawn.
         if (locked) {
-          const lyt = officeState.getLayout()
-          if (lyt.cols !== lastLayoutDimsRef.current.cols || lyt.rows !== lastLayoutDimsRef.current.rows) {
-            lastLayoutDimsRef.current = { cols: lyt.cols, rows: lyt.rows }
-            resizeCanvas()
+          const lyt = officeState.getLayout();
+          if (
+            lyt.cols !== lastLayoutDimsRef.current.cols ||
+            lyt.rows !== lastLayoutDimsRef.current.rows
+          ) {
+            lastLayoutDimsRef.current = { cols: lyt.cols, rows: lyt.rows };
+            resizeCanvas();
           }
         }
 
-        const w  = canvas.width
-        const h  = canvas.height
-        const ez = effectiveZoom()
+        const w = canvas.width;
+        const h = canvas.height;
+        const ez = effectiveZoom();
 
         // ── Pixel sharpness — disable ALL smoothing APIs ───────────────────
         // At high fit-zoom scales the sprites would blur without this.
-        ctx.imageSmoothingEnabled = false
+        ctx.imageSmoothingEnabled = false;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ctxAny = ctx as any
-        ctxAny.mozImageSmoothingEnabled    = false
-        ctxAny.webkitImageSmoothingEnabled = false
-        ctxAny.msImageSmoothingEnabled     = false
+        const ctxAny = ctx as any;
+        ctxAny.mozImageSmoothingEnabled = false;
+        ctxAny.webkitImageSmoothingEnabled = false;
+        ctxAny.msImageSmoothingEnabled = false;
 
         // ── Background fill ────────────────────────────────────────────────
-        ctx.fillStyle = '#13131f'
-        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#13131f';
+        ctx.fillRect(0, 0, w, h);
 
         // Camera follow (interactive mode only — locked maps stay centered)
         if (!locked && officeState.cameraFollowId !== null) {
-          const ch = officeState.characters.get(officeState.cameraFollowId)
+          const ch = officeState.characters.get(officeState.cameraFollowId);
           if (ch) {
-            const layout = officeState.getLayout()
-            const mapW = layout.cols * TILE_SIZE * ez
-            const mapH = layout.rows * TILE_SIZE * ez
-            const targetX = mapW / 2 - ch.x * ez
-            const targetY = mapH / 2 - ch.y * ez
-            const dx = targetX - panRef.current.x
-            const dy = targetY - panRef.current.y
+            const layout = officeState.getLayout();
+            const mapW = layout.cols * TILE_SIZE * ez;
+            const mapH = layout.rows * TILE_SIZE * ez;
+            const targetX = mapW / 2 - ch.x * ez;
+            const targetY = mapH / 2 - ch.y * ez;
+            const dx = targetX - panRef.current.x;
+            const dy = targetY - panRef.current.y;
             if (
               Math.abs(dx) < CAMERA_FOLLOW_SNAP_THRESHOLD &&
               Math.abs(dy) < CAMERA_FOLLOW_SNAP_THRESHOLD
             ) {
-              panRef.current = { x: targetX, y: targetY }
+              panRef.current = { x: targetX, y: targetY };
             } else {
               panRef.current = {
                 x: panRef.current.x + dx * CAMERA_FOLLOW_LERP,
                 y: panRef.current.y + dy * CAMERA_FOLLOW_LERP,
-              }
+              };
             }
           }
         }
@@ -220,246 +224,250 @@ export function OfficeCanvas({
           officeState.tileMap,
           officeState.furniture,
           officeState.getCharacters(),
-          ez,                        // ← auto-fit zoom when locked
+          ez, // ← auto-fit zoom when locked
           locked ? 0 : panRef.current.x,
           locked ? 0 : panRef.current.y,
           {
             selectedAgentId: officeState.selectedAgentId,
-            hoveredAgentId:  officeState.hoveredAgentId,
-            hoveredTile:     officeState.hoveredTile,
-            seats:           officeState.seats,
-            characters:      officeState.characters,
+            hoveredAgentId: officeState.hoveredAgentId,
+            hoveredTile: officeState.hoveredTile,
+            seats: officeState.seats,
+            characters: officeState.characters,
           },
           undefined, // no editor render state
           officeState.getLayout().tileColors,
           officeState.getLayout().cols,
           officeState.getLayout().rows,
-        )
-        offsetRef.current = { x: offsetX, y: offsetY }
+        );
+        offsetRef.current = { x: offsetX, y: offsetY };
       },
-    })
+    });
 
-    return () => { stop(); observer.disconnect() }
-  }, [officeState, resizeCanvas, zoom, panRef, locked, effectiveZoom])
+    return () => {
+      stop();
+      observer.disconnect();
+    };
+  }, [officeState, resizeCanvas, zoom, panRef, locked, effectiveZoom]);
 
   // ── coordinate utils ──────────────────────────────────────────────────────────
 
   const screenToWorld = useCallback(
     (clientX: number, clientY: number) => {
-      const canvas = canvasRef.current
-      if (!canvas) return null
-      const rect = canvas.getBoundingClientRect()
-      const dpr  = window.devicePixelRatio || 1
-      const cssX = clientX - rect.left
-      const cssY = clientY - rect.top
-      const devX = cssX * dpr
-      const devY = cssY * dpr
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const cssX = clientX - rect.left;
+      const cssY = clientY - rect.top;
+      const devX = cssX * dpr;
+      const devY = cssY * dpr;
       // Use effectiveZoom() so hit-testing is correct in both free and locked modes
-      const ez     = effectiveZoom()
-      const worldX = (devX - offsetRef.current.x) / ez
-      const worldY = (devY - offsetRef.current.y) / ez
-      return { worldX, worldY }
+      const ez = effectiveZoom();
+      const worldX = (devX - offsetRef.current.x) / ez;
+      const worldY = (devY - offsetRef.current.y) / ez;
+      return { worldX, worldY };
     },
     [effectiveZoom],
-  )
+  );
 
   const screenToTile = useCallback(
     (clientX: number, clientY: number) => {
-      const pos = screenToWorld(clientX, clientY)
-      if (!pos) return null
-      const col = Math.floor(pos.worldX / TILE_SIZE)
-      const row = Math.floor(pos.worldY / TILE_SIZE)
-      const layout = officeState.getLayout()
-      if (col < 0 || col >= layout.cols || row < 0 || row >= layout.rows) return null
-      return { col, row }
+      const pos = screenToWorld(clientX, clientY);
+      if (!pos) return null;
+      const col = Math.floor(pos.worldX / TILE_SIZE);
+      const row = Math.floor(pos.worldY / TILE_SIZE);
+      const layout = officeState.getLayout();
+      if (col < 0 || col >= layout.cols || row < 0 || row >= layout.rows) return null;
+      return { col, row };
     },
     [screenToWorld, officeState],
-  )
+  );
 
   // ── mouse handlers ────────────────────────────────────────────────────────────
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isPanningRef.current) {
-        const dpr = window.devicePixelRatio || 1
-        const dx  = (e.clientX - panStartRef.current.mouseX) * dpr
-        const dy  = (e.clientY - panStartRef.current.mouseY) * dpr
-        panRef.current = clampPan(
-          panStartRef.current.panX + dx,
-          panStartRef.current.panY + dy,
-        )
-        return
+        const dpr = window.devicePixelRatio || 1;
+        const dx = (e.clientX - panStartRef.current.mouseX) * dpr;
+        const dy = (e.clientY - panStartRef.current.mouseY) * dpr;
+        panRef.current = clampPan(panStartRef.current.panX + dx, panStartRef.current.panY + dy);
+        return;
       }
 
-      const pos = screenToWorld(e.clientX, e.clientY)
-      if (!pos) return
-      const hitId = officeState.getCharacterAt(pos.worldX, pos.worldY)
-      const tile  = screenToTile(e.clientX, e.clientY)
-      officeState.hoveredTile     = tile
-      officeState.hoveredAgentId  = hitId
+      const pos = screenToWorld(e.clientX, e.clientY);
+      if (!pos) return;
+      const hitId = officeState.getCharacterAt(pos.worldX, pos.worldY);
+      const tile = screenToTile(e.clientX, e.clientY);
+      officeState.hoveredTile = tile;
+      officeState.hoveredAgentId = hitId;
 
-      const canvas = canvasRef.current
+      const canvas = canvasRef.current;
       if (canvas) {
-        let cursor = 'default'
+        let cursor = 'default';
         if (hitId !== null) {
-          cursor = 'pointer'
+          cursor = 'pointer';
         } else if (officeState.selectedAgentId !== null && tile) {
-          const seatId = officeState.getSeatAtTile(tile.col, tile.row)
+          const seatId = officeState.getSeatAtTile(tile.col, tile.row);
           if (seatId) {
-            const seat       = officeState.seats.get(seatId)
-            const selectedCh = officeState.characters.get(officeState.selectedAgentId)
+            const seat = officeState.seats.get(seatId);
+            const selectedCh = officeState.characters.get(officeState.selectedAgentId);
             if (seat && (!seat.assigned || (selectedCh && selectedCh.seatId === seatId))) {
-              cursor = 'pointer'
+              cursor = 'pointer';
             }
           }
         }
-        canvas.style.cursor = cursor
+        canvas.style.cursor = cursor;
       }
     },
     [officeState, screenToWorld, screenToTile, panRef, clampPan],
-  )
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button === 1 && !locked) {
-        e.preventDefault()
-        officeState.cameraFollowId = null
-        isPanningRef.current = true
-        panStartRef.current  = {
+        e.preventDefault();
+        officeState.cameraFollowId = null;
+        isPanningRef.current = true;
+        panStartRef.current = {
           mouseX: e.clientX,
           mouseY: e.clientY,
-          panX:   panRef.current.x,
-          panY:   panRef.current.y,
-        }
-        const canvas = canvasRef.current
-        if (canvas) canvas.style.cursor = 'grabbing'
+          panX: panRef.current.x,
+          panY: panRef.current.y,
+        };
+        const canvas = canvasRef.current;
+        if (canvas) canvas.style.cursor = 'grabbing';
       }
     },
     [officeState, panRef, locked],
-  )
+  );
 
-  const handleMouseUp = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button === 1) {
-        isPanningRef.current = false
-        const canvas = canvasRef.current
-        if (canvas) canvas.style.cursor = 'default'
-      }
-    },
-    [],
-  )
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (e.button === 1) {
+      isPanningRef.current = false;
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = 'default';
+    }
+  }, []);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      const pos = screenToWorld(e.clientX, e.clientY)
-      if (!pos) return
+      const pos = screenToWorld(e.clientX, e.clientY);
+      if (!pos) return;
 
-      const hitId = officeState.getCharacterAt(pos.worldX, pos.worldY)
+      const hitId = officeState.getCharacterAt(pos.worldX, pos.worldY);
       if (hitId !== null) {
-        officeState.dismissBubble(hitId)
+        officeState.dismissBubble(hitId);
         if (officeState.selectedAgentId === hitId) {
-          officeState.selectedAgentId = null
-          officeState.cameraFollowId  = null
+          officeState.selectedAgentId = null;
+          officeState.cameraFollowId = null;
         } else {
-          officeState.selectedAgentId = hitId
-          officeState.cameraFollowId  = hitId
+          officeState.selectedAgentId = hitId;
+          officeState.cameraFollowId = hitId;
         }
-        onAgentClick?.(hitId)
-        return
+        onAgentClick?.(hitId);
+        return;
       }
 
       // Seat click while agent selected
       if (officeState.selectedAgentId !== null) {
-        const selectedCh = officeState.characters.get(officeState.selectedAgentId)
+        const selectedCh = officeState.characters.get(officeState.selectedAgentId);
         if (selectedCh && !selectedCh.isSubagent) {
-          const tile = screenToTile(e.clientX, e.clientY)
+          const tile = screenToTile(e.clientX, e.clientY);
           if (tile) {
-            const seatId = officeState.getSeatAtTile(tile.col, tile.row)
+            const seatId = officeState.getSeatAtTile(tile.col, tile.row);
             if (seatId) {
-              const seat = officeState.seats.get(seatId)
+              const seat = officeState.seats.get(seatId);
               if (seat) {
                 if (selectedCh.seatId === seatId) {
-                  officeState.sendToSeat(officeState.selectedAgentId)
-                  officeState.selectedAgentId = null
-                  officeState.cameraFollowId  = null
-                  return
+                  officeState.sendToSeat(officeState.selectedAgentId);
+                  officeState.selectedAgentId = null;
+                  officeState.cameraFollowId = null;
+                  return;
                 } else if (!seat.assigned) {
-                  officeState.reassignSeat(officeState.selectedAgentId, seatId)
-                  officeState.selectedAgentId = null
-                  officeState.cameraFollowId  = null
+                  officeState.reassignSeat(officeState.selectedAgentId, seatId);
+                  officeState.selectedAgentId = null;
+                  officeState.cameraFollowId = null;
                   // Persist to localStorage
-                  const seats: Record<number, { palette: number; hueShift: number; seatId: string | null }> = {}
+                  const seats: Record<
+                    number,
+                    { palette: number; hueShift: number; seatId: string | null }
+                  > = {};
                   for (const ch of officeState.characters.values()) {
-                    if (ch.isSubagent) continue
-                    seats[ch.id] = { palette: ch.palette, hueShift: ch.hueShift, seatId: ch.seatId }
+                    if (ch.isSubagent) continue;
+                    seats[ch.id] = {
+                      palette: ch.palette,
+                      hueShift: ch.hueShift,
+                      seatId: ch.seatId,
+                    };
                   }
-                  localStorage.setItem('open_qa_agent_seats', JSON.stringify(seats))
-                  return
+                  localStorage.setItem('open_qa_agent_seats', JSON.stringify(seats));
+                  return;
                 }
               }
             }
           }
         }
-        officeState.selectedAgentId = null
-        officeState.cameraFollowId  = null
+        officeState.selectedAgentId = null;
+        officeState.cameraFollowId = null;
       }
     },
     [officeState, onAgentClick, screenToWorld, screenToTile],
-  )
+  );
 
   const handleMouseLeave = useCallback(() => {
-    isPanningRef.current       = false
-    officeState.hoveredAgentId = null
-    officeState.hoveredTile    = null
-  }, [officeState])
+    isPanningRef.current = false;
+    officeState.hoveredAgentId = null;
+    officeState.hoveredTile = null;
+  }, [officeState]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
-      e.preventDefault()
+      e.preventDefault();
       if (officeState.selectedAgentId !== null) {
-        const tile = screenToTile(e.clientX, e.clientY)
-        if (tile) officeState.walkToTile(officeState.selectedAgentId, tile.col, tile.row)
+        const tile = screenToTile(e.clientX, e.clientY);
+        if (tile) officeState.walkToTile(officeState.selectedAgentId, tile.col, tile.row);
       }
     },
     [officeState, screenToTile],
-  )
+  );
 
   // Ctrl/Cmd+wheel = zoom, plain wheel = pan
   // When locked=true both interactions are disabled (fixed map mode).
   const handleWheel = useCallback(
     (e: WheelEvent) => {
-      if (locked) return
-      e.preventDefault()
+      if (locked) return;
+      e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        zoomAccumRef.current += e.deltaY
+        zoomAccumRef.current += e.deltaY;
         if (Math.abs(zoomAccumRef.current) >= ZOOM_SCROLL_THRESHOLD) {
-          const delta = zoomAccumRef.current < 0 ? 1 : -1
-          zoomAccumRef.current = 0
-          const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + delta))
-          if (next !== zoom) onZoomChange(next)
+          const delta = zoomAccumRef.current < 0 ? 1 : -1;
+          zoomAccumRef.current = 0;
+          const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + delta));
+          if (next !== zoom) onZoomChange(next);
         }
       } else {
-        const dpr = window.devicePixelRatio || 1
-        officeState.cameraFollowId = null
+        const dpr = window.devicePixelRatio || 1;
+        officeState.cameraFollowId = null;
         panRef.current = clampPan(
           panRef.current.x - e.deltaX * dpr,
           panRef.current.y - e.deltaY * dpr,
-        )
+        );
       }
     },
     [zoom, onZoomChange, officeState, panRef, clampPan, locked],
-  )
+  );
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    canvas.addEventListener('wheel', handleWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', handleWheel)
-  }, [handleWheel])
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const handleAuxClick = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1) e.preventDefault()
-  }, [])
+    if (e.button === 1) e.preventDefault();
+  }, []);
 
   return (
     <div
@@ -480,5 +488,5 @@ export function OfficeCanvas({
         style={{ imageRendering: 'pixelated' }}
       />
     </div>
-  )
+  );
 }

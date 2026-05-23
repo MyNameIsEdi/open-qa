@@ -34,7 +34,9 @@ export function createMockPOM(input: POMBuilderInput): string {
 
   const testIdMatches = [...domHtml.matchAll(/data-testid=["']([^"']+)["']/gi)];
   const buttonMatches = [...domHtml.matchAll(/<button[^>]*>([^<]+)<\/button>/gi)];
-  const inputMatches = [...domHtml.matchAll(/<input[^>]+(?:placeholder|aria-label)=["']([^"']+)["'][^>]*>/gi)];
+  const inputMatches = [
+    ...domHtml.matchAll(/<input[^>]+(?:placeholder|aria-label)=["']([^"']+)["'][^>]*>/gi),
+  ];
 
   const locators: string[] = [];
   const methods: string[] = [];
@@ -47,15 +49,26 @@ export function createMockPOM(input: POMBuilderInput): string {
 
   for (const m of buttonMatches.slice(0, 3)) {
     const label = m[1].trim();
-    const propName = label.toLowerCase().replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/[^a-zA-Z]/g, '') + 'Btn';
+    const propName =
+      label
+        .toLowerCase()
+        .replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase())
+        .replace(/[^a-zA-Z]/g, '') + 'Btn';
     locators.push(`  readonly ${propName}: Locator`);
-    const methodName = 'click' + label.replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/^[a-z]/, (c) => c.toUpperCase()).replace(/[^a-zA-Z]/g, '');
+    const methodName =
+      'click' +
+      label
+        .replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase())
+        .replace(/^[a-z]/, (c) => c.toUpperCase())
+        .replace(/[^a-zA-Z]/g, '');
     methods.push(`  async ${methodName}() {\n    await this.${propName}.click()\n  }`);
   }
 
   if (inputMatches.length > 0) {
     locators.push(`  readonly searchInput: Locator`);
-    methods.push(`  async fillSearch(value: string) {\n    await this.searchInput.fill(value)\n  }`);
+    methods.push(
+      `  async fillSearch(value: string) {\n    await this.searchInput.fill(value)\n  }`,
+    );
   }
 
   if (locators.length === 0) {
@@ -70,16 +83,26 @@ ${locators.join('\n')}
 
   constructor(page: Page) {
     this.page = page
-${testIdMatches.slice(0, 4).map(m => {
-  const id = m[1];
-  const propName = id.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/-/g, '');
-  return `    this.${propName} = page.getByTestId('${id}')`;
-}).join('\n')}
-${buttonMatches.slice(0, 3).map(m => {
-  const label = m[1].trim();
-  const propName = label.toLowerCase().replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/[^a-zA-Z]/g, '') + 'Btn';
-  return `    this.${propName} = page.getByRole('button', { name: '${label}' })`;
-}).join('\n')}
+${testIdMatches
+  .slice(0, 4)
+  .map((m) => {
+    const id = m[1];
+    const propName = id.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/-/g, '');
+    return `    this.${propName} = page.getByTestId('${id}')`;
+  })
+  .join('\n')}
+${buttonMatches
+  .slice(0, 3)
+  .map((m) => {
+    const label = m[1].trim();
+    const propName =
+      label
+        .toLowerCase()
+        .replace(/\s+([a-z])/g, (_, c: string) => c.toUpperCase())
+        .replace(/[^a-zA-Z]/g, '') + 'Btn';
+    return `    this.${propName} = page.getByRole('button', { name: '${label}' })`;
+  })
+  .join('\n')}
 ${inputMatches.length > 0 ? `    this.searchInput = page.getByPlaceholder('${inputMatches[0][1]}')` : ''}
 ${locators.length === 1 && testIdMatches.length === 0 ? `    this.heading = page.getByRole('heading')` : ''}
   }

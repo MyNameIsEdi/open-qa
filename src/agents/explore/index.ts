@@ -26,7 +26,7 @@ async function explore(url: string): Promise<void> {
   const title = await page.title();
   const bodyText = await page.evaluate(() => document.body.innerText.slice(0, 3000));
   const links = await page.$$eval('a[href]', (els) =>
-    els.slice(0, 20).map((el) => (el as HTMLAnchorElement).href)
+    els.slice(0, 20).map((el) => (el as HTMLAnchorElement).href),
   );
 
   await browser.close();

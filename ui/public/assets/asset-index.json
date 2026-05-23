@@ -10,9 +10,7 @@
     "floor_7.png",
     "floor_8.png"
   ],
-  "walls": [
-    "wall_0.png"
-  ],
+  "walls": ["wall_0.png"],
   "characters": [
     "char_0.png",
     "char_1.png",

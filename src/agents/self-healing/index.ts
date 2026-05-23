@@ -35,8 +35,8 @@ export function createMockHealedLocator(
   html: string,
   actionDescription: string,
 ): HealedLocatorSpec {
-  const testIdMatch = html.match(/data-testid=["']([^"']+)["']/i)
-    ?? html.match(/data-test-id=["']([^"']+)["']/i);
+  const testIdMatch =
+    html.match(/data-testid=["']([^"']+)["']/i) ?? html.match(/data-test-id=["']([^"']+)["']/i);
   if (testIdMatch) {
     return { strategy: 'getByTestId', target: testIdMatch[1] };
   }
@@ -59,7 +59,10 @@ export function createMockHealedLocator(
 }
 
 function parseHealedLocator(raw: string): HealedLocatorSpec {
-  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const cleaned = raw
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
   const parsed = JSON.parse(cleaned) as HealedLocatorSpec;
   if (!parsed.strategy || !parsed.target) {
     throw new Error(`Invalid locator spec from AI: ${cleaned}`);
@@ -88,7 +91,12 @@ ${html}
 Return the best Playwright locator as JSON.`;
 
   try {
-    const raw = await askClaude({ system: SYSTEM_PROMPT, prompt, maxTokens: 256, temperature: 0.1 });
+    const raw = await askClaude({
+      system: SYSTEM_PROMPT,
+      prompt,
+      maxTokens: 256,
+      temperature: 0.1,
+    });
     const spec = parseHealedLocator(raw);
     console.log(`✨ [Self-Healing] AI suggested locator: ${JSON.stringify(spec)}`);
     return spec;
@@ -153,7 +161,9 @@ export async function clickWithSelfHealing(
     if (!(error instanceof errors.TimeoutError)) {
       throw error;
     }
-    console.log(`\n🚑 Timeout on "${brokenSelector}" — invoking self-healing for: ${actionDescription}`);
+    console.log(
+      `\n🚑 Timeout on "${brokenSelector}" — invoking self-healing for: ${actionDescription}`,
+    );
     const spec = await suggestLocator(page, actionDescription);
     const healed = buildLocator(page, spec);
     await healed.click({ timeout: 5000 });

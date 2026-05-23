@@ -1,23 +1,30 @@
-import type { GuideModule } from '../../data/guidesData'
+import type { GuideModule } from '../../data/guidesData';
 
 interface ModuleHeroProps {
-  module: GuideModule
-  totalSections: number
-  isHe: boolean
-  onStart: () => void
+  module: GuideModule;
+  totalSections: number;
+  isHe: boolean;
+  onStart: () => void;
 }
 
-const MODULE_META: Record<string, {
-  subtitle: string; subtitleHe: string
-  desc: string; descHe: string
-  objectives: string[]; objectivesHe: string[]
-  duration: string
-}> = {
+const MODULE_META: Record<
+  string,
+  {
+    subtitle: string;
+    subtitleHe: string;
+    desc: string;
+    descHe: string;
+    objectives: string[];
+    objectivesHe: string[];
+    duration: string;
+  }
+> = {
   welcome: {
     subtitle: 'Module 1 — Foundations',
     subtitleHe: 'מודול 1 — יסודות',
     desc: 'Learn QA Automation from the ground up — from the testing pyramid to writing your first Playwright test, with real-world analogies.',
-    descHe: 'למד QA אוטומציה מהבסיס — מפירמידת הבדיקות ועד לכתיבת הבדיקה הראשונה שלך עם Playwright, עם דוגמאות מהחיים האמיתיים.',
+    descHe:
+      'למד QA אוטומציה מהבסיס — מפירמידת הבדיקות ועד לכתיבת הבדיקה הראשונה שלך עם Playwright, עם דוגמאות מהחיים האמיתיים.',
     objectives: [
       'Understand what QA Automation is and why it matters',
       'Identify the 3 testing pyramid layers',
@@ -38,7 +45,8 @@ const MODULE_META: Record<string, {
     subtitle: 'Module 2 — Automation',
     subtitleHe: 'מודול 2 — אוטומציה',
     desc: 'Master Playwright locators, Page Object Model, and writing resilient tests that survive UI changes.',
-    descHe: 'שלוט ב-locators של Playwright, Page Object Model, וכתיבת בדיקות עמידות שממשיכות לעבוד אחרי שינויי UI.',
+    descHe:
+      'שלוט ב-locators של Playwright, Page Object Model, וכתיבת בדיקות עמידות שממשיכות לעבוד אחרי שינויי UI.',
     objectives: [
       'Use all 5 Playwright locator types correctly',
       'Build a Page Object Model from scratch',
@@ -125,7 +133,8 @@ const MODULE_META: Record<string, {
     subtitle: 'Module 7 — AI, DevOps & Security',
     subtitleHe: 'מודול 7 — AI, DevOps ואבטחה',
     desc: 'Use Claude to generate tests, wire Playwright into GitHub Actions CI, and find OWASP security bugs.',
-    descHe: 'השתמש ב-Claude ליצירת בדיקות, חבר Playwright ל-GitHub Actions CI, ומצא באגי אבטחה לפי OWASP.',
+    descHe:
+      'השתמש ב-Claude ליצירת בדיקות, חבר Playwright ל-GitHub Actions CI, ומצא באגי אבטחה לפי OWASP.',
     objectives: [
       'Prompt Claude to write Playwright tests',
       'Add a GitHub Actions workflow for CI',
@@ -155,19 +164,21 @@ const MODULE_META: Record<string, {
     ],
     duration: '20 min',
   },
-}
+};
 
 export default function ModuleHero({ module, totalSections, isHe, onStart }: ModuleHeroProps) {
-  const meta = MODULE_META[module.id]
-  if (!meta) return null
+  const meta = MODULE_META[module.id];
+  if (!meta) return null;
 
-  const objectives = isHe ? meta.objectivesHe : meta.objectives
-  const subtitle   = isHe ? meta.subtitleHe   : meta.subtitle
-  const desc       = isHe ? meta.descHe        : meta.desc
+  const objectives = isHe ? meta.objectivesHe : meta.objectives;
+  const subtitle = isHe ? meta.subtitleHe : meta.subtitle;
+  const desc = isHe ? meta.descHe : meta.desc;
 
   return (
-    <div className="mb-8 rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-
+    <div
+      className="mb-8 rounded-2xl overflow-hidden border"
+      style={{ borderColor: 'var(--border)' }}
+    >
       {/* Gradient header */}
       <div
         className="relative px-6 py-8 overflow-hidden"
@@ -177,7 +188,8 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)',
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
@@ -185,16 +197,24 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
         <div
           className="absolute pointer-events-none"
           style={{
-            top: '-30%', insetInlineEnd: '-5%',
-            width: '50%', height: '160%',
+            top: '-30%',
+            insetInlineEnd: '-5%',
+            width: '50%',
+            height: '160%',
             background: 'radial-gradient(ellipse, rgba(79,114,212,.3) 0%, transparent 65%)',
           }}
         />
 
         <div className="relative z-10">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4"
-            style={{ background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.22)', color: '#fff' }}>
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4"
+            style={{
+              background: 'rgba(255,255,255,.12)',
+              border: '1px solid rgba(255,255,255,.22)',
+              color: '#fff',
+            }}
+          >
             <span className="text-base">{module.icon}</span>
             {subtitle}
           </div>
@@ -203,7 +223,10 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
           <h2 className="text-2xl font-black text-white mb-2 leading-tight">
             {isHe ? module.titleHe : module.title}
           </h2>
-          <p className="text-sm leading-relaxed mb-5" style={{ color: 'rgba(255,255,255,.75)', maxWidth: 520 }}>
+          <p
+            className="text-sm leading-relaxed mb-5"
+            style={{ color: 'rgba(255,255,255,.75)', maxWidth: 520 }}
+          >
             {desc}
           </p>
 
@@ -214,8 +237,13 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
               ['📚', `${totalSections} ${isHe ? 'סעיפים' : 'sections'}`],
               ['🎯', isHe ? 'מתחיל' : 'Beginner'],
             ].map(([icon, label]) => (
-              <span key={label} className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,.7)' }}>
-                <span>{icon}</span>{label}
+              <span
+                key={label}
+                className="flex items-center gap-1.5 text-xs"
+                style={{ color: 'rgba(255,255,255,.7)' }}
+              >
+                <span>{icon}</span>
+                {label}
               </span>
             ))}
           </div>
@@ -225,7 +253,11 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
             <button
               onClick={onStart}
               className="px-5 py-2 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
-              style={{ background: '#fff', color: '#1a3a8f', boxShadow: '0 4px 16px rgba(0,0,0,.18)' }}
+              style={{
+                background: '#fff',
+                color: '#1a3a8f',
+                boxShadow: '0 4px 16px rgba(0,0,0,.18)',
+              }}
             >
               {isHe ? '▶ התחל ללמוד' : '▶ Start Learning'}
             </button>
@@ -235,14 +267,23 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
 
       {/* Learning objectives */}
       <div className="px-6 py-5" style={{ backgroundColor: 'var(--bg-card)' }}>
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+        <p
+          className="text-xs font-bold uppercase tracking-widest mb-3"
+          style={{ color: 'var(--text-muted)' }}
+        >
           {isHe ? '🎯 מה תלמד במודול זה?' : '🎯 What you will learn'}
         </p>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {objectives.map((obj, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs leading-relaxed" style={{ color: 'var(--text-main)' }}>
-              <span className="shrink-0 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5"
-                style={{ background: 'var(--primary, #1a3a8f)', color: '#fff' }}>
+            <li
+              key={i}
+              className="flex items-start gap-2 text-xs leading-relaxed"
+              style={{ color: 'var(--text-main)' }}
+            >
+              <span
+                className="shrink-0 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center mt-0.5"
+                style={{ background: 'var(--primary, #1a3a8f)', color: '#fff' }}
+              >
                 {i + 1}
               </span>
               {obj}
@@ -251,5 +292,5 @@ export default function ModuleHero({ module, totalSections, isHe, onStart }: Mod
         </ul>
       </div>
     </div>
-  )
+  );
 }
