@@ -166,8 +166,24 @@ function HistoryChart({
   selectedId: string | null
   onSelect: (id: string) => void
 }) {
+  // ── UX upgrade ─────────────────────────────────────────────────────────────
+  // • Hover tooltip (replaces native title="…" attribute) with rich content
+  // • Inline pass-rate overlay line (moving-average) that tracks reliability
+  // • Per-bar pass-rate label on hover so a quick scan tells you the story
+  // • "Latest" pin on the newest bar
+  // The native `title` tooltip is removed so we don't get duplicate UI.
+  const [hoverId, setHoverId] = useState<string | null>(null)
+
   const displayed  = runs.slice().reverse()   // oldest → newest left → right
   const maxTotal   = Math.max(...displayed.map(r => r.total), 1)
+
+  // Moving-average pass rate (window of 3) — gives a smoother trend than per-bar % alone
+  const passRates = displayed.map(r => r.total > 0 ? r.passed / r.total : 0)
+  const movingAvg = passRates.map((_, i) => {
+    const start = Math.max(0, i - 2)
+    const slice = passRates.slice(start, i + 1)
+    return slice.reduce((a, b) => a + b, 0) / slice.length
+  })
 
   if (runs.length === 0) {
     return (
@@ -185,6 +201,11 @@ function HistoryChart({
     )
   }
 
+  const hoveredRun = hoverId ? displayed.find(r => r.id === hoverId) ?? null : null
+  const hoveredRate = hoveredRun && hoveredRun.total > 0
+    ? Math.round((hoveredRun.passed / hoveredRun.total) * 100)
+    : null
+
   return (
     <div className="rounded-2xl overflow-hidden mb-6"
       style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
@@ -194,50 +215,124 @@ function HistoryChart({
           <TrendingUp size={13} style={{ color: '#3b82f6' }} />
           <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>Run History</span>
           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            · {runs.length} run{runs.length !== 1 ? 's' : ''} · click a bar to view
+            · {runs.length} run{runs.length !== 1 ? 's' : ''} · hover for details · click to view
           </span>
         </div>
         <div className="flex items-center gap-4">
-          {([['#10b981', 'Passed'], ['#ef4444', 'Failed'], ['#fbbf24', 'Skipped']] as const).map(([color, label]) => (
+          {([['#10b981', 'Passed'], ['#ef4444', 'Failed'], ['#fbbf24', 'Skipped'], ['#3b82f6', 'Pass-rate trend']] as const).map(([color, label]) => (
             <span key={label} className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              <span className="w-2 h-2 rounded-sm inline-block shrink-0" style={{ backgroundColor: color }} />
+              <span
+                className={label === 'Pass-rate trend' ? 'inline-block shrink-0' : 'w-2 h-2 rounded-sm inline-block shrink-0'}
+                style={
+                  label === 'Pass-rate trend'
+                    ? { width: 10, height: 2, backgroundColor: color, borderRadius: 1 }
+                    : { backgroundColor: color }
+                }
+              />
               {label}
             </span>
           ))}
         </div>
       </div>
-      <div className="px-5 py-3">
-        <div className="flex gap-2" style={{ height: CHART_H + 20 }}>
-          {displayed.map(run => {
+      <div className="px-5 pt-3 pb-3 relative">
+        {/* Hover tooltip — pinned to top of chart so it doesn't shift layout */}
+        {hoveredRun && (
+          <div
+            className="absolute z-10 px-3 py-2 rounded-lg shadow-lg pointer-events-none text-[10px]"
+            style={{
+              top: 6, right: 12,
+              backgroundColor: '#1e1e2e', color: '#e2e8f0',
+              border: '1px solid rgba(255,255,255,0.08)',
+              minWidth: 180,
+            }}
+          >
+            <div className="font-bold text-[11px] mb-1 flex items-center justify-between gap-3">
+              <span>{new Date(hoveredRun.runAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              {hoveredRate != null && (
+                <span className="px-1.5 py-px rounded font-bold"
+                  style={{
+                    background: hoveredRate >= 80 ? 'rgba(16,185,129,0.20)' : hoveredRate >= 50 ? 'rgba(251,191,36,0.20)' : 'rgba(239,68,68,0.20)',
+                    color:      hoveredRate >= 80 ? '#34d399' : hoveredRate >= 50 ? '#fbbf24' : '#f87171',
+                  }}>
+                  {hoveredRate}%
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mb-0.5">
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 inline-block" />{hoveredRun.passed}</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-red-500 inline-block" />{hoveredRun.failed}</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-400 inline-block" />{hoveredRun.skipped}</span>
+              <span className="opacity-60 ml-auto">{formatMs(hoveredRun.duration)}</span>
+            </div>
+            {hoveredRun.spec && (
+              <div className="font-mono opacity-60 text-[9px] truncate mt-1" title={hoveredRun.spec}>
+                {hoveredRun.spec.replace(/^tests[\\/]/g, '').replace(/\.spec\.(ts|js)/g, '')}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-2 relative" style={{ height: CHART_H + 26 }}>
+          {/* Moving-average trend line — overlaid on top of the bars */}
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            width="100%" height={CHART_H} viewBox={`0 0 ${displayed.length * 100} ${CHART_H}`}
+            preserveAspectRatio="none"
+          >
+            <polyline
+              fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
+              opacity={0.85}
+              points={
+                movingAvg.map((r, i) => {
+                  const x = i * 100 + 50
+                  const y = CHART_H - r * CHART_H
+                  return `${x},${y}`
+                }).join(' ')
+              }
+            />
+          </svg>
+          {displayed.map((run, i) => {
             const passH      = Math.round((run.passed  / maxTotal) * CHART_H)
             const failH      = Math.round((run.failed  / maxTotal) * CHART_H)
             const skipH      = Math.round((run.skipped / maxTotal) * CHART_H)
             const isSelected = run.id === selectedId
+            const isHover    = hoverId === run.id
+            const isLatest   = i === displayed.length - 1   // rightmost
             return (
               <div
                 key={run.id}
                 onClick={() => onSelect(run.id)}
-                title={`${new Date(run.runAt).toLocaleString()}\n${run.passed}✓  ${run.failed}✗  ${run.skipped}–\n${formatMs(run.duration)}`}
+                onMouseEnter={() => setHoverId(run.id)}
+                onMouseLeave={() => setHoverId(prev => prev === run.id ? null : prev)}
                 style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                   gap: 5, cursor: 'pointer',
-                  opacity: selectedId === null || isSelected ? 1 : 0.55,
+                  opacity: selectedId === null || isSelected || isHover ? 1 : 0.55,
                   transition: 'opacity 150ms',
                 }}
               >
                 <div style={{
                   flex: 1, width: '100%', position: 'relative',
-                  outline: isSelected ? '2px solid #3b82f6' : undefined,
+                  outline: isSelected ? '2px solid #3b82f6' : isHover ? '2px solid rgba(59,130,246,0.4)' : undefined,
                   borderRadius: 3,
+                  transform: isHover && !isSelected ? 'translateY(-1px)' : undefined,
+                  transition: 'transform 120ms',
                 }}>
                   {passH > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: passH, backgroundColor: '#10b981', borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0' }} />}
                   {failH > 0 && <div style={{ position: 'absolute', bottom: passH, left: 0, right: 0, height: failH, backgroundColor: '#ef4444', borderRadius: skipH === 0 ? '3px 3px 0 0' : '0' }} />}
                   {skipH > 0 && <div style={{ position: 'absolute', bottom: passH + failH, left: 0, right: 0, height: skipH, backgroundColor: '#fbbf24', borderRadius: '3px 3px 0 0' }} />}
+                  {isLatest && (
+                    <span
+                      className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 0 2px var(--bg-card)' }}
+                      title="Latest run"
+                    />
+                  )}
                 </div>
                 <span style={{
                   fontSize: 9, flexShrink: 0, lineHeight: 1,
-                  color: isSelected ? '#3b82f6' : '#94a3b8',
-                  fontWeight: isSelected ? 700 : 400,
+                  color: isSelected || isHover ? '#3b82f6' : '#94a3b8',
+                  fontWeight: isSelected ? 700 : isHover ? 600 : 400,
                 }}>
                   {fmtRunLabel(run.runAt)}
                 </span>
@@ -2226,6 +2321,23 @@ function PwMessageBubble({ msg, isStreaming, agents, onRunCode }: {
   const avatarRing = isUser ? '#1d4ed8' : (accent?.ring ?? '#166534')
   const avatarText = isUser ? '#93c5fd' : (accent?.text ?? '#4ade80')
   const initials   = isUser ? 'U'       : (msg.senderName?.slice(0,2).toUpperCase() ?? 'AI')
+
+  // ── Multi-agent collaboration: detect role from the " · label" suffix the
+  // server adds to senderName (e.g. "Bug Triager · Critique (round 1)") and
+  // render it as a colour-coded role pill so the user can tell at a glance
+  // who is drafting / critiquing / synthesising.
+  const senderParts = (msg.senderName ?? '').split(' · ')
+  const agentLabel  = senderParts[0]
+  const roleLabel   = senderParts.length > 1 ? senderParts.slice(1).join(' · ') : null
+  const rolePalette = (() => {
+    if (!roleLabel) return null
+    const l = roleLabel.toLowerCase()
+    if (l.includes('synthesis') || l.includes('final'))                return { bg: 'rgba(16,185,129,0.16)', color: '#34d399', border: 'rgba(16,185,129,0.30)' } // synthesis = emerald
+    if (l.includes('critique') || l.includes('review'))                return { bg: 'rgba(245,158,11,0.16)', color: '#fbbf24', border: 'rgba(245,158,11,0.30)' } // critic = amber
+    if (l.includes('draft') || l.includes('refined') || l.includes('round')) return { bg: 'rgba(59,130,246,0.16)', color: '#60a5fa', border: 'rgba(59,130,246,0.30)' } // primary = blue
+    return { bg: 'rgba(148,163,184,0.16)', color: '#cbd5e1', border: 'rgba(148,163,184,0.30)' }
+  })()
+
   return (
     <div className={`flex gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end`}>
       <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
@@ -2233,9 +2345,18 @@ function PwMessageBubble({ msg, isStreaming, agents, onRunCode }: {
         {initials}
       </div>
       <div className={`flex flex-col gap-0.5 max-w-[88%] ${isUser ? 'items-end' : 'items-start'}`}>
-        <span className="text-[9px] font-medium px-0.5" style={{ color: 'var(--text-muted)' }}>
-          {msg.senderName}
-          <span className="ml-1 font-normal opacity-60">
+        <span className="text-[9px] font-medium px-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+          <span>{agentLabel}</span>
+          {roleLabel && rolePalette && (
+            <span
+              className="inline-flex items-center text-[8px] font-bold uppercase tracking-wider px-1.5 py-px rounded leading-none"
+              style={{ background: rolePalette.bg, color: rolePalette.color, border: `1px solid ${rolePalette.border}` }}
+              title={`Collaboration step: ${roleLabel}`}
+            >
+              {roleLabel}
+            </span>
+          )}
+          <span className="font-normal opacity-60">
             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         </span>
@@ -2286,7 +2407,7 @@ interface PwOfficePanelProps {
 function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelProps) {
   const {
     agents, settings, updateSettings,
-    messages, appendMessage, appendChunk, clearHistory,
+    messages, appendMessage, appendChunk, updateMessage, clearHistory,
     activeTypingAgents,
     setAgentStatus, setActiveTyping, removeActiveTyping,
   } = useSettings()
@@ -2530,6 +2651,14 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
           model:            isOllama ? settings.ollamaModel : settings.defaultModel,
           provider:         settings.provider,
           ollamaBaseUrl:    settings.ollamaBaseUrl,
+          // ── Multi-agent collaboration trigger ───────────────────────────────
+          // Auto-enable when the user tags 2+ agents (intent: "team huddle") or
+          // tags the manager (intent: "go through the team"). Gemini-only.
+          collaborate:      !isOllama && (
+            targets.length >= 2 ||
+            targets.some(a => a.id === TEAM_MANAGER_ID)
+          ),
+          maxRounds:        2,
         }),
         signal: controller.signal,
       })
@@ -2545,6 +2674,12 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
       const decoder = new TextDecoder()
       let buffer    = ''
 
+      // Multi-agent collaboration mode: the server emits `turn_start | chunk |
+      // turn_done` events as the team passes work back and forth. Each turn
+      // gets its own chat message so the user sees a threaded conversation.
+      // `activeMsgId` tracks which message subsequent `chunk` events flow into.
+      let activeMsgId: string = modelMsgId
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -2556,13 +2691,60 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
           const raw = line.slice(6).trim()
           if (!raw) continue
           try {
-            const payload = JSON.parse(raw) as { chunk?: string; done?: boolean; error?: string }
+            const payload = JSON.parse(raw) as {
+              chunk?:     string
+              done?:      boolean
+              error?:     string
+              evt?:       'turn_start' | 'turn_done' | 'turn_verdict'
+              agentId?:   string
+              agentName?: string
+              role?:      'primary' | 'critic' | 'synthesis'
+              round?:     number
+              label?:     string
+              verdict?:   'lgtm' | 'needs_work'
+            }
             if (payload.error) {
-              appendChunk(modelMsgId, `\n\n[Error: ${payload.error}]`)
+              appendChunk(activeMsgId, `\n\n[Error: ${payload.error}]`)
               targets.forEach(a => setAgentStatus(a.id, 'error'))
               setActiveTyping([]); setStreamingMsgId(null); return
             }
-            if (payload.chunk) appendChunk(modelMsgId, payload.chunk)
+            // Collaboration turn boundary — replace the initial placeholder
+            // on the first turn_start, then create a fresh message per subsequent turn.
+            if (payload.evt === 'turn_start' && payload.agentId) {
+              const senderName = payload.label
+                ? `${payload.agentName ?? 'Agent'} · ${payload.label}`
+                : (payload.agentName ?? 'Agent')
+              // First turn reuses modelMsgId (and clears its placeholder name);
+              // subsequent turns spawn a brand-new message.
+              if (activeMsgId === modelMsgId && payload.round === 1 && payload.role === 'primary') {
+                updateMessage(modelMsgId, { senderName, agentId: payload.agentId })
+              } else {
+                const newId = crypto.randomUUID()
+                appendMessage({
+                  id:         newId,
+                  role:       'model',
+                  content:    '',
+                  senderName,
+                  agentId:    payload.agentId,
+                  timestamp:  Date.now(),
+                })
+                activeMsgId = newId
+                setStreamingMsgId(newId)
+              }
+              if (payload.agentId) setAgentStatus(payload.agentId, 'working')
+              continue
+            }
+            if (payload.evt === 'turn_done') {
+              if (payload.agentId) setAgentStatus(payload.agentId, 'idle')
+              continue
+            }
+            if (payload.evt === 'turn_verdict') {
+              // Inline marker — appended to current message so the user sees the critic's verdict
+              const tag = payload.verdict === 'lgtm' ? '\n\n✅ Verdict: LGTM' : '\n\n🔁 Verdict: needs another pass'
+              appendChunk(activeMsgId, tag)
+              continue
+            }
+            if (payload.chunk) appendChunk(activeMsgId, payload.chunk)
             if (payload.done) {
               targets.forEach(a => { setAgentStatus(a.id, 'idle'); removeActiveTyping(a.id) })
               setStreamingMsgId(null); return
@@ -2579,7 +2761,7 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
     }
   }, [
     inputText, pendingFiles, streamingMsgId, settings, agents, messages, selectedAgentId,
-    appendMessage, appendChunk, parseTaggedAgents,
+    appendMessage, appendChunk, updateMessage, parseTaggedAgents,
     setActiveTyping, setAgentStatus, removeActiveTyping,
     onRunAll,
   ])
@@ -2637,13 +2819,42 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
         </div>
       </div>
 
-      {/* ── Canvas (height self-sized by OfficeCanvas from layout aspect ratio) */}
-      <div className="w-full shrink-0 relative" style={{ background: '#1a1a2e' }}>
+      {/*
+        ── Canvas — cropped to content area (no "blue void" at top) ─────────
+        `default-layout-1.json` is 21 × 22 tiles, but rows 0–9 are void
+        (tile 255). OfficeCanvas sizes itself to the FULL 21×22 aspect ratio,
+        so without intervention the upper ~45% of the rendered area shows
+        only the canvas background colour — that's the "blue blank" the user
+        reported in the PW Dashboard sidebar.
+
+        Fix without touching the layout JSON or the shared OfficeCanvas
+        component (both used by OfficePage too):
+          1. Outer wrapper uses the CONTENT-ONLY aspect ratio (21 wide × 12
+             rows tall ≈ 1.75) + `overflow: hidden`.
+          2. Inner wrapper is `position: absolute; bottom: 0` so the canvas
+             — which still computes its own height as 21:22 — overflows
+             UPWARD past the clip boundary. Only the bottom 12 rows of
+             actual office content are visible.
+
+        Mouse events still hit the canvas at its translated DOM position
+        (offsetX/Y on the canvas element are unaffected by the offset of
+        its containing element).
+      */}
+      <div
+        className="w-full shrink-0 relative"
+        style={{
+          background: '#1a1a2e',
+          overflow: 'hidden',
+          aspectRatio: '21 / 12',
+        }}
+      >
         {assetsReady && _pwOfficeState ? (
-          <OfficeCanvas officeState={_pwOfficeState} onAgentClick={handleAgentClick}
-            zoom={1} onZoomChange={() => {}} panRef={panRef} locked />
+          <div className="absolute left-0 right-0 bottom-0">
+            <OfficeCanvas officeState={_pwOfficeState} onAgentClick={handleAgentClick}
+              zoom={1} onZoomChange={() => {}} panRef={panRef} locked />
+          </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center absolute inset-0">
             <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
@@ -2970,6 +3181,8 @@ export default function PlaywrightDashboard() {
   }, [config])
 
   // ── Fetch results from server (latest or a specific archived run) ───────────
+  // Bug-Fix 1: when loading an archived run, the server now returns the original
+  // stdout in `runLog` so we can hydrate the log panel instead of leaving it blank.
   const fetchResults = useCallback(async (runId?: string) => {
     setIsLoading(true)
     try {
@@ -2983,13 +3196,17 @@ export default function PlaywrightDashboard() {
         return
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json() as { suites: TestSuite[]; runAt: string }
+      const data = await res.json() as { suites: TestSuite[]; runAt: string; runLog?: string[] }
       setSuites(data.suites)
       setDemoMode(false)
       setServerOnline(true)
       setLastRunAt(data.runAt ?? null)
       setSelectedRunId(runId ?? null)
       setExpandedSuites(Object.fromEntries(data.suites.map(s => [s.id, true])))
+      // Restore the archived stdout when viewing an old run — empty array if absent.
+      if (runId && Array.isArray(data.runLog)) {
+        setRunLog(data.runLog.slice(-999))
+      }
     } catch {
       setServerOnline(false)
       setDemoMode(true)
@@ -3088,6 +3305,10 @@ export default function PlaywrightDashboard() {
   )
 
   // ── Core SSE runner (shared by runTests + runSingleSpec) ───────────────────
+  // After Bug-Fix 2: the server now emits Phase 2 `summary_*` events after
+  // `[DONE]` so the Edi M AI summary is delivered into the chat panel for every
+  // run, not just agent-generated dynamic runs.  We mirror the parser from
+  // `runDynamicTest` below to handle these events uniformly.
   const runWithSSE = useCallback(async (body: Record<string, unknown>) => {
     const controller = new AbortController()
     const timeoutId  = setTimeout(() => controller.abort(), 10 * 60 * 1000) // 10-minute hard limit
@@ -3099,11 +3320,27 @@ export default function PlaywrightDashboard() {
     setActiveView('dashboard')
     setSuites(prev => prev.map(s => ({ ...s, tests: s.tests.map(t => ({ ...t, status: 'pending' as Status, duration: 0 })) })))
     setExpandedSuites(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))
+
+    // Phase 2 (AI summary) tracking — same protocol used by runDynamicTest
+    let summaryMsgId: string | null = null
+    let inSummaryPhase = false
+
     try {
+      // Inject AI credentials so the server can stream the Edi M summary.
+      // The user's caller already provides spec/specs/config; we merge in creds.
+      const bodyWithCreds = {
+        ...body,
+        apiKey:        settings.geminiApiKey,
+        model:         settings.defaultModel,
+        provider:      settings.provider,
+        ollamaBaseUrl: settings.ollamaBaseUrl,
+        ollamaModel:   settings.ollamaModel,
+        agentName:     'Dashboard',
+      }
       const response = await fetch(`${API_BASE}/api/playwright/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(bodyWithCreds),
         signal: controller.signal,
       })
       if (!response.ok || !response.body) throw new Error(`Server ${response.status}`)
@@ -3118,9 +3355,67 @@ export default function PlaywrightDashboard() {
         buffer = parts.pop() ?? ''
         for (const line of parts) {
           if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6)
+
+          // First try to parse as a structured event object
+          let evt: Record<string, unknown> | null = null
+          try {
+            const parsed = JSON.parse(raw)
+            if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
+              evt = parsed as Record<string, unknown>
+            }
+          } catch { /* not JSON — fall through to plain string */ }
+
+          if (evt) {
+            // ── Phase 2: summary_start / summary_chunk / summary_done ─────────
+            if (evt.evt === 'summary_start') {
+              inSummaryPhase = true
+              setRunning(false)   // tests are done — let the UI relax
+
+              const mgrAgent = allAgents.find(a => a.id === TEAM_MANAGER_ID)
+              const mgrName  = mgrAgent?.name ?? 'Edi M'
+              const newMsgId = `run-summary-${Date.now()}`
+              summaryMsgId   = newMsgId
+
+              appendMessage({
+                id:         newMsgId,
+                role:       'model',
+                content:    '',
+                senderName: mgrName,
+                agentId:    TEAM_MANAGER_ID,
+                timestamp:  Date.now(),
+                type:       'qa_summary',
+              })
+            } else if (evt.evt === 'summary_chunk' && summaryMsgId) {
+              const chunk = typeof evt.text === 'string' ? evt.text : ''
+              if (chunk) appendChunk(summaryMsgId, chunk)
+            } else if (evt.evt === 'summary_done') {
+              if (summaryMsgId && evt.failures) {
+                updateMessage(summaryMsgId, {
+                  summaryData: {
+                    total:    typeof evt.total    === 'number' ? evt.total    : 0,
+                    passed:   typeof evt.passed   === 'number' ? evt.passed   : 0,
+                    failed:   typeof evt.failed   === 'number' ? evt.failed   : 0,
+                    duration: typeof evt.duration === 'number' ? evt.duration : 0,
+                    failures: evt.failures as QASummaryData['failures'],
+                  },
+                })
+              }
+              break outer
+            }
+            continue
+          }
+
+          // ── Phase 1: plain stdout log lines ────────────────────────────────
+          if (inSummaryPhase) continue   // safety: ignore stray strings after Phase 2
           let msg: string
-          try { msg = JSON.parse(line.slice(6)) as string } catch { msg = line.slice(6) }
-          if (msg.startsWith('[DONE]')) { break outer }
+          try { msg = JSON.parse(raw) as string } catch { msg = raw }
+          if (msg.startsWith('[DONE]')) {
+            // [DONE] signals end of Phase 1. Keep reading for summary_start
+            // unless the user has no credentials AND is on Gemini — then bail.
+            if (!settings.geminiApiKey && settings.provider === 'gemini') break outer
+            continue
+          }
           setRunLog(prev => [...prev.slice(-999), msg])
         }
       }
@@ -3138,7 +3433,7 @@ export default function PlaywrightDashboard() {
       clearTimeout(timeoutId)
       setRunning(false)
     }
-  }, [fetchResults, fetchHistory])  // eslint-disable-line
+  }, [fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])  // eslint-disable-line
 
   // ── Run a single spec from editor ─────────────────────────────────────────
   const runSingleSpec = useCallback((spec: string) => {
@@ -3366,20 +3661,35 @@ export default function PlaywrightDashboard() {
                 </span>
               )}
             </div>
-            <p className="text-xs mt-1.5 flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
-              <span>{suites.length} suites</span>
-              <span style={{ color: 'var(--border)' }}>·</span>
-              <span>{counts.total} tests</span>
-              {totalDuration > 0 && <>
-                <span style={{ color: 'var(--border)' }}>·</span>
-                <span>{formatMs(totalDuration)}</span>
-              </>}
-              {lastRunAt && <>
-                <span style={{ color: 'var(--border)' }}>·</span>
-                <span>last run {new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </>}
-              {isLoading && <span className="text-blue-400 flex items-center gap-1"><RotateCcw size={10} className="animate-spin" /> loading…</span>}
-            </p>
+            {/* Subtitle pill-row — cleaner than `·`-separated text and easier to scan */}
+            <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                <FolderOpen size={9} /> {suites.length} suite{suites.length === 1 ? '' : 's'}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                <Hash size={9} /> {counts.total} test{counts.total === 1 ? '' : 's'}
+              </span>
+              {totalDuration > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  <Clock size={9} /> {formatMs(totalDuration)}
+                </span>
+              )}
+              {lastRunAt && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  <RotateCcw size={9} /> last run {new Date(lastRunAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {isLoading && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                  style={{ backgroundColor: 'rgba(59,130,246,0.10)', color: '#2563eb', border: '1px solid rgba(59,130,246,0.20)' }}>
+                  <RotateCcw size={9} className="animate-spin" /> loading…
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -3749,43 +4059,84 @@ export default function PlaywrightDashboard() {
               </div>
             )}
 
-            {/* Metric cards */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 mb-8">
+            {/* ── KPI Hero: large Pass Rate card + 4 secondary tiles ──────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+              {/* Hero — Pass Rate (spans 2 columns on md+) */}
+              <div
+                className="md:col-span-2 relative overflow-hidden rounded-2xl p-5 flex items-center gap-5"
+                style={{
+                  backgroundColor: 'var(--bg-card)',
+                  boxShadow: '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+                  border: `1px solid ${passRate >= 80 ? 'rgba(16,185,129,0.18)' : passRate >= 50 ? 'rgba(251,191,36,0.20)' : 'rgba(239,68,68,0.18)'}`,
+                }}
+              >
+                {/* Soft background glow */}
+                <div
+                  aria-hidden
+                  className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none"
+                  style={{ backgroundColor: passRate >= 80 ? '#10b981' : passRate >= 50 ? '#fbbf24' : '#ef4444' }}
+                />
+                {/* Progress ring */}
+                <svg width="92" height="92" viewBox="0 0 92 92" className="shrink-0">
+                  <circle cx="46" cy="46" r="38" stroke="var(--border)" strokeWidth="8" fill="none" />
+                  <circle
+                    cx="46" cy="46" r="38" fill="none" strokeWidth="8" strokeLinecap="round"
+                    stroke={passRate >= 80 ? '#10b981' : passRate >= 50 ? '#fbbf24' : '#ef4444'}
+                    strokeDasharray={`${(passRate / 100) * 238.76} 238.76`}
+                    transform="rotate(-90 46 46)"
+                    style={{ transition: 'stroke-dasharray 700ms ease, stroke 300ms' }}
+                  />
+                  <text x="46" y="50" textAnchor="middle" fontSize="20" fontWeight="800"
+                    fill={passRate >= 80 ? '#059669' : passRate >= 50 ? '#d97706' : '#dc2626'}>
+                    {counts.total === 0 ? '—' : `${passRate}%`}
+                  </text>
+                  <text x="46" y="66" textAnchor="middle" fontSize="8" fontWeight="600"
+                    fill="var(--text-muted)" style={{ letterSpacing: '0.05em' }}>
+                    PASS
+                  </text>
+                </svg>
+                <div className="flex-1 min-w-0 relative">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Run Health</p>
+                  <p className="text-lg font-black leading-tight mb-2.5" style={{ color: 'var(--text-main)' }}>
+                    {counts.total === 0
+                      ? 'No data yet'
+                      : passRate >= 95   ? 'All-green'
+                      : passRate >= 80   ? 'Mostly passing'
+                      : passRate >= 50   ? 'Needs attention'
+                      :                    'Critical failures'}
+                  </p>
+                  {/* Inline stack bar */}
+                  <div className="h-2 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--bg-muted)' }}>
+                    {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / Math.max(counts.total, 1)) * 100}%` }} />}
+                    {counts.failed  > 0 && <div className="h-full bg-red-500     transition-all duration-700" style={{ width: `${(counts.failed  / Math.max(counts.total, 1)) * 100}%` }} />}
+                    {counts.skipped > 0 && <div className="h-full bg-amber-400   transition-all duration-700" style={{ width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%` }} />}
+                    {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / Math.max(counts.total, 1)) * 100}%` }} />}
+                  </div>
+                  <div className="flex items-center gap-3 mt-2 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 inline-block" /><span className="font-semibold text-emerald-600">{counts.passed}</span> passed</span>
+                    {counts.failed  > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-red-500 inline-block" /><span className="font-semibold text-red-500">{counts.failed}</span> failed</span>}
+                    {counts.skipped > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm bg-amber-400 inline-block" /><span className="font-semibold text-amber-600">{counts.skipped}</span> skipped</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Secondary tiles (4 across, 1 column on mobile, 3 columns md+) */}
               {([
-                { label: 'Total',     value: counts.total,            color: '#6366f1', accent: '#6366f1', icon: <Hash size={13} /> },
-                { label: 'Passed',    value: counts.passed,           color: '#059669', accent: '#10b981', icon: <CheckCircle2 size={13} /> },
-                { label: 'Failed',    value: counts.failed,           color: '#ef4444', accent: '#ef4444', icon: <XCircle size={13} /> },
-                { label: 'Skipped',   value: counts.skipped,          color: '#d97706', accent: '#fbbf24', icon: <MinusCircle size={13} /> },
-                { label: 'Pass Rate', value: `${passRate}%`,          color: passRate >= 80 ? '#059669' : '#ef4444', accent: passRate >= 80 ? '#10b981' : '#ef4444', icon: <TrendingUp size={13} /> },
-                { label: 'Duration',  value: formatMs(totalDuration), color: '#8b5cf6', accent: '#8b5cf6', icon: <Clock size={13} /> },
-              ]).map(({ label, value, color, accent, icon }) => (
-                <div key={label} className="pt-4 pb-5 px-4 rounded-2xl text-center relative overflow-hidden"
-                  style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
-                  {/* Accent top bar */}
+                { label: 'Total',    value: counts.total,            sub: `${suites.length} suites`,                                color: '#6366f1', accent: '#6366f1', icon: <Hash size={13} /> },
+                { label: 'Failed',   value: counts.failed,           sub: counts.failed > 0 ? 'needs triage' : 'all clear',          color: counts.failed > 0 ? '#dc2626' : 'var(--text-muted)', accent: counts.failed > 0 ? '#ef4444' : '#94a3b8', icon: counts.failed > 0 ? <XCircle size={13} /> : <CheckCircle2 size={13} /> },
+                { label: 'Duration', value: formatMs(totalDuration), sub: counts.total > 0 ? `${Math.round(totalDuration / Math.max(counts.total, 1))}ms avg` : '—', color: '#8b5cf6', accent: '#8b5cf6', icon: <Clock size={13} /> },
+              ]).map(({ label, value, sub, color, accent, icon }) => (
+                <div key={label} className="relative overflow-hidden rounded-2xl px-4 py-4"
+                  style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
                   <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ backgroundColor: accent }} />
-                  <div className="flex justify-center mb-2" style={{ color: accent }}>{icon}</div>
-                  <p className="text-2xl font-black leading-none" style={{ color }}>{value}</p>
-                  <p className="text-[11px] mt-1.5 font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: accent }}>{icon}</span>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                  </div>
+                  <p className="text-2xl font-black leading-none mt-2" style={{ color }}>{value}</p>
+                  <p className="text-[10px] mt-1.5 font-medium" style={{ color: 'var(--text-muted)' }}>{sub}</p>
                 </div>
               ))}
-            </div>
-
-            {/* Progress bar */}
-            <div className="mb-8">
-              <div className="h-2.5 rounded-full overflow-hidden flex gap-px" style={{ backgroundColor: 'var(--border)' }}>
-                {counts.passed  > 0 && <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(counts.passed  / counts.total) * 100}%` }} />}
-                {counts.failed  > 0 && <div className="h-full bg-red-500   transition-all duration-700" style={{ width: `${(counts.failed  / counts.total) * 100}%` }} />}
-                {counts.skipped > 0 && <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${(counts.skipped / counts.total) * 100}%` }} />}
-                {counts.pending > 0 && <div className="h-full bg-neutral-300 transition-all duration-700" style={{ width: `${(counts.pending / counts.total) * 100}%` }} />}
-              </div>
-              {counts.total > 0 && (
-                <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  <span className="text-emerald-600 font-semibold">{counts.passed} passed</span>
-                  {counts.failed > 0  && <span className="text-red-500 font-semibold">{counts.failed} failed</span>}
-                  {counts.skipped > 0 && <span className="text-amber-500">{counts.skipped} skipped</span>}
-                  <span className="font-semibold" style={{ color: passRate >= 80 ? '#059669' : '#ef4444' }}>{passRate}%</span>
-                </div>
-              )}
             </div>
 
             {/* History chart — real run records only */}
@@ -3877,10 +4228,23 @@ export default function PlaywrightDashboard() {
                 return (
                   <div key={suite.id} className="rounded-2xl overflow-hidden"
                     style={{ backgroundColor: 'var(--bg-card)', borderLeft: `3px solid ${statusAccent}`, boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}>
+                    {/*
+                      Sticky header: when a suite is expanded and the user scrolls
+                      down through long test lists, the suite header stays pinned
+                      below the navbar (h-14 = 3.5rem) so they don't lose context.
+                      `backdrop-blur` + the card background keeps it readable while
+                      sticky content scrolls behind it.
+                    */}
                     <button
                       onClick={() => toggleSuite(suite.id)}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors"
-                      style={{ backgroundColor: 'var(--bg-card)' }}
+                      className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isOpen ? 'sticky z-[5]' : ''}`}
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        top: isOpen ? '3.5rem' : undefined,
+                        backdropFilter: isOpen ? 'saturate(180%) blur(8px)' : undefined,
+                        WebkitBackdropFilter: isOpen ? 'saturate(180%) blur(8px)' : undefined,
+                        boxShadow: isOpen ? '0 4px 12px -8px rgba(0,0,0,0.18)' : undefined,
+                      }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-body)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}>
                       <StatusIcon status={status} size={16} />
@@ -3897,7 +4261,16 @@ export default function PlaywrightDashboard() {
                         }}>
                         {passed}/{suite.tests.length}
                       </span>
-                      {isOpen ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} className="shrink-0" />}
+                      {/* Single chevron, rotates 180° when open — smoother than swapping icons */}
+                      <ChevronDown
+                        size={15}
+                        className="shrink-0"
+                        style={{
+                          color: 'var(--text-muted)',
+                          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 200ms ease',
+                        }}
+                      />
                     </button>
 
                     {isOpen && (
@@ -3974,16 +4347,52 @@ export default function PlaywrightDashboard() {
                                   </span>
                                 )}
                                 <StatusBadge status={test.status} />
-                                {isFailed && (errorOpen ? <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" /> : <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} className="shrink-0" />)}
+                                {isFailed && (
+                                  <ChevronDown
+                                    size={13}
+                                    className="shrink-0"
+                                    style={{
+                                      color: 'var(--text-muted)',
+                                      transform: errorOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                      transition: 'transform 200ms ease',
+                                    }}
+                                  />
+                                )}
                               </div>
                               {showActions && <FailedActions test={test} suiteFile={suite.file} onViewArtifacts={setArtifactModal} />}
                               {isFailed && errorOpen && test.steps && test.steps.length > 0 && (
                                 <StepTimeline steps={test.steps} />
                               )}
                               {isFailed && errorOpen && (
-                                <div className="mx-4 mb-3 p-3 rounded-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap border-l-2 border-red-400"
-                                  style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#dc2626' }}>
-                                  {test.error}
+                                <div className="mx-4 mb-3 rounded-xl border-l-2 border-red-400 overflow-hidden"
+                                  style={{ backgroundColor: 'rgba(239,68,68,0.06)' }}>
+                                  {/* Error block header — type chip + copy button */}
+                                  <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: 'rgba(239,68,68,0.15)' }}>
+                                    <XCircle size={11} className="text-red-500 shrink-0" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-600">
+                                      {errType ?? 'Error'}
+                                    </span>
+                                    <span className="text-[10px]" style={{ color: '#b91c1c' }}>
+                                      · {(test.error ?? '').split('\n')[0].slice(0, 80)}{(test.error ?? '').length > 80 ? '…' : ''}
+                                    </span>
+                                    <button
+                                      onClick={e => {
+                                        e.stopPropagation()
+                                        navigator.clipboard?.writeText(test.error ?? '').catch(() => { /* clipboard blocked */ })
+                                      }}
+                                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors shrink-0"
+                                      style={{ color: '#b91c1c' }}
+                                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
+                                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                      title="Copy full error message"
+                                    >
+                                      <Copy size={10} /> Copy
+                                    </button>
+                                  </div>
+                                  <pre
+                                    className="px-3 py-2.5 text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-words"
+                                    style={{ color: '#dc2626', maxHeight: 260, overflow: 'auto' }}
+                                  >{test.error}</pre>
                                 </div>
                               )}
                             </div>

@@ -207,6 +207,68 @@ interface QaAgentBody {
   provider?:         'gemini' | 'ollama'
   /** Base URL for Ollama server, e.g. http://localhost:11434 */
   ollamaBaseUrl?:    string
+  /**
+   * When true, the request runs through the multi-agent collaboration loop:
+   * a primary specialist drafts → critic reviews → primary refines → manager
+   * synthesises. Streams `turn_start | chunk | turn_done` SSE events so the
+   * chat UI can render a threaded conversation.  Gemini-only for now.
+   */
+  collaborate?:      boolean
+  /** Max refinement rounds when collaborate=true. Default 2 (4 LLM calls). */
+  maxRounds?:        number
+}
+
+// ─── Multi-agent collaboration helpers ───────────────────────────────────────
+
+/** Pick the manager (Edi M) and 1 primary + 1 critic from the tagged set */
+function pickCollabRoster(
+  tagged: AgentMeta[],
+  allAgents: AgentMeta[],
+): { manager: AgentMeta; primary: AgentMeta; critic: AgentMeta } | null {
+  const manager = allAgents.find(a => a.id === 'agent-manager')
+                ?? tagged.find(a => a.id === 'agent-manager')
+  if (!manager) return null
+
+  // Primary: first tagged agent that isn't the manager; fall back to a
+  // sensible default (E2E Tester) so collab still works if the user only
+  // typed "@Edi M, …".
+  const primary = tagged.find(a => a.id !== 'agent-manager')
+              ?? allAgents.find(a => a.id === 'agent-1')
+              ?? allAgents[0]
+  if (!primary) return null
+
+  // Critic: second tagged agent; if none provided, default to the Bug Triager
+  // (sharp eye for failure modes) or any agent other than the primary/manager.
+  const critic = tagged.filter(a => a.id !== 'agent-manager' && a.id !== primary.id)[0]
+             ?? allAgents.find(a => a.id === 'agent-3' && a.id !== primary.id)
+             ?? allAgents.find(a => a.id !== primary.id && a.id !== manager.id)
+             ?? manager
+  return { manager, primary, critic }
+}
+
+/**
+ * Run a single Gemini turn with a custom system instruction. Streams chunks via
+ * the provided callback and resolves with the full concatenated text so the
+ * next turn can be conditioned on it.
+ */
+async function runCollabTurn(
+  apiKey: string,
+  model: string,
+  systemInstruction: string,
+  prompt: string,
+  onChunk: (text: string) => void,
+): Promise<string> {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai')
+  const genAI    = new GoogleGenerativeAI(apiKey)
+  const genModel = genAI.getGenerativeModel({ model, systemInstruction })
+  const chat     = genModel.startChat({ history: [] })
+  const result   = await chat.sendMessageStream([{ text: prompt }])
+  let full = ''
+  for await (const chunk of result.stream) {
+    const t = chunk.text()
+    if (t) { full += t; onChunk(t) }
+  }
+  return full
 }
 
 /** Strip data-URL prefix (data:image/png;base64,…) leaving only the raw Base64 */
@@ -249,6 +311,8 @@ app.post('/api/qa-agent', async (req, res) => {
     model             = 'gemini-2.0-flash',
     provider          = 'gemini',
     ollamaBaseUrl     = 'http://localhost:11434',
+    collaborate       = false,
+    maxRounds         = 2,
   } = req.body as QaAgentBody
 
   // SSE setup — do this before any early returns so errors arrive as SSE too
@@ -282,6 +346,132 @@ app.post('/api/qa-agent', async (req, res) => {
   const systemInstruction = taggedAgents.length > 0
     ? taggedAgents.map(a => `## ${a.name}\n${a.systemPrompt}`).join('\n\n---\n\n')
     : agents[0]?.systemPrompt ?? 'You are a helpful QA assistant.'
+
+  // ── Multi-Agent Collaboration mode ────────────────────────────────────────────
+  // When the client opts in via collaborate=true, run a structured orchestration:
+  //   1. Primary specialist drafts initial answer
+  //   2. Critic reviews and provides feedback (verdict: lgtm | needs_work)
+  //   3. If verdict == needs_work AND rounds remain → primary refines, repeat
+  //   4. Manager (Edi M) synthesises a final, polished answer
+  //
+  // Each step streams its own message via:
+  //   {evt:'turn_start', agentId, agentName, role, round, label}
+  //   {chunk:'…'}             ← reuses the regular chunk protocol
+  //   {evt:'turn_done', agentId, verdict?}
+  //   …
+  //   {done:true}
+  if (collaborate && provider === 'gemini') {
+    const roster = pickCollabRoster(taggedAgents, agents)
+    if (!roster) {
+      send({ error: 'Collaboration needs at least one agent (and an Edi M manager) to be configured.' })
+      res.end()
+      return
+    }
+    const { manager, primary, critic } = roster
+    const rounds  = Math.max(1, Math.min(maxRounds, 4))   // clamp 1–4 to avoid runaway cost
+
+    // Helper: start/stream/end one turn
+    const playTurn = async (
+      agent:        AgentMeta,
+      role:         'primary' | 'critic' | 'synthesis',
+      round:        number,
+      label:        string,
+      systemPrompt: string,
+      userPrompt:   string,
+    ): Promise<string> => {
+      send({ evt: 'turn_start', agentId: agent.id, agentName: agent.name, role, round, label })
+      let full = ''
+      try {
+        full = await runCollabTurn(apiKey!, model, systemPrompt, userPrompt, txt => send({ chunk: txt }))
+      } catch (err: unknown) {
+        const m = err instanceof Error ? err.message : String(err)
+        send({ chunk: `\n\n[${agent.name} error: ${m}]` })
+      }
+      send({ evt: 'turn_done', agentId: agent.id, role, round })
+      return full
+    }
+
+    // Common context shared across turns — keeps each agent's reply grounded
+    const userBlock = `# User request\n${message.trim()}\n`
+
+    let primaryAnswer = await playTurn(
+      primary,
+      'primary',
+      1,
+      'Initial draft',
+      primary.systemPrompt + '\n\nYou are drafting an initial response. Be thorough but concise; another specialist will review your work.',
+      userBlock,
+    )
+
+    let verdict: 'lgtm' | 'needs_work' = 'needs_work'
+
+    for (let round = 1; round <= rounds; round++) {
+      // ── Critic review ────────────────────────────────────────────────────
+      const critiquePrompt =
+        userBlock +
+        `\n# Draft from ${primary.name} (round ${round})\n${primaryAnswer}\n\n` +
+        `# Your task\nReview the draft above as ${critic.name}. Identify gaps, bugs, or missed requirements. ` +
+        `End your message with exactly one of:\n  VERDICT: LGTM   — the draft is good enough to ship\n  VERDICT: NEEDS_WORK — the primary should revise based on your feedback`
+
+      const critiqueText = await playTurn(
+        critic,
+        'critic',
+        round,
+        `Critique (round ${round})`,
+        critic.systemPrompt + '\n\nYou are reviewing a peer\'s draft. Be specific, constructive, and decisive — your goal is to make the final answer the best it can be.',
+        critiquePrompt,
+      )
+
+      verdict = /VERDICT:\s*LGTM/i.test(critiqueText) ? 'lgtm' : 'needs_work'
+      // Echo the verdict via a dedicated done event so the UI can render a badge
+      send({ evt: 'turn_verdict', agentId: critic.id, round, verdict })
+
+      if (verdict === 'lgtm' || round === rounds) break
+
+      // ── Primary refines ──────────────────────────────────────────────────
+      const refinePrompt =
+        userBlock +
+        `\n# Your previous draft (round ${round})\n${primaryAnswer}\n\n` +
+        `# Feedback from ${critic.name}\n${critiqueText}\n\n` +
+        `# Your task\nRevise your draft to address ${critic.name}'s feedback. Keep what works, fix what doesn't, and don't re-explain everything — just produce the improved answer.`
+
+      primaryAnswer = await playTurn(
+        primary,
+        'primary',
+        round + 1,
+        `Refined response (round ${round + 1})`,
+        primary.systemPrompt + '\n\nYou are refining your previous draft based on peer feedback. Be focused — incorporate the feedback that\'s right, push back briefly on anything that\'s wrong, and produce a stronger answer.',
+        refinePrompt,
+      )
+    }
+
+    // ── Manager (Edi M) final synthesis ────────────────────────────────────
+    const synthPrompt =
+      userBlock +
+      `\n# Final draft from ${primary.name}\n${primaryAnswer}\n\n` +
+      `# Your task\nAs the team manager, deliver the final polished answer to the user. ` +
+      `Synthesise the team's work into a clear, actionable response. ` +
+      `If anything still seems off, add a short "Heads-up" note at the end.`
+
+    await playTurn(
+      manager,
+      'synthesis',
+      rounds + 1,
+      'Final synthesis',
+      manager.systemPrompt + '\n\nYou are delivering the team\'s final answer to the user. Be clear, decisive, and useful.',
+      synthPrompt,
+    )
+
+    send({ done: true })
+    res.end()
+    return
+  }
+
+  if (collaborate && provider === 'ollama') {
+    // Ollama collaboration is intentionally a no-op for now — single-agent fallback
+    send({ chunk: '_Multi-agent collaboration is currently Gemini-only. Falling back to single-agent reply._\n\n' })
+    // Fall through to the normal Ollama path below
+  }
 
   // ── Ollama path ───────────────────────────────────────────────────────────────
   if (provider === 'ollama') {
@@ -554,12 +744,20 @@ function normalizePwResults(raw: Record<string, unknown>) {
 }
 
 /**
- * Read pw-results.json, embed _meta (spec, archivedAt), and write to RUNS_DIR.
+ * Read pw-results.json, embed _meta (spec, archivedAt, runLog), and write to RUNS_DIR.
  * Called BEFORE sending [DONE] to avoid the client fetching history too early.
+ *
+ * @param spec    optional spec identifier shown in the Run History table
+ * @param runLog  optional array of streamed log lines captured during the run.
+ *                Persisted so the dashboard can re-display logs when a user
+ *                clicks an old run in the history table.
  */
-async function archiveRun(spec?: string): Promise<string | null> {
+async function archiveRun(spec?: string, runLog?: string[]): Promise<string | null> {
   try {
-    if (!existsSync(RESULTS_PATH)) return null
+    if (!existsSync(RESULTS_PATH)) {
+      console.warn('[archiveRun] skipped — pw-results.json not found at', RESULTS_PATH)
+      return null
+    }
     await fs.mkdir(RUNS_DIR, { recursive: true })
     const ts  = new Date().toISOString().replace(/[:.]/g, '-')
     const id  = `run-${ts}`
@@ -567,9 +765,13 @@ async function archiveRun(spec?: string): Promise<string | null> {
     // embed lightweight metadata directly in the archive (normalizePwResults ignores unknown keys)
     raw._spec       = spec ?? null
     raw._archivedAt = new Date().toISOString()
+    // Cap log size to ~5000 lines to avoid bloating archive files
+    if (runLog && runLog.length > 0) raw._runLog = runLog.slice(-5000)
     await fs.writeFile(path.join(RUNS_DIR, `${id}.json`), JSON.stringify(raw))
+    console.log(`[archiveRun] ok → runs/${id}.json (${runLog?.length ?? 0} log lines, spec=${spec ?? 'all'})`)
     return id
-  } catch {
+  } catch (err) {
+    console.error('[archiveRun] failed:', err)
     return null
   }
 }
@@ -723,6 +925,8 @@ app.get('/api/playwright/history', async (_req, res) => {
 })
 
 // GET /api/playwright/results/:runId — fetch a specific archived run
+// Returns the normalised result PLUS the optional runLog captured at run time
+// so the client can re-display the original stdout in the log panel.
 app.get('/api/playwright/results/:runId', async (req, res) => {
   const { runId } = req.params
   // sanitise to prevent path traversal
@@ -730,8 +934,10 @@ app.get('/api/playwright/results/:runId', async (req, res) => {
   const filePath = path.join(RUNS_DIR, `${safe}.json`)
   try {
     if (!existsSync(filePath)) return res.status(404).json({ error: `Run "${safe}" not found` })
-    const raw = JSON.parse(await fs.readFile(filePath, 'utf-8')) as Record<string, unknown>
-    res.json(normalizePwResults(raw))
+    const raw      = JSON.parse(await fs.readFile(filePath, 'utf-8')) as Record<string, unknown>
+    const result   = normalizePwResults(raw)
+    const runLog   = Array.isArray(raw._runLog) ? raw._runLog as string[] : []
+    res.json({ ...result, runLog })
   } catch (err: unknown) {
     res.status(500).json({ error: String(err) })
   }
@@ -789,10 +995,25 @@ app.get('/api/playwright/artifacts', (_req, res) => {
 })
 
 app.post('/api/playwright/run', async (req, res) => {
-  const { spec, specs, config } = req.body as {
+  const {
+    spec, specs, config,
+    // AI credentials for post-run Edi M summary — same shape as /api/run-dynamic-test
+    apiKey,
+    model         = 'gemini-2.0-flash',
+    provider      = 'gemini',
+    ollamaBaseUrl = 'http://localhost:11434',
+    ollamaModel   = 'llama3.2',
+    agentName     = 'Dashboard',
+  } = req.body as {
     spec?: string
     specs?: string[]           // multi-run: array of spec filenames
     config?: Record<string, unknown>
+    apiKey?:        string
+    model?:         string
+    provider?:      'gemini' | 'ollama'
+    ollamaBaseUrl?: string
+    ollamaModel?:   string
+    agentName?:     string
   }
 
   res.setHeader('Content-Type', 'text/event-stream')
@@ -882,16 +1103,28 @@ app.post('/api/playwright/run', async (req, res) => {
     shell: process.platform === 'win32',
   })
 
+  // Capture log lines so they're (a) persisted with the archived run and
+  // (b) available for the AI summary if needed.
+  const capturedLog: string[] = []
   const stream = (chunk: Buffer) =>
-    chunk.toString().split('\n').filter(Boolean).forEach(line => send(line))
+    chunk.toString().split('\n').filter(Boolean).forEach(line => {
+      if (capturedLog.length < 5000) capturedLog.push(line)
+      send(line)
+    })
 
   child.stdout.on('data', stream)
   child.stderr.on('data', stream)
 
   child.on('close', async code => {
-    // Archive FIRST so history is ready by the time the client calls fetchHistory()
-    try { await archiveRun(archiveSpec) } catch { /* non-fatal */ }
+    // Archive FIRST so history is ready by the time the client calls fetchHistory().
+    // Pass capturedLog so the run page can re-display the stdout next time it's loaded.
+    try { await archiveRun(archiveSpec, capturedLog) } catch { /* non-fatal */ }
     send(`[DONE] Finished with exit code ${code ?? 0}`)
+
+    // ── Phase 2: Edi M AI Summary — routed to chat via summary_* SSE events.
+    // streamSummary is no-op-safe when credentials are missing; emits a friendly
+    // placeholder and a final summary_done. The client decides whether to render.
+    await streamSummary(res, { agentName, apiKey, model, provider, ollamaBaseUrl, ollamaModel })
     res.end()
   })
 
@@ -930,6 +1163,141 @@ interface DynamicTestBody {
   provider?:      'gemini' | 'ollama'
   ollamaBaseUrl?: string
   ollamaModel?:   string
+}
+
+/** Credentials accepted by the streamSummary() helper. */
+interface SummaryCreds {
+  agentName?:     string
+  apiKey?:        string
+  model?:         string
+  provider?:      'gemini' | 'ollama'
+  ollamaBaseUrl?: string
+  ollamaModel?:   string
+}
+
+/**
+ * Shared Phase 2 helper — reads the latest archived pw-results.json, builds the
+ * Edi M failure-analysis prompt, and streams the AI's reply to the SSE response
+ * using the structured `evt: 'summary_start' | 'summary_chunk' | 'summary_done'`
+ * protocol that the dashboard chat panel listens for.
+ *
+ * Returns when the summary is fully streamed and `summary_done` has been sent.
+ * The caller is responsible for `res.end()` after this completes.
+ *
+ * Safe to call when AI credentials are absent — it emits a friendly placeholder
+ * chunk and resolves cleanly.
+ */
+async function streamSummary(
+  res: import('express').Response,
+  creds: SummaryCreds,
+): Promise<void> {
+  const sendEvt = (payload: Record<string, unknown>) =>
+    res.write(`data: ${JSON.stringify(payload)}\n\n`)
+
+  if (!existsSync(RESULTS_PATH)) {
+    sendEvt({ evt: 'summary_done', failures: [] })
+    return
+  }
+
+  // Build the failure list and the prompt up front so we can always emit
+  // summary_done with structured failure data even if the AI call fails.
+  let failures: Array<{ testTitle: string; suiteName: string; error: string; errorType: string }> = []
+  let summaryPrompt = ''
+  let totals = { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 }
+
+  try {
+    const rawResults  = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
+    const normalized  = normalizePwResults(rawResults)
+    summaryPrompt     = buildSummaryPrompt(normalized, creds.agentName)
+    totals            = {
+      total:    normalized.stats.total,
+      passed:   normalized.stats.passed,
+      failed:   normalized.stats.failed,
+      skipped:  normalized.stats.skipped,
+      duration: normalized.stats.duration,
+    }
+    failures = normalized.suites.flatMap(s =>
+      (s.tests as Array<{ status: string; title: string; error?: string }>)
+        .filter(t => t.status === 'failed')
+        .map(t => {
+          const err = t.error ?? ''
+          const errorType =
+            /timeout/i.test(err)                          ? 'Timeout'   :
+            /toHave|toBe|toContain|expect/i.test(err)    ? 'Assertion' :
+            /locator|strict mode|resolved/i.test(err)    ? 'Locator'   :
+            /net::|ERR_|fetch|request/i.test(err)        ? 'Network'   : 'Error'
+          return { testTitle: t.title, suiteName: s.title, error: err, errorType }
+        }),
+    )
+  } catch (err) {
+    console.error('[streamSummary] failed to read/parse results:', err)
+    sendEvt({ evt: 'summary_done', failures: [] })
+    return
+  }
+
+  sendEvt({ evt: 'summary_start' })
+
+  const {
+    apiKey,
+    model         = 'gemini-2.0-flash',
+    provider      = 'gemini',
+    ollamaBaseUrl = 'http://localhost:11434',
+    ollamaModel   = 'llama3.2',
+  } = creds
+
+  // Guard: skip AI call if no credentials
+  if (provider === 'gemini' && !apiKey) {
+    sendEvt({ evt: 'summary_chunk', text: '⚠️ No Gemini API key configured — set it in **Settings** to enable AI summaries.\n\nTest run completed. Check the dashboard for full results.' })
+    sendEvt({ evt: 'summary_done', failures, ...totals })
+    return
+  }
+
+  try {
+    if (provider === 'ollama') {
+      const ollamaMessages = [
+        { role: 'system', content: EDI_M_SUMMARY_SYSTEM },
+        { role: 'user',   content: summaryPrompt },
+      ]
+      const ollamaRes = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ model: ollamaModel, messages: ollamaMessages, stream: true }),
+        signal:  AbortSignal.timeout(90_000),
+      })
+      if (!ollamaRes.ok || !ollamaRes.body) throw new Error(`Ollama HTTP ${ollamaRes.status}`)
+      const reader  = (ollamaRes.body as ReadableStream<Uint8Array>).getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n'); buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const p = JSON.parse(line) as { message?: { content?: string }; done?: boolean }
+            if (p.message?.content) sendEvt({ evt: 'summary_chunk', text: p.message.content })
+            if (p.done) break
+          } catch { /* skip malformed */ }
+        }
+      }
+    } else {
+      const { GoogleGenerativeAI } = await import('@google/generative-ai')
+      const genAI    = new GoogleGenerativeAI(apiKey!)
+      const genModel = genAI.getGenerativeModel({ model, systemInstruction: EDI_M_SUMMARY_SYSTEM })
+      const chat     = genModel.startChat({ history: [] })
+      const result   = await chat.sendMessageStream([{ text: summaryPrompt }])
+      for await (const chunk of result.stream) {
+        const text = chunk.text()
+        if (text) sendEvt({ evt: 'summary_chunk', text })
+      }
+    }
+  } catch (err: unknown) {
+    sendEvt({ evt: 'summary_chunk', text: `\n\n[Summary error: ${String(err)}]` })
+  }
+
+  sendEvt({ evt: 'summary_done', failures, ...totals })
 }
 
 function buildSummaryPrompt(
@@ -1028,113 +1396,28 @@ app.post('/api/run-dynamic-test', async (req, res) => {
     shell: process.platform === 'win32',
   })
 
+  // Capture every log line so we can persist them with the archived run.
+  // Bounded to ~5000 to match archiveRun's slice — protects against runaway
+  // logs from misbehaving tests.
+  const capturedLog: string[] = []
   const streamLine = (chunk: Buffer) =>
-    chunk.toString().split('\n').filter(Boolean).forEach(line => sendStr(line))
+    chunk.toString().split('\n').filter(Boolean).forEach(line => {
+      if (capturedLog.length < 5000) capturedLog.push(line)
+      sendStr(line)
+    })
 
   child.stdout.on('data', streamLine)
   child.stderr.on('data', streamLine)
 
   child.on('close', async exitCode => {
-    // Archive run first, then clean up temp file
-    try { await archiveRun(`agent:${agentName ?? 'dynamic'}`) } catch { /* non-fatal */ }
+    // Archive run first (with captured log), then clean up temp file
+    try { await archiveRun(`agent:${agentName ?? 'dynamic'}`, capturedLog) } catch { /* non-fatal */ }
     try { await fs.unlink(tmpFile) } catch { /* non-fatal */ }
 
     sendStr(`[DONE] Finished with exit code ${exitCode ?? 0}`)
 
-    // ── Phase 2: Edi M AI Summary ─────────────────────────────────────────────
-    if (!existsSync(RESULTS_PATH)) {
-      sendEvt({ evt: 'summary_done', failures: [] })
-      res.end()
-      return
-    }
-
-    // Extract failure data for structured summary_done event
-    let failures: Array<{ testTitle: string; suiteName: string; error: string; errorType: string }> = []
-    let summaryPrompt = ''
-
-    try {
-      const rawResults  = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>
-      const normalized  = normalizePwResults(rawResults)
-      summaryPrompt     = buildSummaryPrompt(normalized, agentName)
-
-      // Build structured failure list for the client
-      failures = normalized.suites.flatMap(s =>
-        (s.tests as Array<{ status: string; title: string; error?: string }>)
-          .filter(t => t.status === 'failed')
-          .map(t => {
-            const err = t.error ?? ''
-            const errorType =
-              /timeout/i.test(err)                          ? 'Timeout'   :
-              /toHave|toBe|toContain|expect/i.test(err)    ? 'Assertion' :
-              /locator|strict mode|resolved/i.test(err)    ? 'Locator'   :
-              /net::|ERR_|fetch|request/i.test(err)        ? 'Network'   : 'Error'
-            return { testTitle: t.title, suiteName: s.title, error: err, errorType }
-          }),
-      )
-    } catch {
-      sendEvt({ evt: 'summary_done', failures: [] })
-      res.end()
-      return
-    }
-
-    sendEvt({ evt: 'summary_start' })
-
-    // Guard: skip AI call if no credentials
-    if (!apiKey && provider === 'gemini') {
-      sendEvt({ evt: 'summary_chunk', text: '⚠️ No Gemini API key configured — set it in **Settings** to enable AI summaries.\n\nTest run completed. Check the dashboard for full results.' })
-      sendEvt({ evt: 'summary_done', failures })
-      res.end()
-      return
-    }
-
-    try {
-      if (provider === 'ollama') {
-        // ── Ollama summary path ─────────────────────────────────────────────
-        const ollamaMessages = [
-          { role: 'system',    content: EDI_M_SUMMARY_SYSTEM },
-          { role: 'user',      content: summaryPrompt },
-        ]
-        const ollamaRes = await fetch(`${ollamaBaseUrl}/api/chat`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ model: ollamaModel, messages: ollamaMessages, stream: true }),
-          signal:  AbortSignal.timeout(90_000),
-        })
-        if (!ollamaRes.ok || !ollamaRes.body) throw new Error(`Ollama HTTP ${ollamaRes.status}`)
-        const reader  = (ollamaRes.body as ReadableStream<Uint8Array>).getReader()
-        const decoder = new TextDecoder()
-        let buf = ''
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += decoder.decode(value, { stream: true })
-          const lines = buf.split('\n'); buf = lines.pop() ?? ''
-          for (const line of lines) {
-            if (!line.trim()) continue
-            try {
-              const p = JSON.parse(line) as { message?: { content?: string }; done?: boolean }
-              if (p.message?.content) sendEvt({ evt: 'summary_chunk', text: p.message.content })
-              if (p.done) break
-            } catch { /* skip malformed */ }
-          }
-        }
-      } else {
-        // ── Gemini summary path ─────────────────────────────────────────────
-        const { GoogleGenerativeAI } = await import('@google/generative-ai')
-        const genAI    = new GoogleGenerativeAI(apiKey!)
-        const genModel = genAI.getGenerativeModel({ model, systemInstruction: EDI_M_SUMMARY_SYSTEM })
-        const chat     = genModel.startChat({ history: [] })
-        const result   = await chat.sendMessageStream([{ text: summaryPrompt }])
-        for await (const chunk of result.stream) {
-          const text = chunk.text()
-          if (text) sendEvt({ evt: 'summary_chunk', text })
-        }
-      }
-    } catch (err: unknown) {
-      sendEvt({ evt: 'summary_chunk', text: `\n\n[Summary error: ${String(err)}]` })
-    }
-
-    sendEvt({ evt: 'summary_done', failures })
+    // ── Phase 2: Edi M AI Summary (shared helper) ────────────────────────────
+    await streamSummary(res, { agentName, apiKey, model, provider, ollamaBaseUrl, ollamaModel })
     res.end()
   })
 
