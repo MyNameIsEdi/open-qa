@@ -161,6 +161,29 @@ const DEFAULT_CONFIG: PlaywrightConfig = {
   grepInvert: '',
 };
 
+// ─── SSE / request types ──────────────────────────────────────────────────────
+
+/** Shape of the body sent to /api/playwright/run */
+interface RunRequest {
+  spec?: string;
+  specs?: string[];
+  config?: PlaywrightConfig;
+}
+
+/** Discriminated union for the three structured summary SSE events */
+type SummaryEvent =
+  | { evt: 'summary_start' }
+  | { evt: 'summary_chunk'; text?: string }
+  | {
+      evt: 'summary_done';
+      failures?: QASummaryData['failures'];
+      total?: number;
+      passed?: number;
+      failed?: number;
+      skipped?: number;
+      duration?: number;
+    };
+
 const STORAGE_KEY = 'pw_dashboard_config_v1';
 const RUN_HISTORY_KEY = 'pw_run_history_v1';
 const API_BASE = 'http://localhost:3001';
@@ -4596,10 +4619,8 @@ export default function PlaywrightDashboard() {
       setLastRunAt(data.runAt ?? null);
       setSelectedRunId(runId ?? null);
       setExpandedSuites(Object.fromEntries(data.suites.map((s) => [s.id, true])));
-      // Restore the archived stdout when viewing an old run — empty array if absent.
-      if (runId && Array.isArray(data.runLog)) {
-        setRunLog(data.runLog.slice(-999));
-      }
+      // Restore the archived stdout when viewing an old run; clear when switching to latest.
+      setRunLog(runId && Array.isArray(data.runLog) ? data.runLog.slice(-999) : []);
     } catch {
       setServerOnline(false);
       setDemoMode(true);
@@ -4715,7 +4736,7 @@ export default function PlaywrightDashboard() {
   // run, not just agent-generated dynamic runs.  We mirror the parser from
   // `runDynamicTest` below to handle these events uniformly.
   const runWithSSE = useCallback(
-    async (body: Record<string, unknown>) => {
+    async (body: RunRequest) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000); // 10-minute hard limit
       setRunning(true);
@@ -4769,11 +4790,11 @@ export default function PlaywrightDashboard() {
             const raw = line.slice(6);
 
             // First try to parse as a structured event object
-            let evt: Record<string, unknown> | null = null;
+            let evt: SummaryEvent | Record<string, unknown> | null = null;
             try {
               const parsed = JSON.parse(raw);
               if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
-                evt = parsed as Record<string, unknown>;
+                evt = parsed as SummaryEvent | Record<string, unknown>;
               }
             } catch {
               /* not JSON — fall through to plain string */
@@ -4922,11 +4943,11 @@ export default function PlaywrightDashboard() {
             const raw = line.slice(6);
 
             // Try parsing as a structured event object first
-            let evt: Record<string, unknown> | null = null;
+            let evt: SummaryEvent | Record<string, unknown> | null = null;
             try {
               const parsed = JSON.parse(raw);
               if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
-                evt = parsed as Record<string, unknown>;
+                evt = parsed as SummaryEvent | Record<string, unknown>;
               }
             } catch {
               /* not JSON — plain string */
@@ -5039,7 +5060,7 @@ export default function PlaywrightDashboard() {
 
     // ── Real run — delegate to runWithSSE ────────────────────────────────────
     const specList = selectedSpecs.size > 0 ? Array.from(selectedSpecs) : [];
-    const body: Record<string, unknown> = { config };
+    const body: RunRequest = { config };
     if (specList.length === 1) body.spec = specList[0];
     else if (specList.length > 1) body.specs = specList;
     await runWithSSE(body);

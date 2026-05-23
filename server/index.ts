@@ -316,12 +316,21 @@ async function runCollabTurn(
   systemInstruction: string,
   prompt: string,
   onChunk: (text: string) => void,
+  history?: HistoryItem[],
+  imageAttachments?: ImageAttachment[],
 ): Promise<string> {
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(apiKey);
   const genModel = genAI.getGenerativeModel({ model, systemInstruction });
-  const chat = genModel.startChat({ history: [] });
-  const result = await chat.sendMessageStream([{ text: prompt }]);
+  // Forward prior chat history so follow-up questions and context are preserved.
+  const chat = genModel.startChat({ history: toGeminiHistory(history ?? []) });
+  // Build message parts: text prompt + any inline image attachments.
+  type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+  const parts: GeminiPart[] = [{ text: prompt }];
+  for (const img of imageAttachments ?? []) {
+    parts.push({ inlineData: { mimeType: img.type, data: stripDataUrl(img.content) } });
+  }
+  const result = await chat.sendMessageStream(parts);
   let full = '';
   for await (const chunk of result.stream) {
     const t = chunk.text();
@@ -443,12 +452,20 @@ app.post('/api/qa-agent', async (req, res) => {
       label: string,
       systemPrompt: string,
       userPrompt: string,
+      turnHistory?: HistoryItem[],
+      turnImages?: ImageAttachment[],
     ): Promise<string> => {
       send({ evt: 'turn_start', agentId: agent.id, agentName: agent.name, role, round, label });
       let full = '';
       try {
-        full = await runCollabTurn(apiKey!, model, systemPrompt, userPrompt, (txt) =>
-          send({ chunk: txt }),
+        full = await runCollabTurn(
+          apiKey!,
+          model,
+          systemPrompt,
+          userPrompt,
+          (txt) => send({ chunk: txt }),
+          turnHistory,
+          turnImages,
         );
       } catch (err: unknown) {
         const m = err instanceof Error ? err.message : String(err);
@@ -469,6 +486,8 @@ app.post('/api/qa-agent', async (req, res) => {
       primary.systemPrompt +
         '\n\nYou are drafting an initial response. Be thorough but concise; another specialist will review your work.',
       userBlock,
+      history, // forward chat history so prior context is preserved
+      imageAttachments, // forward image attachments so vision prompts work
     );
 
     let verdict: 'lgtm' | 'needs_work' = 'needs_work';
@@ -1224,7 +1243,8 @@ app.post('/api/playwright/run', async (req, res) => {
       .split('\n')
       .filter(Boolean)
       .forEach((line) => {
-        if (capturedLog.length < 5000) capturedLog.push(line);
+        capturedLog.push(line);
+        if (capturedLog.length > 5000) capturedLog.shift(); // sliding window: keep newest 5000
         send(line);
       });
 
@@ -1233,18 +1253,26 @@ app.post('/api/playwright/run', async (req, res) => {
 
   child.on('close', async (code) => {
     // Archive FIRST so history is ready by the time the client calls fetchHistory().
-    // Pass capturedLog so the run page can re-display the stdout next time it's loaded.
+    // Capture the returned runId so streamSummary reads the immutable snapshot.
+    let runId: string | null = null;
     try {
-      await archiveRun(archiveSpec, capturedLog);
+      runId = await archiveRun(archiveSpec, capturedLog);
     } catch {
       /* non-fatal */
     }
     send(`[DONE] Finished with exit code ${code ?? 0}`);
 
     // ── Phase 2: Edi M AI Summary — routed to chat via summary_* SSE events.
-    // streamSummary is no-op-safe when credentials are missing; emits a friendly
-    // placeholder and a final summary_done. The client decides whether to render.
-    await streamSummary(res, { agentName, apiKey, model, provider, ollamaBaseUrl, ollamaModel });
+    // Pass runId so the helper reads the archived snapshot, not the shared file.
+    await streamSummary(res, {
+      agentName,
+      apiKey,
+      model,
+      provider,
+      ollamaBaseUrl,
+      ollamaModel,
+      runId: runId ?? undefined,
+    });
     res.end();
   });
 
@@ -1293,6 +1321,12 @@ interface SummaryCreds {
   provider?: 'gemini' | 'ollama';
   ollamaBaseUrl?: string;
   ollamaModel?: string;
+  /**
+   * ID of the archived run file (e.g. "run-2026-…").  When provided,
+   * streamSummary reads the immutable per-run snapshot instead of the shared
+   * RESULTS_PATH so concurrent runs don't clobber each other's summary.
+   */
+  runId?: string;
 }
 
 /**
@@ -1311,7 +1345,11 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   const sendEvt = (payload: Record<string, unknown>) =>
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
 
-  if (!existsSync(RESULTS_PATH)) {
+  // Prefer the immutable per-run archive over the shared RESULTS_PATH so that
+  // concurrent runs don't cause this summary to read the wrong results file.
+  const resultsFile = creds.runId ? path.join(RUNS_DIR, `${creds.runId}.json`) : RESULTS_PATH;
+
+  if (!existsSync(resultsFile)) {
     sendEvt({ evt: 'summary_done', failures: [] });
     return;
   }
@@ -1324,7 +1362,7 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   let totals = { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 };
 
   try {
-    const rawResults = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<
+    const rawResults = JSON.parse(await fs.readFile(resultsFile, 'utf-8')) as Record<
       string,
       unknown
     >;
@@ -1537,7 +1575,8 @@ app.post('/api/run-dynamic-test', async (req, res) => {
       .split('\n')
       .filter(Boolean)
       .forEach((line) => {
-        if (capturedLog.length < 5000) capturedLog.push(line);
+        capturedLog.push(line);
+        if (capturedLog.length > 5000) capturedLog.shift(); // sliding window: keep newest 5000
         sendStr(line);
       });
 
@@ -1545,9 +1584,11 @@ app.post('/api/run-dynamic-test', async (req, res) => {
   child.stderr.on('data', streamLine);
 
   child.on('close', async (exitCode) => {
-    // Archive run first (with captured log), then clean up temp file
+    // Archive run first (with captured log), then clean up temp file.
+    // Capture runId so streamSummary reads the immutable per-run snapshot.
+    let runId: string | null = null;
     try {
-      await archiveRun(`agent:${agentName ?? 'dynamic'}`, capturedLog);
+      runId = await archiveRun(`agent:${agentName ?? 'dynamic'}`, capturedLog);
     } catch {
       /* non-fatal */
     }
@@ -1560,7 +1601,15 @@ app.post('/api/run-dynamic-test', async (req, res) => {
     sendStr(`[DONE] Finished with exit code ${exitCode ?? 0}`);
 
     // ── Phase 2: Edi M AI Summary (shared helper) ────────────────────────────
-    await streamSummary(res, { agentName, apiKey, model, provider, ollamaBaseUrl, ollamaModel });
+    await streamSummary(res, {
+      agentName,
+      apiKey,
+      model,
+      provider,
+      ollamaBaseUrl,
+      ollamaModel,
+      runId: runId ?? undefined,
+    });
     res.end();
   });
 

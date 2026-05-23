@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **DocsPage updated for Gemini/Ollama stack** — all nine documentation
+  sections rewritten to reflect the current project state: Anthropic/Claude
+  references replaced with Gemini/Ollama, directory tree updated, env-var
+  section shows dual-provider setup, tech stack table corrected, FAQ updated
+  with Gemini key and provider-switching questions, roadmap marks completed
+  features (multi-agent collab, Playwright Dashboard, run history, AI
+  summaries, Gemini/Ollama switching) as done (`ui/src/pages/DocsPage.tsx`).
+
 ### Added
 
 - **Multi-agent collaboration loop** in `/api/qa-agent` — when 2+ agents are
@@ -50,8 +60,6 @@ All notable changes to this project will be documented in this file.
   layout JSON are untouched (`ui/src/pages/PlaywrightDashboard.tsx`).
 - `archiveRun()` now logs success/failure to the console — silent
   archive failures are no longer invisible.
-- Migrated AI logic from numbered demo folders into `src/`; shared LLM client at `src/core/llm-client.ts`.
-- Moved marketplace HTML to `docs/` with `css/` and `js/` assets; updated all script paths and README links.
 
 ### Changed
 
