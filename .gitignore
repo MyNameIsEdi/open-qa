@@ -19,7 +19,11 @@ dist/
 # Playwright reports and output
 playwright-report/
 test-results/
-output/
+blob-report/
+
+# Runtime output artifacts — keep directory skeleton via .gitkeep
+output/**
+!output/.gitkeep
 
 # OS
 .DS_Store
