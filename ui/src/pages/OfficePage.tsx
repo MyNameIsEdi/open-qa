@@ -1073,7 +1073,7 @@ export default function OfficePage() {
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* ════════════ LEFT: Office map + Roster ════════════ */}
-        <aside className="flex flex-col w-72 shrink-0 overflow-hidden"
+        <aside className="flex flex-col w-80 shrink-0 overflow-hidden"
           style={{ borderRight: '1px solid var(--border)' }}>
 
           {/* Canvas strip label */}
@@ -1087,7 +1087,7 @@ export default function OfficePage() {
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 min-h-[300px] relative overflow-hidden" style={{ background: '#1a1a2e' }}>
+          <div className="w-full shrink-0 relative overflow-hidden" style={{ aspectRatio: '20/11', background: '#1a1a2e' }}>
             {!assetsReady && (
               <div className="absolute inset-0 flex items-center justify-center z-10"
                 style={{ background: '#1a1a2e' }}>

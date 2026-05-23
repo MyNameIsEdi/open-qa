@@ -2637,8 +2637,8 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
         </div>
       </div>
 
-      {/* ── Canvas (auto-fill height) ──────────────────────────────────────── */}
-      <div className="flex-1 min-h-[200px] relative" style={{ background: '#1a1a2e' }}>
+      {/* ── Canvas (aspect-ratio driven, no dead space) ────────────────────── */}
+      <div className="w-full shrink-0 relative" style={{ aspectRatio: '20/11', background: '#1a1a2e' }}>
         {assetsReady && _pwOfficeState ? (
           <OfficeCanvas officeState={_pwOfficeState} onAgentClick={handleAgentClick}
             zoom={1} onZoomChange={() => {}} panRef={panRef} locked />
