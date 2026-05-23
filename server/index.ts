@@ -930,7 +930,7 @@ app.get('/api/playwright/history', async (_req, res) => {
 app.get('/api/playwright/results/:runId', async (req, res) => {
   const { runId } = req.params
   // sanitise to prevent path traversal
-  const safe     = runId.replace(/[^a-zA-Z0-9_\-]/g, '')
+  const safe     = runId.replace(/[^a-zA-Z0-9_-]/g, '')
   const filePath = path.join(RUNS_DIR, `${safe}.json`)
   try {
     if (!existsSync(filePath)) return res.status(404).json({ error: `Run "${safe}" not found` })

@@ -33,9 +33,11 @@ Type a request in the chat. **Edi M**, the Team Manager, analyses your intent an
 |---|---|---|
 | 🏢 | **2D Pixel-Art Office** | 7 specialist agents at animated desks — click any desk to start a conversation |
 | 🤖 | **Edi M — Team Manager** | Orchestrator agent that analyses your request and routes it to the right specialist |
+| 🤝 | **Multi-Agent Collaboration** | Tag two or more specialists (or @Edi M) and they iterate: primary drafts → critic reviews → primary refines → manager delivers the polished synthesis. Each turn streams into its own chat bubble with a role pill (primary / critic / synthesis) |
 | ✨🦙 | **Gemini + Ollama** | Switch between cloud Gemini and fully-local Ollama models with a single click — no restart required |
-| 🎭 | **Playwright Dashboard** | Run your test suite, stream live terminal output, and view pass/fail telemetry in real time |
+| 🎭 | **Playwright Dashboard** | Run your test suite, stream live terminal output, and view pass/fail telemetry in real time. Every run now also lands an Edi M post-mortem directly in chat |
 | 🧠 | **Post-Run AI Summaries** | After a test run Edi M reads the JSON results, classifies each failure (Timeout / Assertion / Locator / Network), and streams a structured executive summary with TypeScript fix snippets |
+| 📜 | **Persistent Run History + Logs** | Each run is archived under `test-results/runs/` with its full stdout — click any past run in the history table to replay results AND the original log lines |
 | 🔧 | **Self-Healing Locators** | Broken selectors are ranked by resilience: `getByTestId` → `getByRole` → `getByLabel` → CSS/XPath with confidence scores and caveats |
 | 🔬 | **6 CLI Agents** | Standalone Node.js agents: Self-Healing, Auto-POM, Bug Triage, Visual Regression, A11y Scanner, Data Generator |
 | 📚 | **Built-in QA Course** | 12-chapter automation curriculum with animated, interactive lessons built directly into the UI |

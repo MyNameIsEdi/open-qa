@@ -2457,7 +2457,6 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
         setAssetsReady(true)
       })
       .catch(() => setAssetsReady(true))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Derive failure flag ───────────────────────────────────────────────────
@@ -3433,7 +3432,7 @@ export default function PlaywrightDashboard() {
       clearTimeout(timeoutId)
       setRunning(false)
     }
-  }, [fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])  // eslint-disable-line
+  }, [fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])
 
   // ── Run a single spec from editor ─────────────────────────────────────────
   const runSingleSpec = useCallback((spec: string) => {
@@ -3570,7 +3569,7 @@ export default function PlaywrightDashboard() {
       clearTimeout(timeoutId)
       setRunning(false)
     }
-  }, [serverOnline, fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])  // eslint-disable-line
+  }, [serverOnline, fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents])
 
   // ── Run tests (real SSE when server online, show offline message otherwise) ─
   const runTests = useCallback(async () => {
@@ -3756,7 +3755,7 @@ export default function PlaywrightDashboard() {
                               checked={selectedSpecs.has(s)}
                               onChange={() => setSelectedSpecs(prev => {
                                 const next = new Set(prev)
-                                next.has(s) ? next.delete(s) : next.add(s)
+                                if (next.has(s)) next.delete(s); else next.add(s)
                                 return next
                               })}
                               className="rounded accent-blue-600"

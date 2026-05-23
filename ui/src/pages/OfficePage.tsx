@@ -578,7 +578,6 @@ export default function OfficePage() {
         setAssetsReady(true)
       })
       .catch(err => { setLoadError(String(err)); setAssetsReady(true) })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { BASE_URL, gotoLogin, pwInput } from './sv-helpers'
+import { gotoLogin, pwInput } from './sv-helpers'
 
 /**
  * SV Students — Login & Registration
