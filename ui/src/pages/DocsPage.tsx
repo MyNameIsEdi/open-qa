@@ -32,16 +32,18 @@ const sections: DocSection[] = [
     titleKey: 'docs.sections.architecture',
     icon: <AccountTreeOutlinedIcon sx={{ fontSize: 16 }} />,
     blocks: [
-      { type: 'paragraph', text: 'open-qa separates concerns cleanly across three layers:' },
+      {
+        type: 'paragraph',
+        text: 'open-qa is a multi-agent AI workspace built on three layers: a React/Vite UI, an Express API server, and standalone CLI agents.',
+      },
       {
         type: 'list',
         items: [
-          'Core (src/) — pure TypeScript, no framework dependencies',
-          'src/agents/ — autonomous entities that make LLM calls',
-          'src/skills/ — composable utilities (data gen, log analysis)',
-          'src/core/ — shared LLM client wrapper (Anthropic SDK)',
-          'UI (ui/) — React/Vite/Tailwind marketplace app',
-          'Server (server/) — thin Express API on port 3001',
+          'server/ — Express API on port 3001: /api/qa-agent (SSE, Gemini/Ollama), /api/run-dynamic-test (Playwright + AI summary)',
+          'ui/src/ — React 18 + Vite 6 app (port 5173): pixel-art office, Playwright Dashboard, agent chat, QA course',
+          'src/agents/ — standalone CLI agents: Self-Healing, Auto-POM, Bug Triage, Visual Regression, A11y, Data Gen',
+          'src/skills/ — composable utilities: data generator, log analyzer',
+          'src/core/ — shared LLM client wrapper (Gemini SDK + Anthropic SDK for CLI agents)',
         ],
       },
       {
@@ -49,14 +51,20 @@ const sections: DocSection[] = [
         language: 'bash',
         label: 'Directory tree',
         code: `open-qa/
+├── server/
+│   └── index.ts      # Express API — /api/qa-agent, /api/run-dynamic-test, SSE
+├── ui/
+│   └── src/
+│       ├── pages/    # OfficePage, PlaywrightDashboard, AgentsPage, DocsPage …
+│       ├── components/
+│       ├── context/  # SettingsContext — agent config + chat state
+│       └── office/   # Pixel-art engine (game loop, renderer, sprites)
 ├── src/
-│   ├── agents/       # Self-healing, visual regression, Auto-POM, A11y
-│   ├── skills/       # Data-gen, log analyzer, prompts
-│   └── core/         # LLM client (Claude / MOCK mode)
-├── ui/               # React/Vite/Tailwind marketplace (this app)
-├── server/           # Express API — runs agents via HTTP
-├── tests/            # Playwright test suite
-└── output/           # Generated artifacts`,
+│   ├── agents/       # Self-healing, Auto-POM, Visual Regression, A11y, Explore
+│   ├── skills/       # Data-gen, log-analyzer
+│   └── core/         # llm-client.ts (CLI agents)
+├── tests/            # Playwright E2E specs
+└── output/           # Generated artifacts (.gitkeep)`,
       },
     ],
   },
@@ -65,12 +73,30 @@ const sections: DocSection[] = [
     titleKey: 'docs.sections.env-vars',
     icon: <KeyOutlinedIcon sx={{ fontSize: 16 }} />,
     blocks: [
-      { type: 'paragraph', text: 'Copy .env.example to .env and fill in your Anthropic API key:' },
-      { type: 'code', language: 'bash', code: 'cp .env.example .env' },
-      { type: 'code', language: 'bash', label: '.env', code: 'ANTHROPIC_API_KEY=sk-ant-...' },
       {
         type: 'paragraph',
-        text: 'Without this key, all agents run in MOCK mode — deterministic outputs, no API costs, instant feedback. Set the key for live Claude calls.',
+        text: 'Copy .env.example to .env and configure your LLM provider. Choose Gemini (cloud) or Ollama (fully local — no key needed):',
+      },
+      { type: 'code', language: 'bash', code: 'cp .env.example .env' },
+      {
+        type: 'code',
+        language: 'bash',
+        label: '.env — Option A: Gemini (cloud)',
+        code: `PORT=3001
+GEMINI_API_KEY=your_gemini_api_key_here
+# Get a free key at https://aistudio.google.com/app/apikey`,
+      },
+      {
+        type: 'code',
+        language: 'bash',
+        label: 'Option B: Ollama (local — no .env changes needed)',
+        code: `# Install Ollama from https://ollama.ai, then:
+ollama pull qwen2.5-coder
+# Switch to Ollama in the app Settings panel (saved to localStorage)`,
+      },
+      {
+        type: 'paragraph',
+        text: 'The CLI agents in src/agents/ optionally use ANTHROPIC_API_KEY and fall back to deterministic MOCK mode when no key is present — great for CI.',
       },
     ],
   },
@@ -79,31 +105,40 @@ const sections: DocSection[] = [
     titleKey: 'docs.sections.running-tests',
     icon: <PlayCircleOutlinedIcon sx={{ fontSize: 16 }} />,
     blocks: [
+      {
+        type: 'code',
+        language: 'bash',
+        label: 'Start the full app (UI + API server)',
+        code: 'npm run dev',
+      },
       { type: 'code', language: 'bash', label: 'Run full Playwright test suite', code: 'npm test' },
       {
         type: 'code',
         language: 'bash',
-        label: 'Run only the self-healing spec',
-        code: 'npm run test:healing',
-      },
-      {
-        type: 'code',
-        language: 'bash',
-        label: 'Run with CI reporter (artifact upload on failure)',
-        code: 'npm run test:ci',
-      },
-      {
-        type: 'code',
-        language: 'bash',
-        label: 'Type-check everything (src + ui)',
+        label: 'Type-check everything (server + root)',
         code: 'npm run typecheck',
+      },
+      {
+        type: 'code',
+        language: 'bash',
+        label: 'Type-check UI separately',
+        code: 'cd ui && npx tsc --noEmit',
       },
       { type: 'code', language: 'bash', label: 'Lint', code: 'npm run lint' },
       {
+        type: 'paragraph',
+        text: 'CLI agents (run independently from the UI):',
+      },
+      {
         type: 'code',
         language: 'bash',
-        label: 'Start UI + API server together',
-        code: 'npm run dev',
+        label: 'CLI agent commands',
+        code: `npm run heal                  # Self-Healing locator repair
+npm run run:auto-pom          # Auto-POM generator
+npm run run:bugreport         # Bug Triage → Jira-ready report
+npm run run:visual-regression # Pixel-diff visual regression
+npm run run:visual-a11y       # WCAG 2.1 AA accessibility audit
+npm run run:datagen           # Edge-case test data generator`,
       },
     ],
   },
@@ -124,7 +159,7 @@ const sections: DocSection[] = [
   "name": "self-healing-locator",
   "system_prompt": "You are an expert Playwright...",
   "tool_schema": { ... },
-  "run_command": "npm run run:healing"
+  "run_command": "npm run heal"
 }`,
       },
       {
@@ -143,10 +178,11 @@ const sections: DocSection[] = [
         headers: ['Layer', 'Technology'],
         rows: [
           ['Automation', 'Playwright Test'],
-          ['AI', 'Anthropic Claude (Sonnet)'],
-          ['Runtime', 'TypeScript 5.x, Node 18+'],
-          ['UI', 'React 18 + Vite + Tailwind CSS'],
-          ['API server', 'Express 4'],
+          ['AI (UI)', 'Gemini API (cloud) + Ollama (local)'],
+          ['AI (CLI agents)', 'Anthropic Claude SDK (MOCK fallback)'],
+          ['Runtime', 'TypeScript 5.x, Node 20+'],
+          ['UI', 'React 18 + Vite 6 + Tailwind CSS'],
+          ['API server', 'Express 4 + SSE streaming'],
           ['CI', 'GitHub Actions (Chromium, artifacts)'],
           ['Design system', 'OpenHuman token system (colors, fonts, shadows)'],
         ],
@@ -161,11 +197,11 @@ const sections: DocSection[] = [
       {
         type: 'list',
         items: [
-          'Fork and create a feature branch: git checkout -b feature/your-feature',
+          'Fork and create a feature branch: git checkout -b feat/your-feature',
           'Keep changes small and focused; open multiple PRs if needed.',
-          'Write clear commit messages; include tests or examples.',
+          'Write clear commit messages (conventional commits preferred).',
           'Run: npm run lint && npm run typecheck && npm test',
-          'Open a PR with rationale and usage steps.',
+          'Open a PR — CI checks lint, typecheck, and the docs-validation script.',
         ],
       },
       { type: 'paragraph', text: 'PR checklist:' },
@@ -173,10 +209,10 @@ const sections: DocSection[] = [
         type: 'list',
         items: [
           '☐ npm run lint passes',
-          '☐ npm run typecheck passes',
+          '☐ npm run typecheck passes (server + ui)',
           '☐ npm test passes',
-          '☐ README.md updated if behavior changed',
-          '☐ CHANGELOG.md entry added',
+          '☐ README.md updated if server/ or ui/src/ changed',
+          '☐ CHANGELOG.md entry added under [Unreleased]',
         ],
       },
     ],
@@ -190,28 +226,32 @@ const sections: DocSection[] = [
         type: 'faq',
         items: [
           {
-            q: 'Do I need an Anthropic API key?',
-            a: 'No. All agents run in MOCK mode by default — deterministic outputs, no API costs. Set ANTHROPIC_API_KEY in .env for live Claude calls.',
+            q: 'Do I need a Gemini API key?',
+            a: 'No — you can run fully locally with Ollama (install from ollama.ai, pull any model, then select Ollama in the app Settings panel). A free Gemini key is available at aistudio.google.com/app/apikey if you prefer the cloud option.',
+          },
+          {
+            q: 'How do I switch between Gemini and Ollama?',
+            a: 'Open the QA Office page, click ⚙ Settings in the top bar (or use the ✨ / 🦙 inline toggle in the chat header). Set the provider, Ollama base URL, and model name. Your choice is saved to localStorage and survives page refreshes — no server restart needed.',
           },
           {
             q: 'Can I use open-qa with Cypress instead of Playwright?',
             a: 'The agents operate at the LLM level and are framework-agnostic. The generated code defaults to Playwright, but you can instruct the agents to produce Cypress or WebdriverIO output.',
           },
           {
-            q: 'How do I add my own agent?',
-            a: 'Create a new file in src/agents/, following the existing self-healing pattern. Export a run() function and add the agent metadata to server/index.ts and ui/src/pages/AgentsPage.tsx.',
+            q: 'How does multi-agent collaboration work?',
+            a: 'Tag two or more specialists (or @Edi M) in a message. Edi M runs a primary draft → critic review → primary refine → manager synthesis loop. Each turn streams into its own chat bubble with a role pill (blue = draft, amber = critic, emerald = synthesis). Chat history and image attachments are forwarded to the primary turn.',
           },
           {
-            q: 'Is there a hosted demo?',
-            a: 'A GitHub Pages deployment of the UI is on the roadmap. For now, run locally with npm run dev — it takes under 5 minutes.',
+            q: 'How do I add my own agent?',
+            a: 'Create a new directory in src/agents/<name>/index.ts following the existing pattern. Export a run() function, then add the agent metadata to server/index.ts and ui/src/pages/AgentsPage.tsx.',
           },
           {
             q: 'What Node.js version is required?',
-            a: 'Node 18 or higher. Node 20 LTS is recommended for best compatibility.',
+            a: 'Node 20 or higher. Node 20 LTS is recommended for best compatibility.',
           },
           {
-            q: 'How do Daily Missions work?',
-            a: '3 missions are seeded deterministically from the current UTC date, so every user sees the same challenges each day. Completion and XP are tracked in localStorage.',
+            q: 'Where are test run results stored?',
+            a: 'Each run is archived under test-results/runs/ as run-<id>.json with up to 5000 lines of stdout. Click any past run in the history table on the Playwright Dashboard to replay its results and original log output.',
           },
         ],
       },
@@ -225,12 +265,13 @@ const sections: DocSection[] = [
       {
         type: 'list',
         items: [
-          'Error "browserType.launch: Executable doesn\'t exist" → Run: npx playwright install chromium',
-          '404 on /api/run/:id → Start the server: npm run server:dev (or npm run dev to start both)',
-          'MOCK mode returns identical output every time → Expected. Set ANTHROPIC_API_KEY for live responses.',
-          'UI shows blank page after npm run ui:dev → Check port 5174 is free. Check the browser console for errors.',
-          'TypeScript errors after modifying an agent → Run npm run typecheck. Ensure exports match the existing agent pattern.',
+          "Error \"browserType.launch: Executable doesn't exist\" → Run: npx playwright install --with-deps chromium",
+          '404 on /api/run/:id → Start the server: npm run dev (starts both UI on port 5173 and API on port 3001)',
+          'Chat returns no response → Check that GEMINI_API_KEY is set in .env, or that Ollama is running at the configured base URL.',
+          'UI shows blank page after npm run dev → Check that port 5173 is free. Check the browser console for errors.',
+          'TypeScript errors after modifying an agent → Run npm run typecheck and cd ui && npx tsc --noEmit. Ensure exports match the existing agent pattern.',
           'git push rejected → The branch may have diverged. Run git pull --rebase then push again.',
+          'Ollama model not responding → Run ollama list to confirm the model is pulled. Check that OLLAMA_BASE_URL matches (default: http://localhost:11434).',
         ],
       },
     ],
@@ -244,8 +285,13 @@ const sections: DocSection[] = [
         type: 'table',
         headers: ['Feature', 'Status'],
         rows: [
-          ['Daily Missions gamification', '🟡 In Progress'],
-          ['Full i18n (EN/HE)', '🟡 In Progress'],
+          ['Multi-agent collaboration (primary → critic → synthesis)', '✅ Done'],
+          ['Playwright Dashboard with live SSE log streaming', '✅ Done'],
+          ['Edi M AI post-run summaries (root-cause + fix snippets)', '✅ Done'],
+          ['Persistent run history + log replay', '✅ Done'],
+          ['Gemini / Ollama provider switching (no restart)', '✅ Done'],
+          ['Daily Missions gamification', '✅ Done'],
+          ['Full i18n (EN/HE)', '✅ Done'],
           ['Native MCP server (npx open-qa mcp-server)', '⬜ Planned'],
           ['Network Interceptor & Mock Gen agent', '⬜ Planned'],
           ['Chaos Monkey UI agent', '⬜ Planned'],

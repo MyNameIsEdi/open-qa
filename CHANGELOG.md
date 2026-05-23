@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **DocsPage updated for Gemini/Ollama stack** — all nine documentation
+  sections rewritten to reflect the current project state: Anthropic/Claude
+  references replaced with Gemini/Ollama, directory tree updated, env-var
+  section shows dual-provider setup, tech stack table corrected, FAQ updated
+  with Gemini key and provider-switching questions, roadmap marks completed
+  features (multi-agent collab, Playwright Dashboard, run history, AI
+  summaries, Gemini/Ollama switching) as done (`ui/src/pages/DocsPage.tsx`).
+
 ### Added
 
 - **Multi-agent collaboration loop** in `/api/qa-agent` — when 2+ agents are
