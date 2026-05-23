@@ -26,7 +26,9 @@ XX-Skill-Name/
 ## Template Files
 
 ### 1. README.md
+
 Includes:
+
 - **Title & emoji** (e.g., "# 06 — Your Skill Name 🎨")
 - **Why it matters** — Problem it solves
 - **Quick start** — How to run the demo
@@ -40,7 +42,9 @@ Includes:
 - **Contributing** — Link back to CONTRIBUTING.md
 
 ### 2. skill.ts
+
 Must include:
+
 - **USE_MOCK pattern** — Works without API key
   ```typescript
   const USE_MOCK = !Boolean(process.env.ANTHROPIC_API_KEY);
@@ -56,25 +60,30 @@ Must include:
   ```
 - **argv check** — Only run demo when executed directly
   ```typescript
-  if (process.argv.some(arg => arg.endsWith('skill.ts'))) {
+  if (process.argv.some((arg) => arg.endsWith('skill.ts'))) {
     runDemoTest().catch(console.error);
   }
   ```
 
 ### 3. Prompts (Optional)
+
 If your skill uses Claude, create `prompts/prompt.md` with:
+
 ```markdown
 # Your Skill Prompt
 
 System prompt for Claude:
+
 - Be specific about the task
 - Include examples of expected output
 - Set constraints (length, format, tone)
 
 ## Example Input
+
 [Example]
 
 ## Expected Output
+
 [Example]
 ```
 
@@ -129,6 +138,7 @@ Before submitting a PR, verify:
 ## File Size Guidelines
 
 Keep it small & focused:
+
 - `skill.ts` < 400 lines (split if larger)
 - `README.md` < 150 lines (be concise)
 - Total folder < 500KB
@@ -136,6 +146,7 @@ Keep it small & focused:
 ## Real-World Examples
 
 See these folders for reference:
+
 - [01-Self-Healing-Tests](../01-Self-Healing-Tests/) — Playwright + Claude
 - [02-Smart-Data-Gen](../02-Smart-Data-Gen/) — Data generation with mock fallback
 - [03-Automated-Bug-Report](../03-Automated-Bug-Report/) — Log analysis

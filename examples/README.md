@@ -5,24 +5,29 @@ This folder contains practical, runnable examples showing how to combine skills 
 ## Available Examples
 
 ### 1. E-Commerce Checkout Test Suite
+
 **File:** `ecommerce-checkout.ts`
 
 **Scenario:** Test an e-commerce checkout flow with AI-powered:
+
 - Self-healing selectors for form fields
 - Edge-case test data generation (extreme prices, special chars)
 - Automated bug triage if a step fails
 
 **Skills used:**
+
 - Self-Healing Locator (recover from UI changes)
 - Smart Data Gen (test edge cases)
 - Bug Triage (auto-report failures)
 
 **Run it:**
+
 ```bash
 npx tsx examples/ecommerce-checkout.ts
 ```
 
 **What it does:**
+
 1. Navigate to mock checkout page
 2. Test form filling with extreme values
 3. Detect selector changes automatically
@@ -31,20 +36,24 @@ npx tsx examples/ecommerce-checkout.ts
 ---
 
 ### 2. Design System Visual Testing
+
 **File:** `design-system-visual.ts`
 
 **Scenario:** Validate a design system stays consistent across releases.
 
 **Skills used:**
+
 - Visual Regression (detect pixel changes)
 - Smart Data Gen (test with various data)
 
 **Run it:**
+
 ```bash
 npx tsx examples/design-system-visual.ts
 ```
 
 **What it does:**
+
 1. Capture component baselines
 2. Render with different data sizes
 3. Detect layout/color/spacing changes
@@ -53,20 +62,24 @@ npx tsx examples/design-system-visual.ts
 ---
 
 ### 3. API Integration Test Pipeline
+
 **File:** `api-integration-test.ts`
 
 **Scenario:** Test a REST API with fuzzing + smart assertions.
 
 **Skills used:**
+
 - Smart Data Gen (generate fuzzing payloads)
 - Bug Triage (classify API errors)
 
 **Run it:**
+
 ```bash
 npx tsx examples/api-integration-test.ts
 ```
 
 **What it does:**
+
 1. Generate edge-case payloads
 2. Send requests with fuzzing data
 3. Capture failures
@@ -77,19 +90,24 @@ npx tsx examples/api-integration-test.ts
 ## How to Use These Examples
 
 ### Option 1: Run as-is (MOCK mode)
+
 ```bash
 npx tsx examples/ecommerce-checkout.ts
 ```
+
 All examples work without an API key using mock data.
 
 ### Option 2: Run with real Claude
+
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 npx tsx examples/ecommerce-checkout.ts
 ```
 
 ### Option 3: Modify for your use case
+
 Each file is heavily commented. Copy the pattern and adapt:
+
 ```typescript
 // 1. Import the skills you need
 import { healLocator } from '../01-Self-Healing-Tests/self-healing';
@@ -171,6 +189,7 @@ To create your own example:
 6. Submit a PR with your example
 
 Examples are great for:
+
 - Teaching how to use the toolkit
 - Demonstrating skill combinations
 - Providing copy-paste starting points

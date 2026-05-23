@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
-import SkillCard, { SkillDef } from '../components/SkillCard'
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import SkillCard, { SkillDef } from '../components/SkillCard';
 
 interface SkillEntry extends SkillDef {
-  category: string
+  category: string;
 }
 
 const skills: SkillEntry[] = [
@@ -20,7 +20,10 @@ const skills: SkillEntry[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        target: { type: 'string', description: 'The API field, schema, or URL to generate payloads for' },
+        target: {
+          type: 'string',
+          description: 'The API field, schema, or URL to generate payloads for',
+        },
         count: { type: 'integer', description: 'Number of payloads to generate', default: 20 },
       },
       required: ['target'],
@@ -66,26 +69,27 @@ const skills: SkillEntry[] = [
     systemPrompt:
       'You are a security testing expert. Generate a JSON array of JWT attack scenario objects, each with a "scenario", "token", and "expected_behavior" field. Cover: none algorithm, expired, invalid signature, wrong audience, missing sub.',
   },
-]
+];
 
-const ALL_CATEGORIES = ['all', ...Array.from(new Set(skills.map((s) => s.category)))]
+const ALL_CATEGORIES = ['all', ...Array.from(new Set(skills.map((s) => s.category)))];
 
 export default function SkillsPage() {
-  const { t } = useTranslation()
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('all')
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
+    const q = search.toLowerCase();
     return skills.filter((s) => {
-      const matchesSearch = !q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)
-      const matchesCategory = activeCategory === 'all' || s.category === activeCategory
-      return matchesSearch && matchesCategory
-    })
-  }, [search, activeCategory])
+      const matchesSearch =
+        !q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
+      const matchesCategory = activeCategory === 'all' || s.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, activeCategory]);
 
-  const active = skills.filter((s) => s.status === 'active')
-  const planned = skills.filter((s) => s.status === 'planned')
+  const active = skills.filter((s) => s.status === 'active');
+  const planned = skills.filter((s) => s.status === 'planned');
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-up">
@@ -149,5 +153,5 @@ export default function SkillsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

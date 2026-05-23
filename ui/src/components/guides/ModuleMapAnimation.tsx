@@ -7,18 +7,18 @@ const css = `
     from { opacity: 0; transform: translateX(-8px); }
     to   { opacity: 1; transform: translateX(0);    }
   }
-`
+`;
 
 const MODULES = [
-  { icon: '🎓', label: 'Welcome',    color: '#e0f2fe', border: '#7dd3fc', delay: 0.05 },
-  { icon: '🤖', label: 'Automation', color: '#dcfce7', border: '#86efac', delay: 0.20 },
-  { icon: '🌐', label: 'API Testing',color: '#fef9c3', border: '#fde047', delay: 0.35 },
-  { icon: '⚡', label: 'Load Tests', color: '#fff7ed', border: '#fdba74', delay: 0.50 },
-  { icon: '🔧', label: 'IoT/HW',     color: '#f3e8ff', border: '#d8b4fe', delay: 0.65 },
-  { icon: '🗄️', label: 'SQL',        color: '#fce7f3', border: '#f9a8d4', delay: 0.80 },
-  { icon: '🧠', label: 'AI & DevOps',color: '#ecfdf5', border: '#6ee7b7', delay: 0.95 },
-  { icon: '🏁', label: 'Summary',    color: '#f1f5f9', border: '#94a3b8', delay: 1.10 },
-]
+  { icon: '🎓', label: 'Welcome', color: '#e0f2fe', border: '#7dd3fc', delay: 0.05 },
+  { icon: '🤖', label: 'Automation', color: '#dcfce7', border: '#86efac', delay: 0.2 },
+  { icon: '🌐', label: 'API Testing', color: '#fef9c3', border: '#fde047', delay: 0.35 },
+  { icon: '⚡', label: 'Load Tests', color: '#fff7ed', border: '#fdba74', delay: 0.5 },
+  { icon: '🔧', label: 'IoT/HW', color: '#f3e8ff', border: '#d8b4fe', delay: 0.65 },
+  { icon: '🗄️', label: 'SQL', color: '#fce7f3', border: '#f9a8d4', delay: 0.8 },
+  { icon: '🧠', label: 'AI & DevOps', color: '#ecfdf5', border: '#6ee7b7', delay: 0.95 },
+  { icon: '🏁', label: 'Summary', color: '#f1f5f9', border: '#94a3b8', delay: 1.1 },
+];
 
 export function ModuleMapAnimation() {
   return (
@@ -67,5 +67,5 @@ export function ModuleMapAnimation() {
         ))}
       </div>
     </div>
-  )
+  );
 }

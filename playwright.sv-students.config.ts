@@ -7,11 +7,11 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/sv-students.spec.ts',
-  fullyParallel: false,          // Render free tier is slow — run serially
+  fullyParallel: false, // Render free tier is slow — run serially
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
   workers: 1,
-  timeout: 20000,                // 20 s per test (Render cold-start can be slow)
+  timeout: 20000, // 20 s per test (Render cold-start can be slow)
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report/sv-students' }],

@@ -58,14 +58,16 @@ export function createMockA11yReport(url: string, standard = 'WCAG21AA'): A11yRe
         wcagCriteria: '4.1.2',
         severity: 'serious',
         element: 'button.icon-btn',
-        description: 'Icon button has no accessible name. Screen readers cannot describe its purpose.',
+        description:
+          'Icon button has no accessible name. Screen readers cannot describe its purpose.',
         fix: 'Add aria-label: <button aria-label="Close dialog" class="icon-btn">...</button>',
       },
       {
         wcagCriteria: '1.4.3',
         severity: 'moderate',
         element: '.text-gray-400',
-        description: 'Text color #9CA3AF on white background has contrast ratio 2.85:1, below the 4.5:1 minimum.',
+        description:
+          'Text color #9CA3AF on white background has contrast ratio 2.85:1, below the 4.5:1 minimum.',
         fix: 'Use a darker gray: #6B7280 (contrast 4.63:1) or higher.',
       },
       {
@@ -162,8 +164,15 @@ export async function runA11yScan(input: A11yScanInput): Promise<A11yReport> {
       temperature: 0.1,
     });
 
-    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned) as { violations: A11yViolation[]; passedChecks: string[]; summary: string };
+    const cleaned = raw
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+    const parsed = JSON.parse(cleaned) as {
+      violations: A11yViolation[];
+      passedChecks: string[];
+      summary: string;
+    };
 
     const report: A11yReport = {
       url,

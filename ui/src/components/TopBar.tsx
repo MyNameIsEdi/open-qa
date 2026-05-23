@@ -1,30 +1,30 @@
-import { useState, useEffect } from 'react'
-import { Menu, Moon, Sun, Globe } from 'lucide-react'
-import GitHubIcon from '@mui/icons-material/GitHub'
-import i18n from '../i18n'
-import { useRtl } from '../hooks/useRtl'
+import { useState, useEffect } from 'react';
+import { Menu, Moon, Sun, Globe } from 'lucide-react';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import i18n from '../i18n';
+import { useRtl } from '../hooks/useRtl';
 
 interface TopBarProps {
-  onMenuClick: () => void   // opens mobile drawer OR triggers desktop collapse
+  onMenuClick: () => void; // opens mobile drawer OR triggers desktop collapse
 }
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
-  const isRtl = useRtl()
-  const isHe = isRtl
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const isRtl = useRtl();
+  const isHe = isRtl;
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
 
   const toggleLang = () => {
-    const next = i18n.language === 'en' ? 'he' : 'en'
-    i18n.changeLanguage(next)
-    localStorage.setItem('lang', next)
-    document.documentElement.dir  = next === 'he' ? 'rtl' : 'ltr'
-    document.documentElement.lang = next
-  }
+    const next = i18n.language === 'en' ? 'he' : 'en';
+    i18n.changeLanguage(next);
+    localStorage.setItem('lang', next);
+    document.documentElement.dir = next === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.lang = next;
+  };
 
   return (
     <header
@@ -42,7 +42,10 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
       </button>
 
       {/* Logo — shown on mobile (sidebar is hidden) */}
-      <span className="md:hidden font-black text-sm tracking-tight select-none" style={{ color: 'var(--text-main)' }}>
+      <span
+        className="md:hidden font-black text-sm tracking-tight select-none"
+        style={{ color: 'var(--text-main)' }}
+      >
         OPEN<span className="text-primary-600">-QA</span>
       </span>
 
@@ -53,7 +56,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
       <div className="flex items-center gap-1">
         {/* Dark mode */}
         <button
-          onClick={() => setDark(d => !d)}
+          onClick={() => setDark((d) => !d)}
           className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-sand-400"
           style={{ color: 'var(--text-muted)' }}
           title={dark ? 'Light mode' : 'Dark mode'}
@@ -85,5 +88,5 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         </a>
       </div>
     </header>
-  )
+  );
 }

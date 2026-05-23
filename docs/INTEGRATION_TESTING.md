@@ -36,13 +36,13 @@ for (const payload of payloads) {
     // Try normal request
     const response = await fetch('/api/checkout', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   } catch (error) {
     // If endpoint signature changed, use self-healing to suggest new endpoint
     const suggestion = await healLocator(apiDocs, 'checkout endpoint');
     console.log(`API changed. Try: ${suggestion}`);
-    
+
     // Auto-triage the failure
     const report = createMockBugReport(`${error}`);
   }
@@ -68,10 +68,10 @@ const diff = await compareScreenshots('baseline.png', 'current.png');
 
 if (diff.pixelDiffPercentage > 5) {
   console.log('Visual change detected:', diff.description);
-  
+
   // 2. If major change, test with updated selectors
   const newSelector = await healLocator(newHTML, 'button');
-  
+
   // 3. Run smoke test with recovered selectors
   await page.click(newSelector);
   console.log('✅ Functionality still works!');
@@ -126,26 +126,23 @@ import { compareScreenshots } from '../05-Visual-Regression/visual-regression';
 async function fuzzAndReport() {
   // 1. Generate extreme payloads
   const payloads = createMockEdgeCaseData(10);
-  
+
   // 2. Send each to API
   const failures = [];
   for (const payload of payloads) {
     const response = await sendPayload(payload);
     if (!response.ok) failures.push(response);
   }
-  
+
   // 3. Auto-categorize by error type
   for (const failure of failures) {
     const bugReport = createMockBugReport(failure.errorLog);
     saveReport(bugReport);
   }
-  
+
   // 4. Check for visual regressions in error page
-  const errorPageDiff = await compareScreenshots(
-    'baseline-error.png',
-    'current-error.png'
-  );
-  
+  const errorPageDiff = await compareScreenshots('baseline-error.png', 'current-error.png');
+
   console.log(`Found ${failures.length} issues`);
   console.log(`Error page changed: ${errorPageDiff.pixelDiffPercentage}%`);
 }
@@ -167,22 +164,22 @@ async function fuzzAndReport() {
 async function testCheckoutWorkflow() {
   // 1. Self-healing: Adapt to UI changes
   const firstNameInput = await healLocator(html, 'First Name input');
-  
+
   // 2. Data gen: Fill with edge cases
   const testData = createMockEdgeCaseData(3);
   for (const data of testData) {
     await fillForm(firstNameInput, data.first_name);
   }
-  
+
   // 3. Visual regression: Check UI consistency
   const diff = await compareScreenshots('baseline.png', 'current.png');
   if (diff.severity === 'high') console.warn('UI regression!');
-  
+
   // 4. Execute and capture failures
   const results = await runTests(testData);
-  
+
   // 5. Bug triage: Auto-report failures
-  for (const failure of results.filter(r => r.failed)) {
+  for (const failure of results.filter((r) => r.failed)) {
     const report = createMockBugReport(failure.errorLog);
     saveReport(report);
   }
@@ -193,23 +190,24 @@ async function testCheckoutWorkflow() {
 
 ## Skill Combination Matrix
 
-| Combination | Use Case | Output |
-|-------------|----------|--------|
-| Data Gen + Bug Triage | API fuzzing | Failure classification report |
-| Data Gen + Self-Healing | UI testing with edge cases | Test results with adapted selectors |
-| Visual Regression + Self-Healing | Design system updates | Pixel diffs + functional smoke tests |
-| All 5 Skills | Full E2E workflow | Comprehensive test report |
+| Combination                      | Use Case                   | Output                               |
+| -------------------------------- | -------------------------- | ------------------------------------ |
+| Data Gen + Bug Triage            | API fuzzing                | Failure classification report        |
+| Data Gen + Self-Healing          | UI testing with edge cases | Test results with adapted selectors  |
+| Visual Regression + Self-Healing | Design system updates      | Pixel diffs + functional smoke tests |
+| All 5 Skills                     | Full E2E workflow          | Comprehensive test report            |
 
 ---
 
 ## Best Practices
 
 ### 1. Parallelize Independent Skills
+
 ```typescript
 // ✅ Do this (parallel)
 const [dataResults, visualResults] = await Promise.all([
   generateTestData(),
-  compareScreenshots(baseline, current)
+  compareScreenshots(baseline, current),
 ]);
 
 // ❌ Don't do this (sequential)
@@ -218,6 +216,7 @@ const visualResults = await compareScreenshots(baseline, current);
 ```
 
 ### 2. Cache Generated Data
+
 ```typescript
 // Generate once, use many times
 const testData = createMockEdgeCaseData(100);
@@ -231,19 +230,21 @@ for (const payload of testData) {
 ```
 
 ### 3. Aggregate Reports
+
 ```typescript
 // Combine reports from all skills
 const allReports = await Promise.all([
   generateSelfHealingReport(),
   generateDataGenReport(),
   generateRegressionReport(),
-  generateBugTriageReport()
+  generateBugTriageReport(),
 ]);
 
 saveAggregatedReport(allReports);
 ```
 
 ### 4. Use Consistent Logging
+
 ```typescript
 // All skills follow same logging pattern
 console.log('🚀 Starting skill...');
@@ -257,6 +258,7 @@ console.log(`✅ Complete: ${results.length} items processed`);
 ## Real-World Example Scripts
 
 ### Daily Regression Suite
+
 ```bash
 npx tsx examples/ecommerce-checkout.ts        # Full workflow
 npx tsx examples/api-integration-test.ts      # API fuzzing
@@ -264,6 +266,7 @@ npm run verify:demos                          # All skills
 ```
 
 ### Pre-Deployment Checks
+
 ```bash
 npm run typecheck                             # Type safety
 npm test                                      # Unit tests
@@ -271,6 +274,7 @@ npm run verify:demos                          # Integration tests
 ```
 
 ### CI Pipeline
+
 ```bash
 npm test && npm run verify:demos && npm run generate-report
 ```
@@ -280,18 +284,23 @@ npm test && npm run verify:demos && npm run generate-report
 ## Troubleshooting
 
 ### "Skill output doesn't match expected format"
+
 Check the skill's README for output structure. Each skill has a standard format.
 
 ### "Random failures in mock mode"
+
 Mock mode uses deterministic but varied outputs. Failures may legitimately happen (e.g., negative amounts in payment tests). This is expected.
 
 ### "Skills run too slowly"
+
 - Use `npm run verify:demos` with `HEADLESS=true` environment variable
 - Parallelize independent skills with `Promise.all()`
 - Reduce test payload count for faster runs
 
 ### "Can't combine skills?"
+
 Make sure you're importing from the correct paths:
+
 ```typescript
 import { healLocator } from '../01-Self-Healing-Tests/self-healing';
 import { createMockEdgeCaseData } from '../02-Smart-Data-Gen/generate-test-data';

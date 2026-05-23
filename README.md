@@ -29,16 +29,18 @@ Type a request in the chat. **Edi M**, the Team Manager, analyses your intent an
 
 ## ✨ Features
 
-| | Feature | Description |
-|---|---|---|
-| 🏢 | **2D Pixel-Art Office** | 7 specialist agents at animated desks — click any desk to start a conversation |
-| 🤖 | **Edi M — Team Manager** | Orchestrator agent that analyses your request and routes it to the right specialist |
-| ✨🦙 | **Gemini + Ollama** | Switch between cloud Gemini and fully-local Ollama models with a single click — no restart required |
-| 🎭 | **Playwright Dashboard** | Run your test suite, stream live terminal output, and view pass/fail telemetry in real time |
-| 🧠 | **Post-Run AI Summaries** | After a test run Edi M reads the JSON results, classifies each failure (Timeout / Assertion / Locator / Network), and streams a structured executive summary with TypeScript fix snippets |
-| 🔧 | **Self-Healing Locators** | Broken selectors are ranked by resilience: `getByTestId` → `getByRole` → `getByLabel` → CSS/XPath with confidence scores and caveats |
-| 🔬 | **6 CLI Agents** | Standalone Node.js agents: Self-Healing, Auto-POM, Bug Triage, Visual Regression, A11y Scanner, Data Generator |
-| 📚 | **Built-in QA Course** | 12-chapter automation curriculum with animated, interactive lessons built directly into the UI |
+|      | Feature                           | Description                                                                                                                                                                                                                                       |
+| ---- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🏢   | **2D Pixel-Art Office**           | 7 specialist agents at animated desks — click any desk to start a conversation                                                                                                                                                                    |
+| 🤖   | **Edi M — Team Manager**          | Orchestrator agent that analyses your request and routes it to the right specialist                                                                                                                                                               |
+| 🤝   | **Multi-Agent Collaboration**     | Tag two or more specialists (or @Edi M) and they iterate: primary drafts → critic reviews → primary refines → manager delivers the polished synthesis. Each turn streams into its own chat bubble with a role pill (primary / critic / synthesis) |
+| ✨🦙 | **Gemini + Ollama**               | Switch between cloud Gemini and fully-local Ollama models with a single click — no restart required                                                                                                                                               |
+| 🎭   | **Playwright Dashboard**          | Run your test suite, stream live terminal output, and view pass/fail telemetry in real time. Every run now also lands an Edi M post-mortem directly in chat                                                                                       |
+| 🧠   | **Post-Run AI Summaries**         | After a test run Edi M reads the JSON results, classifies each failure (Timeout / Assertion / Locator / Network), and streams a structured executive summary with TypeScript fix snippets                                                         |
+| 📜   | **Persistent Run History + Logs** | Each run is archived under `test-results/runs/` with its full stdout — click any past run in the history table to replay results AND the original log lines                                                                                       |
+| 🔧   | **Self-Healing Locators**         | Broken selectors are ranked by resilience: `getByTestId` → `getByRole` → `getByLabel` → CSS/XPath with confidence scores and caveats                                                                                                              |
+| 🔬   | **6 CLI Agents**                  | Standalone Node.js agents: Self-Healing, Auto-POM, Bug Triage, Visual Regression, A11y Scanner, Data Generator                                                                                                                                    |
+| 📚   | **Built-in QA Course**            | 12-chapter automation curriculum with animated, interactive lessons built directly into the UI                                                                                                                                                    |
 
 ---
 
@@ -177,14 +179,14 @@ open-qa/
 
 The six standalone agents in `src/agents/` run independently from the UI:
 
-| Command | Agent | What it does |
-|---|---|---|
-| `npm run heal` | Self-Healing | Recovers broken Playwright selectors — outputs ranked repair candidates |
-| `npm run run:auto-pom` | Auto-POM | Generates a typed Page Object Model class from a live URL |
-| `npm run run:bugreport` | Bug Triage | Turns raw error logs into a structured P0–P3 Jira-ready bug report |
-| `npm run run:visual-regression` | Visual Regression | Compares screenshots and reports pixel-level diffs |
-| `npm run run:visual-a11y` | A11y Scanner | Audits a URL for WCAG 2.1 AA violations with fix recommendations |
-| `npm run run:datagen` | Data Generator | Creates edge-case payloads for API fuzzing and boundary testing |
+| Command                         | Agent             | What it does                                                            |
+| ------------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| `npm run heal`                  | Self-Healing      | Recovers broken Playwright selectors — outputs ranked repair candidates |
+| `npm run run:auto-pom`          | Auto-POM          | Generates a typed Page Object Model class from a live URL               |
+| `npm run run:bugreport`         | Bug Triage        | Turns raw error logs into a structured P0–P3 Jira-ready bug report      |
+| `npm run run:visual-regression` | Visual Regression | Compares screenshots and reports pixel-level diffs                      |
+| `npm run run:visual-a11y`       | A11y Scanner      | Audits a URL for WCAG 2.1 AA violations with fix recommendations        |
+| `npm run run:datagen`           | Data Generator    | Creates edge-case payloads for API fuzzing and boundary testing         |
 
 All agents run in **deterministic MOCK mode** if no `ANTHROPIC_API_KEY` is present — perfect for CI and first-time exploration.
 
@@ -234,6 +236,7 @@ cd ui && npx tsc --noEmit  # UI
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 Key guidelines:
+
 - All PRs must pass `npm run typecheck` and `npm run lint`
 - Follow the existing TypeScript strict-mode patterns
 - Agent additions go in `src/agents/<name>/index.ts`
