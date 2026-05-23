@@ -111,16 +111,16 @@ export function OfficeCanvas({
     canvas.style.width  = `${cssW}px`
     canvas.style.height = `${cssH}px`
 
-    // Recalculate fit-zoom whenever the buffer dimensions change
+    // Recalculate fit-zoom whenever the buffer dimensions change.
+    // 0.95 margin keeps a subtle breathing gap so the map never touches the edge.
     if (locked) {
       const layout = officeState.getLayout()
       const cols = layout.cols || 1
       const rows = layout.rows || 1
-      fitZoomRef.current = Math.min(
-        canvas.width  / (cols * TILE_SIZE),
-        canvas.height / (rows * TILE_SIZE),
-      )
-      // Reset pan to zero so the map stays centered after resize
+      const maxScaleX = canvas.width  / (cols * TILE_SIZE)
+      const maxScaleY = canvas.height / (rows * TILE_SIZE)
+      fitZoomRef.current = Math.min(maxScaleX, maxScaleY) * 0.95
+      // Reset pan to zero so the map stays centred after resize
       panRef.current = { x: 0, y: 0 }
     }
   }, [locked, officeState, panRef])
@@ -143,9 +143,16 @@ export function OfficeCanvas({
         const h  = canvas.height
         const ez = effectiveZoom()
 
-        // ── Background fill ────────────────────────────────────────────────
-        // Ensures no raw-black void outside the artboard at any DPR / size.
+        // ── Pixel sharpness — disable ALL smoothing APIs ───────────────────
+        // At high fit-zoom scales the sprites would blur without this.
         ctx.imageSmoothingEnabled = false
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ctxAny = ctx as any
+        ctxAny.mozImageSmoothingEnabled    = false
+        ctxAny.webkitImageSmoothingEnabled = false
+        ctxAny.msImageSmoothingEnabled     = false
+
+        // ── Background fill ────────────────────────────────────────────────
         ctx.fillStyle = '#13131f'
         ctx.fillRect(0, 0, w, h)
 
