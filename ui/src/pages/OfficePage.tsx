@@ -31,7 +31,7 @@ import { OfficeState }   from '../office/engine/officeState'
 import { loadDefaultLayout, loadOfficeAssets } from '../office/assetLoader'
 import { useSettings, TEAM_MANAGER_ID }   from '../context/SettingsContext'
 import type {
-  AgentConfig, AgentStatus, Attachment, Message, QAFailure,
+  AgentConfig, AgentStatus, Attachment, Message,
 } from '../context/SettingsContext'
 import type { SpriteType } from '../context/SettingsContext'
 import type { OfficeLayout } from '../office/types'
