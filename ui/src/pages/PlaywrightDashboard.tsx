@@ -4929,7 +4929,8 @@ export default function PlaywrightDashboard() {
       setSelectedRunId(runId ?? null);
       setExpandedSuites(Object.fromEntries(data.suites.map((s) => [s.id, true])));
       // Restore the archived stdout when viewing an old run; clear when switching to latest.
-      setRunLog(runId && Array.isArray(data.runLog) ? data.runLog.slice(-999) : []);
+      // For archived runs restore the full log; only cap the live view to avoid unbounded state.
+      setRunLog(runId && Array.isArray(data.runLog) ? data.runLog : []);
     } catch {
       setServerOnline(false);
       setDemoMode(true);
