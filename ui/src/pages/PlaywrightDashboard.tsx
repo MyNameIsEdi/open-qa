@@ -214,10 +214,10 @@ const PW_SPRITE_ACCENT: Record<
   { bg: string; ring: string; text: string; bar: string }
 > = {
   tester: { bg: '#0d2a1a', ring: '#166534', text: '#4ade80', bar: '#22c55e' },
-  dev: { bg: '#0f1f3d', ring: '#1d4ed8', text: '#60a5fa', bar: '#3b82f6' },
+  dev: { bg: '#0f1f3d', ring: '#1a3a8f', text: '#60a5fa', bar: '#3b82f6' },
   analyst: { bg: '#1e0a40', ring: '#7c3aed', text: '#c084fc', bar: '#a855f7' },
   devops: { bg: '#2a0e02', ring: '#c2410c', text: '#fb923c', bar: '#f97316' },
-  manager: { bg: '#2a1200', ring: '#d97706', text: '#fbbf24', bar: '#f59e0b' },
+  manager: { bg: '#2a1200', ring: '#d97706', text: '#E8A728', bar: '#f59e0b' },
 };
 
 // ─── PW-Dashboard OfficeState singleton ──────────────────────────────────────
@@ -322,9 +322,9 @@ function HistoryChart({
         <div className="flex items-center gap-4">
           {(
             [
-              ['#10b981', 'Passed'],
+              ['#34C759', 'Passed'],
               ['#ef4444', 'Failed'],
-              ['#fbbf24', 'Skipped'],
+              ['#E8A728', 'Skipped'],
               ['#3b82f6', 'Pass-rate trend'],
             ] as const
           ).map(([color, label]) => (
@@ -358,7 +358,7 @@ function HistoryChart({
             style={{
               top: 6,
               right: 12,
-              backgroundColor: '#1e1e2e',
+              backgroundColor: '#2D2823',
               color: '#e2e8f0',
               border: '1px solid rgba(255,255,255,0.08)',
               minWidth: 180,
@@ -384,7 +384,7 @@ function HistoryChart({
                           ? 'rgba(251,191,36,0.20)'
                           : 'rgba(239,68,68,0.20)',
                     color:
-                      hoveredRate >= 80 ? '#34d399' : hoveredRate >= 50 ? '#fbbf24' : '#f87171',
+                      hoveredRate >= 80 ? '#34d399' : hoveredRate >= 50 ? '#E8A728' : '#f87171',
                   }}
                 >
                   {hoveredRate}%
@@ -393,15 +393,24 @@ function HistoryChart({
             </div>
             <div className="flex items-center gap-3 mb-0.5">
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 inline-block" />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#34C759' }}
+                />
                 {hoveredRun.passed}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm bg-red-500 inline-block" />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#EF4444' }}
+                />
                 {hoveredRun.failed}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm bg-amber-400 inline-block" />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#E8A728' }}
+                />
                 {hoveredRun.skipped}
               </span>
               <span className="opacity-60 ml-auto">{formatMs(hoveredRun.duration)}</span>
@@ -472,9 +481,9 @@ function HistoryChart({
                     width: '100%',
                     position: 'relative',
                     outline: isSelected
-                      ? '2px solid #3b82f6'
+                      ? '2px solid #1a3a8f'
                       : isHover
-                        ? '2px solid rgba(59,130,246,0.4)'
+                        ? '2px solid rgba(26,58,143,0.4)'
                         : undefined,
                     borderRadius: 3,
                     transform: isHover && !isSelected ? 'translateY(-1px)' : undefined,
@@ -489,7 +498,7 @@ function HistoryChart({
                         left: 0,
                         right: 0,
                         height: passH,
-                        backgroundColor: '#10b981',
+                        backgroundColor: '#34C759',
                         borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0',
                       }}
                     />
@@ -515,7 +524,7 @@ function HistoryChart({
                         left: 0,
                         right: 0,
                         height: skipH,
-                        backgroundColor: '#fbbf24',
+                        backgroundColor: '#E8A728',
                         borderRadius: '3px 3px 0 0',
                       }}
                     />
@@ -523,7 +532,7 @@ function HistoryChart({
                   {isLatest && (
                     <span
                       className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 0 2px var(--bg-card)' }}
+                      style={{ backgroundColor: '#1a3a8f', boxShadow: '0 0 0 2px var(--bg-card)' }}
                       title="Latest run"
                     />
                   )}
@@ -533,7 +542,7 @@ function HistoryChart({
                     fontSize: 9,
                     flexShrink: 0,
                     lineHeight: 1,
-                    color: isSelected || isHover ? '#3b82f6' : '#94a3b8',
+                    color: isSelected || isHover ? '#1a3a8f' : 'var(--text-muted)',
                     fontWeight: isSelected ? 700 : isHover ? 600 : 400,
                   }}
                 >
@@ -604,7 +613,14 @@ function RunsPanel({
           </span>
         )}
         {selectedId && !isDemo && (
-          <span className="text-[10px] font-bold px-2 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+          <span
+            className="text-[10px] font-bold px-2 py-px rounded-full"
+            style={{
+              background: 'rgba(26,58,143,0.08)',
+              color: '#1a3a8f',
+              border: '1px solid rgba(26,58,143,0.2)',
+            }}
+          >
             viewing #{total - runs.findIndex((r) => r.id === selectedId)}
           </span>
         )}
@@ -615,7 +631,8 @@ function RunsPanel({
                 e.stopPropagation();
                 onLoadLatest();
               }}
-              className="text-[11px] font-semibold text-blue-600 hover:underline"
+              className="text-[11px] font-semibold hover:underline"
+              style={{ color: '#1a3a8f' }}
             >
               ← Latest
             </button>
@@ -698,9 +715,15 @@ function RunsPanel({
                 >
                   Total
                 </th>
-                <th className="text-right px-3 py-2 font-semibold text-emerald-600">✓</th>
-                <th className="text-right px-3 py-2 font-semibold text-red-500">✗</th>
-                <th className="text-right px-3 py-2 font-semibold text-amber-500">–</th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#16A34A' }}>
+                  ✓
+                </th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#EF4444' }}>
+                  ✗
+                </th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#D97706' }}>
+                  –
+                </th>
                 <th
                   className="text-right px-3 py-2 font-semibold"
                   style={{ color: 'var(--text-muted)' }}
@@ -731,7 +754,7 @@ function RunsPanel({
                     className={`transition-colors ${isDemo ? '' : 'cursor-pointer'}`}
                     style={{
                       borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : undefined,
-                      backgroundColor: isSelected ? 'rgba(59,130,246,0.06)' : 'var(--bg-card)',
+                      backgroundColor: isSelected ? 'rgba(26,58,143,0.06)' : 'var(--bg-card)',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && !isDemo)
@@ -739,7 +762,7 @@ function RunsPanel({
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.backgroundColor = isSelected
-                        ? 'rgba(59,130,246,0.06)'
+                        ? 'rgba(26,58,143,0.06)'
                         : 'var(--bg-card)';
                     }}
                   >
@@ -749,7 +772,9 @@ function RunsPanel({
                       style={{ color: 'var(--text-muted)' }}
                     >
                       {isSelected ? (
-                        <span className="font-bold text-blue-600">#{runNum}</span>
+                        <span className="font-bold" style={{ color: '#1a3a8f' }}>
+                          #{runNum}
+                        </span>
                       ) : (
                         `#${runNum}`
                       )}
@@ -766,13 +791,33 @@ function RunsPanel({
                           })}
                         </span>
                         {i === 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-px rounded-full shrink-0"
+                            style={{
+                              background: 'rgba(26,58,143,0.08)',
+                              color: '#1a3a8f',
+                              border: '1px solid rgba(26,58,143,0.2)',
+                            }}
+                          >
                             latest
                           </span>
                         )}
                         {hasDelta && (
                           <span
-                            className={`text-[10px] font-bold px-1.5 py-px rounded-full shrink-0 ${dFail > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}
+                            className="text-[10px] font-bold px-1.5 py-px rounded-full shrink-0"
+                            style={
+                              dFail > 0
+                                ? {
+                                    background: 'rgba(239,68,68,0.08)',
+                                    color: '#EF4444',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                  }
+                                : {
+                                    background: 'rgba(52,199,89,0.08)',
+                                    color: '#16A34A',
+                                    border: '1px solid rgba(52,199,89,0.2)',
+                                  }
+                            }
                           >
                             {dFail > 0 ? `+${dFail}✗` : `${dFail}✗`}
                           </span>
@@ -805,18 +850,21 @@ function RunsPanel({
                     >
                       {run.total}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-600">
+                    <td
+                      className="px-3 py-2.5 text-right font-mono font-semibold"
+                      style={{ color: '#16A34A' }}
+                    >
                       {run.passed}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono font-semibold"
-                      style={{ color: run.failed > 0 ? '#ef4444' : 'var(--text-muted)' }}
+                      style={{ color: run.failed > 0 ? '#EF4444' : 'var(--text-muted)' }}
                     >
                       {run.failed}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono"
-                      style={{ color: run.skipped > 0 ? '#d97706' : 'var(--text-muted)' }}
+                      style={{ color: run.skipped > 0 ? '#D97706' : 'var(--text-muted)' }}
                     >
                       {run.skipped}
                     </td>
@@ -828,7 +876,7 @@ function RunsPanel({
                     </td>
                     <td
                       className="px-4 py-2.5 text-right font-bold"
-                      style={{ color: rate >= 80 ? '#059669' : '#ef4444' }}
+                      style={{ color: rate >= 80 ? '#16A34A' : '#EF4444' }}
                     >
                       {rate}%
                     </td>
@@ -891,9 +939,12 @@ function formatMs(ms: number) {
 
 function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
   const s = size;
-  if (status === 'passed') return <CheckCircle2 size={s} className="text-emerald-500 shrink-0" />;
-  if (status === 'failed') return <XCircle size={s} className="text-red-500 shrink-0" />;
-  if (status === 'skipped') return <MinusCircle size={s} className="text-amber-400 shrink-0" />;
+  if (status === 'passed')
+    return <CheckCircle2 size={s} className="shrink-0" style={{ color: '#34C759' }} />;
+  if (status === 'failed')
+    return <XCircle size={s} className="shrink-0" style={{ color: '#EF4444' }} />;
+  if (status === 'skipped')
+    return <MinusCircle size={s} className="shrink-0" style={{ color: '#E8A728' }} />;
   if (status === 'running')
     return (
       <span className="inline-block shrink-0" style={{ width: s, height: s }}>
@@ -904,15 +955,15 @@ function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
 }
 
 function StatusBadge({ status }: { status: Status }) {
-  const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide uppercase';
+  const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide';
   if (status === 'passed')
     return (
       <span
         className={`${base}`}
         style={{
-          background: 'rgba(16,185,129,0.12)',
-          color: '#059669',
-          border: '1px solid rgba(16,185,129,0.2)',
+          background: 'rgba(52,199,89,0.12)',
+          color: '#16A34A',
+          border: '1px solid rgba(52,199,89,0.2)',
         }}
       >
         pass
@@ -924,7 +975,7 @@ function StatusBadge({ status }: { status: Status }) {
         className={`${base}`}
         style={{
           background: 'rgba(239,68,68,0.12)',
-          color: '#dc2626',
+          color: '#DC2626',
           border: '1px solid rgba(239,68,68,0.2)',
         }}
       >
@@ -936,9 +987,9 @@ function StatusBadge({ status }: { status: Status }) {
       <span
         className={`${base}`}
         style={{
-          background: 'rgba(251,191,36,0.12)',
-          color: '#d97706',
-          border: '1px solid rgba(251,191,36,0.2)',
+          background: 'rgba(232,167,40,0.12)',
+          color: '#D97706',
+          border: '1px solid rgba(232,167,40,0.2)',
         }}
       >
         skip
@@ -949,9 +1000,9 @@ function StatusBadge({ status }: { status: Status }) {
       <span
         className={`${base}`}
         style={{
-          background: 'rgba(59,130,246,0.12)',
-          color: '#2563eb',
-          border: '1px solid rgba(59,130,246,0.2)',
+          background: 'rgba(26,58,143,0.12)',
+          color: '#1a3a8f',
+          border: '1px solid rgba(26,58,143,0.2)',
         }}
       >
         running…
@@ -980,7 +1031,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-      style={{ backgroundColor: checked ? '#2563eb' : '#d1d5db' }}
+      style={{ backgroundColor: checked ? '#1a3a8f' : '#d1d5db' }}
     >
       <span
         className="inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition-transform duration-200"
@@ -1185,7 +1236,7 @@ const PRESETS: Preset[] = [
     label: 'CI / CD',
     icon: <Zap size={13} />,
     description: 'Headless, JUnit reporter, 2 retries, 1 worker',
-    color: '#2563eb',
+    color: '#1a3a8f',
     config: {
       headed: false,
       timeout: 60000,
@@ -1564,7 +1615,7 @@ function SettingsView({
                     className="py-2 rounded-xl border text-xs font-bold transition-all"
                     style={
                       config.reporter === r
-                        ? { background: '#2563eb', color: '#fff', borderColor: '#2563eb' }
+                        ? { background: '#1a3a8f', color: '#fff', borderColor: '#1a3a8f' }
                         : {
                             background: 'var(--bg-body)',
                             color: 'var(--text-muted)',
@@ -1601,7 +1652,11 @@ function SettingsView({
                 </span>
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}
+                  style={{
+                    background: 'rgba(52,199,89,0.10)',
+                    color: '#16A34A',
+                    border: '1px solid rgba(52,199,89,0.25)',
+                  }}
                 >
                   Live
                 </span>
@@ -1869,7 +1924,7 @@ function FlakyPanel({ suites }: { suites: TestSuite[] }) {
   return (
     <div
       className="mt-4 rounded-2xl border shadow-sm overflow-hidden"
-      style={{ borderColor: '#fbbf24', backgroundColor: 'var(--bg-card)' }}
+      style={{ borderColor: '#E8A728', backgroundColor: 'var(--bg-card)' }}
     >
       <div
         className="flex items-center gap-2 px-4 py-3 border-b"
@@ -1974,7 +2029,7 @@ function StepTimeline({ steps }: { steps: TestStep[] }) {
               className="h-full rounded-full"
               style={{
                 width: `${(step.duration / maxDur) * 100}%`,
-                backgroundColor: step.status === 'failed' ? '#ef4444' : '#10b981',
+                backgroundColor: step.status === 'failed' ? '#ef4444' : '#34C759',
               }}
             />
           </div>
@@ -2046,7 +2101,7 @@ function DocSection({
   return (
     <section id={id} className="scroll-mt-4">
       <div className="flex items-center gap-2 mb-3">
-        <span style={{ color: '#3b82f6' }}>{icon}</span>
+        <span style={{ color: '#1a3a8f' }}>{icon}</span>
         <h2 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
           {title}
         </h2>
@@ -2067,7 +2122,7 @@ function RefRow({
   label,
   desc,
   badge,
-  badgeColor = '#2563eb',
+  badgeColor = '#1a3a8f',
 }: {
   label: string;
   desc: string;
@@ -2112,7 +2167,7 @@ function DocsLink({ href, label }: { href: string; label: string }) {
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-lg border transition-opacity hover:opacity-70"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: '#3b82f6' }}
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)', color: '#1a3a8f' }}
     >
       {label} <ExternalLink size={10} />
     </a>
@@ -2286,19 +2341,19 @@ npx playwright show-report      # open HTML report`}
                 label="getByPlaceholder()"
                 desc="Find input by placeholder text. Use when no label is present."
                 badge="Good"
-                badgeColor="#2563eb"
+                badgeColor="#1a3a8f"
               />
               <RefRow
                 label="getByText()"
                 desc="Find any element by its visible text content. Use .exact for precision."
                 badge="Good"
-                badgeColor="#2563eb"
+                badgeColor="#1a3a8f"
               />
               <RefRow
                 label="getByAltText()"
                 desc="Find images by alt attribute. Essential for image-heavy UIs."
                 badge="Good"
-                badgeColor="#2563eb"
+                badgeColor="#1a3a8f"
               />
               <RefRow
                 label="getByTestId()"
@@ -3068,7 +3123,7 @@ function EditorView({
               onClick={() => setShowNew((v) => !v)}
               title="New spec file"
               className="p-1 rounded transition-colors"
-              style={showNew ? { color: '#2563eb' } : { color: 'var(--text-muted)' }}
+              style={showNew ? { color: '#1a3a8f' } : { color: 'var(--text-muted)' }}
             >
               <Plus size={13} />
             </button>
@@ -3108,7 +3163,7 @@ function EditorView({
               onClick={createFile}
               disabled={!newName.trim()}
               className="w-full py-1 rounded-lg text-xs font-semibold disabled:opacity-40"
-              style={{ backgroundColor: '#2563eb', color: '#fff' }}
+              style={{ backgroundColor: '#1a3a8f', color: '#fff' }}
             >
               Create
             </button>
@@ -3128,7 +3183,7 @@ function EditorView({
               className="group flex items-center justify-between px-3 py-2 cursor-pointer transition-colors"
               style={
                 activeFile === s
-                  ? { backgroundColor: 'rgba(37,99,235,0.08)', borderLeft: '2px solid #2563eb' }
+                  ? { backgroundColor: 'rgba(26,58,143,0.08)', borderLeft: '2px solid #1a3a8f' }
                   : { borderLeft: '2px solid transparent' }
               }
               onClick={() => setActiveFile(s)}
@@ -3142,7 +3197,7 @@ function EditorView({
             >
               <span
                 className="text-[11px] font-mono truncate"
-                style={{ color: activeFile === s ? '#2563eb' : 'var(--text-main)' }}
+                style={{ color: activeFile === s ? '#1a3a8f' : 'var(--text-main)' }}
               >
                 {s.replace(/\.spec\.(ts|js)$/, '')}
                 <span className="opacity-40">.spec.ts</span>
@@ -3236,7 +3291,7 @@ function EditorView({
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
               style={
                 isDirty && !saving
-                  ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#fff' }
+                  ? { backgroundColor: '#1a3a8f', borderColor: '#1a3a8f', color: '#fff' }
                   : {
                       borderColor: 'var(--border)',
                       backgroundColor: 'var(--bg-card)',
@@ -3273,7 +3328,7 @@ function EditorView({
             <button
               onClick={() => setShowNew(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
-              style={{ backgroundColor: '#2563eb', color: '#fff' }}
+              style={{ backgroundColor: '#1a3a8f', color: '#fff' }}
             >
               <Plus size={12} /> New spec file
             </button>
@@ -3458,7 +3513,7 @@ function PwMessageBubble({
   const agent = msg.agentId ? agents.find((a) => a.id === msg.agentId) : null;
   const accent = agent ? PW_SPRITE_ACCENT[agent.characterSprite] : null;
   const avatarBg = isUser ? '#1e3a5f' : (accent?.bg ?? '#0f2a1a');
-  const avatarRing = isUser ? '#1d4ed8' : (accent?.ring ?? '#166534');
+  const avatarRing = isUser ? '#1a3a8f' : (accent?.ring ?? '#166534');
   const avatarText = isUser ? '#93c5fd' : (accent?.text ?? '#4ade80');
   const initials = isUser ? 'U' : (msg.senderName?.slice(0, 2).toUpperCase() ?? 'AI');
 
@@ -3475,7 +3530,7 @@ function PwMessageBubble({
     if (l.includes('synthesis') || l.includes('final'))
       return { bg: 'rgba(16,185,129,0.16)', color: '#34d399', border: 'rgba(16,185,129,0.30)' }; // synthesis = emerald
     if (l.includes('critique') || l.includes('review'))
-      return { bg: 'rgba(245,158,11,0.16)', color: '#fbbf24', border: 'rgba(245,158,11,0.30)' }; // critic = amber
+      return { bg: 'rgba(245,158,11,0.16)', color: '#E8A728', border: 'rgba(245,158,11,0.30)' }; // critic = amber
     if (l.includes('draft') || l.includes('refined') || l.includes('round'))
       return { bg: 'rgba(59,130,246,0.16)', color: '#60a5fa', border: 'rgba(59,130,246,0.30)' }; // primary = blue
     return { bg: 'rgba(148,163,184,0.16)', color: '#cbd5e1', border: 'rgba(148,163,184,0.30)' };
@@ -4097,7 +4152,7 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
                   background:
                     settings.provider === p
                       ? p === 'gemini'
-                        ? '#1d4ed8'
+                        ? '#1a3a8f'
                         : '#065f46'
                       : 'transparent',
                   color: settings.provider === p ? '#fff' : 'var(--text-muted)',
@@ -4241,7 +4296,7 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
       {settings.provider === 'ollama' && !settings.ollamaModel.trim() && (
         <div
           className="shrink-0 px-2 py-0.5 text-[9px]"
-          style={{ background: '#451a03', color: '#fbbf24' }}
+          style={{ background: '#451a03', color: '#E8A728' }}
         >
           ⚠ No Ollama model — configure in Settings
         </div>
@@ -4249,7 +4304,7 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
       {settings.provider === 'gemini' && !settings.geminiApiKey.trim() && (
         <div
           className="shrink-0 px-2 py-0.5 text-[9px]"
-          style={{ background: '#451a03', color: '#fbbf24' }}
+          style={{ background: '#451a03', color: '#E8A728' }}
         >
           ⚠ No Gemini API key — configure in Settings
         </div>
@@ -4439,7 +4494,7 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
               onClick={() => void handleSend()}
               disabled={!inputText.trim() && pendingFiles.length === 0}
               className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-40 transition-opacity"
-              style={{ background: '#2563eb', color: '#fff' }}
+              style={{ background: '#1a3a8f', color: '#fff' }}
               title="Send (Enter)"
             >
               <Send size={11} />
@@ -5155,18 +5210,32 @@ export default function PlaywrightDashboard() {
                 {serverOnline === true && !demoMode && (
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}
+                    style={{
+                      background: 'rgba(52,199,89,0.10)',
+                      color: '#16A34A',
+                      border: '1px solid rgba(52,199,89,0.25)',
+                    }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                    <span
+                      className="w-1.5 h-1.5 rounded-full animate-pulse inline-block"
+                      style={{ backgroundColor: '#34C759' }}
+                    />
                     Live
                   </span>
                 )}
                 {demoMode && (
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}
+                    style={{
+                      background: 'rgba(232,167,40,0.10)',
+                      color: '#92400e',
+                      border: '1px solid rgba(232,167,40,0.30)',
+                    }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{ backgroundColor: '#E8A728' }}
+                    />
                     Demo
                   </span>
                 )}
@@ -5235,7 +5304,7 @@ export default function PlaywrightDashboard() {
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                     style={{
                       backgroundColor: 'rgba(59,130,246,0.10)',
-                      color: '#2563eb',
+                      color: '#1a3a8f',
                       border: '1px solid rgba(59,130,246,0.20)',
                     }}
                   >
@@ -5267,7 +5336,7 @@ export default function PlaywrightDashboard() {
                       activeView === key
                         ? {
                             backgroundColor: 'var(--bg-body)',
-                            color: '#2563eb',
+                            color: '#1a3a8f',
                             boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                           }
                         : { color: 'var(--text-muted)' }
@@ -5291,9 +5360,9 @@ export default function PlaywrightDashboard() {
                         style={
                           specPickerOpen || selectedSpecs.size > 0
                             ? {
-                                borderColor: '#2563eb',
+                                borderColor: '#1a3a8f',
                                 backgroundColor: 'rgba(37,99,235,0.07)',
-                                color: '#2563eb',
+                                color: '#1a3a8f',
                               }
                             : {
                                 borderColor: 'var(--border)',
@@ -5332,7 +5401,7 @@ export default function PlaywrightDashboard() {
                                 )
                               }
                               className="font-semibold hover:underline"
-                              style={{ color: '#2563eb' }}
+                              style={{ color: '#1a3a8f' }}
                             >
                               {selectedSpecs.size === availableSpecs.length ? 'None' : 'All'}
                             </button>
@@ -5376,7 +5445,7 @@ export default function PlaywrightDashboard() {
                             <button
                               onClick={() => setSpecPickerOpen(false)}
                               className="w-full py-1.5 rounded-lg text-xs font-semibold"
-                              style={{ backgroundColor: '#2563eb', color: '#fff' }}
+                              style={{ backgroundColor: '#1a3a8f', color: '#fff' }}
                             >
                               Done
                             </button>
@@ -5399,7 +5468,7 @@ export default function PlaywrightDashboard() {
                       placeholder="grep filter…"
                       className="pl-7 pr-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
                       style={{
-                        borderColor: config.grep ? '#2563eb' : 'var(--border)',
+                        borderColor: config.grep ? '#1a3a8f' : 'var(--border)',
                         backgroundColor: 'var(--bg-card)',
                         color: 'var(--text-main)',
                       }}
@@ -5468,7 +5537,7 @@ export default function PlaywrightDashboard() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                     style={
                       settingsOpen
-                        ? { background: 'rgba(37,99,235,0.08)', color: '#2563eb' }
+                        ? { background: 'rgba(26,58,143,0.08)', color: '#1a3a8f' }
                         : { background: 'transparent', color: 'var(--text-muted)' }
                     }
                     onMouseEnter={(e) => {
@@ -5563,7 +5632,7 @@ export default function PlaywrightDashboard() {
                   <AlertTriangle
                     size={15}
                     className="mt-0.5 shrink-0"
-                    style={{ color: '#fbbf24' }}
+                    style={{ color: '#E8A728' }}
                   />
                   <div className="flex-1">
                     <p className="font-semibold mb-1">Playwright browsers not installed</p>
@@ -5598,7 +5667,7 @@ export default function PlaywrightDashboard() {
                   style={{
                     background: 'rgba(59,130,246,0.05)',
                     borderColor: '#93c5fd',
-                    color: '#1d4ed8',
+                    color: '#1a3a8f',
                   }}
                 >
                   <Clock size={12} className="shrink-0" />
@@ -5619,7 +5688,7 @@ export default function PlaywrightDashboard() {
                       fetchResults();
                     }}
                     className="ml-auto shrink-0 font-semibold underline hover:no-underline"
-                    style={{ color: '#1d4ed8' }}
+                    style={{ color: '#1a3a8f' }}
                   >
                     Return to latest →
                   </button>
@@ -5710,7 +5779,7 @@ export default function PlaywrightDashboard() {
                             configTab === tab.id
                               ? {
                                   backgroundColor: 'var(--bg-card)',
-                                  color: '#2563eb',
+                                  color: '#1a3a8f',
                                   boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                                 }
                               : { color: 'var(--text-muted)' }
@@ -5746,8 +5815,8 @@ export default function PlaywrightDashboard() {
                             style={
                               justSaved
                                 ? {
-                                    backgroundColor: '#10b981',
-                                    borderColor: '#10b981',
+                                    backgroundColor: '#34C759',
+                                    borderColor: '#34C759',
                                     color: '#fff',
                                   }
                                 : isSaved
@@ -5757,8 +5826,8 @@ export default function PlaywrightDashboard() {
                                       color: 'var(--text-muted)',
                                     }
                                   : {
-                                      backgroundColor: '#2563eb',
-                                      borderColor: '#2563eb',
+                                      backgroundColor: '#1a3a8f',
+                                      borderColor: '#1a3a8f',
                                       color: '#fff',
                                     }
                             }
@@ -5880,7 +5949,7 @@ export default function PlaywrightDashboard() {
                     className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none"
                     style={{
                       backgroundColor:
-                        passRate >= 80 ? '#10b981' : passRate >= 50 ? '#fbbf24' : '#ef4444',
+                        passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444',
                     }}
                   />
                   {/* Progress ring */}
@@ -5900,7 +5969,7 @@ export default function PlaywrightDashboard() {
                       fill="none"
                       strokeWidth="8"
                       strokeLinecap="round"
-                      stroke={passRate >= 80 ? '#10b981' : passRate >= 50 ? '#fbbf24' : '#ef4444'}
+                      stroke={passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444'}
                       strokeDasharray={`${(passRate / 100) * 238.76} 238.76`}
                       transform="rotate(-90 46 46)"
                       style={{ transition: 'stroke-dasharray 700ms ease, stroke 300ms' }}
@@ -5955,21 +6024,28 @@ export default function PlaywrightDashboard() {
                     >
                       {counts.passed > 0 && (
                         <div
-                          className="h-full bg-emerald-500 transition-all duration-700"
-                          style={{ width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%` }}
+                          className="h-full transition-all duration-700"
+                          style={{
+                            width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%`,
+                            backgroundColor: '#34C759',
+                          }}
                         />
                       )}
                       {counts.failed > 0 && (
                         <div
-                          className="h-full bg-red-500     transition-all duration-700"
-                          style={{ width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%` }}
+                          className="h-full transition-all duration-700"
+                          style={{
+                            width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%`,
+                            backgroundColor: '#EF4444',
+                          }}
                         />
                       )}
                       {counts.skipped > 0 && (
                         <div
-                          className="h-full bg-amber-400   transition-all duration-700"
+                          className="h-full transition-all duration-700"
                           style={{
                             width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`,
+                            backgroundColor: '#E8A728',
                           }}
                         />
                       )}
@@ -5987,20 +6063,34 @@ export default function PlaywrightDashboard() {
                       style={{ color: 'var(--text-muted)' }}
                     >
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 inline-block" />
-                        <span className="font-semibold text-emerald-600">{counts.passed}</span>{' '}
+                        <span
+                          className="w-1.5 h-1.5 rounded-sm inline-block"
+                          style={{ backgroundColor: '#34C759' }}
+                        />
+                        <span className="font-semibold" style={{ color: '#16A34A' }}>
+                          {counts.passed}
+                        </span>{' '}
                         passed
                       </span>
                       {counts.failed > 0 && (
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-sm bg-red-500 inline-block" />
-                          <span className="font-semibold text-red-500">{counts.failed}</span> failed
+                          <span
+                            className="w-1.5 h-1.5 rounded-sm inline-block"
+                            style={{ backgroundColor: '#EF4444' }}
+                          />
+                          <span className="font-semibold" style={{ color: '#EF4444' }}>
+                            {counts.failed}
+                          </span>{' '}
+                          failed
                         </span>
                       )}
                       {counts.skipped > 0 && (
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-sm bg-amber-400 inline-block" />
-                          <span className="font-semibold text-amber-600">
+                          <span
+                            className="w-1.5 h-1.5 rounded-sm inline-block"
+                            style={{ backgroundColor: '#E8A728' }}
+                          />
+                          <span className="font-semibold" style={{ color: '#D97706' }}>
                             {counts.skipped}
                           </span>{' '}
                           skipped
@@ -6125,8 +6215,8 @@ export default function PlaywrightDashboard() {
                     {
                       key: 'active' as const,
                       label: `Active (${counts.passed + counts.failed})`,
-                      activeColor: '#2563eb',
-                      activeBg: '#2563eb',
+                      activeColor: '#1a3a8f',
+                      activeBg: '#1a3a8f',
                     },
                     {
                       key: 'all' as const,
@@ -6138,7 +6228,7 @@ export default function PlaywrightDashboard() {
                       key: 'passed' as const,
                       label: `Passed (${counts.passed})`,
                       activeColor: '#059669',
-                      activeBg: '#10b981',
+                      activeBg: '#34C759',
                     },
                     {
                       key: 'failed' as const,
@@ -6150,7 +6240,7 @@ export default function PlaywrightDashboard() {
                       key: 'skipped' as const,
                       label: `Skipped (${counts.skipped})`,
                       activeColor: '#d97706',
-                      activeBg: '#fbbf24',
+                      activeBg: '#E8A728',
                     },
                   ].map(({ key, label, activeBg }) => (
                     <button
@@ -6185,7 +6275,7 @@ export default function PlaywrightDashboard() {
                         dashboardMode === mode
                           ? {
                               backgroundColor: 'var(--bg-body)',
-                              color: '#2563eb',
+                              color: '#1a3a8f',
                               boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                             }
                           : { color: 'var(--text-muted)' }
@@ -6211,13 +6301,13 @@ export default function PlaywrightDashboard() {
                     const maxDuration = Math.max(...suite.tests.map((t) => t.duration), 1);
                     const statusAccent =
                       status === 'passed'
-                        ? '#10b981'
+                        ? '#34C759'
                         : status === 'failed'
                           ? '#ef4444'
                           : status === 'running'
                             ? '#3b82f6'
                             : status === 'skipped'
-                              ? '#fbbf24'
+                              ? '#E8A728'
                               : 'var(--border)';
 
                     return (
@@ -6403,8 +6493,8 @@ export default function PlaywrightDashboard() {
                                               test.status === 'failed'
                                                 ? '#ef4444'
                                                 : test.status === 'passed'
-                                                  ? '#10b981'
-                                                  : '#fbbf24',
+                                                  ? '#34C759'
+                                                  : '#E8A728',
                                           }}
                                         />
                                       </div>
@@ -6433,10 +6523,10 @@ export default function PlaywrightDashboard() {
                                               display: 'inline-block',
                                               backgroundColor:
                                                 r.status === 'passed'
-                                                  ? '#10b981'
+                                                  ? '#34C759'
                                                   : r.status === 'failed'
                                                     ? '#ef4444'
-                                                    : '#fbbf24',
+                                                    : '#E8A728',
                                               opacity: r.status === 'skipped' ? 0.6 : 1,
                                             }}
                                           />
@@ -6655,10 +6745,10 @@ export default function PlaywrightDashboard() {
                           style={{ backgroundColor: 'var(--border)' }}
                         >
                           <div
-                            className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                            className="h-full rounded-full transition-all duration-500"
                             style={{
                               width: `${(test.duration / slowestTests[0].duration) * 100}%`,
-                              background: 'linear-gradient(90deg, #fbbf24, #f59e0b)',
+                              background: 'linear-gradient(90deg, #E8A728, #D97706)',
                             }}
                           />
                         </div>
@@ -6685,7 +6775,7 @@ export default function PlaywrightDashboard() {
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
                   >
                     <div className="flex items-center gap-2">
-                      <Terminal size={13} style={{ color: '#10b981' }} />
+                      <Terminal size={13} style={{ color: '#34C759' }} />
                       <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                         Run Output
                       </span>
