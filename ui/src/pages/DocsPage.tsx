@@ -111,7 +111,12 @@ ollama pull qwen2.5-coder
         label: 'Start the full app (UI + API server)',
         code: 'npm run dev',
       },
-      { type: 'code', language: 'bash', label: 'Run full Playwright test suite', code: 'npm test' },
+      {
+        type: 'code',
+        language: 'bash',
+        label: 'Run full Playwright test suite',
+        code: 'npm test',
+      },
       {
         type: 'code',
         language: 'bash',

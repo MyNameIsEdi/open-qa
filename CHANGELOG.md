@@ -28,6 +28,14 @@ All notable changes to this project will be documented in this file.
   features (multi-agent collab, Playwright Dashboard, run history, AI
   summaries, Gemini/Ollama switching) as done (`ui/src/pages/DocsPage.tsx`).
 
+### Fixed
+
+- **Prettier formatting** — `DocsPage.tsx` and `PlaywrightDashboard.tsx`
+  normalized to `singleQuote: true` (project `.prettierrc`) after
+  Windows CRLF line-ending conversion masked the issue locally; both files
+  now pass `format:check` on Linux CI (`ui/src/pages/DocsPage.tsx`,
+  `ui/src/pages/PlaywrightDashboard.tsx`).
+
 ### Added
 
 - **Multi-agent collaboration loop** in `/api/qa-agent` — when 2+ agents are
