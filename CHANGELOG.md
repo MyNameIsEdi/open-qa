@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Archived run log restored in full** — `setRunLog` no longer truncates
+  historical run logs to the last 999 lines when restoring an archived run.
+  The `.slice(-999)` cap is now applied only to the live-streaming path,
+  where it is needed to bound unbounded SSE output; the archived-run restore
+  path sets `data.runLog` directly so all historical context is visible
+  (`ui/src/pages/PlaywrightDashboard.tsx`).
+
 ### Changed
 
 - **Design system compliance pass on PlaywrightDashboard** — aligns
