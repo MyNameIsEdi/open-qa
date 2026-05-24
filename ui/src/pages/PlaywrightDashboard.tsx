@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   Play,
   Square,
@@ -53,28 +47,28 @@ import {
   CheckSquare,
   Send,
   Paperclip,
-} from "lucide-react";
-import { OfficeCanvas } from "../office/components/OfficeCanvas";
-import { OfficeState } from "../office/engine/officeState";
-import { loadDefaultLayout, loadOfficeAssets } from "../office/assetLoader";
-import { useSettings, TEAM_MANAGER_ID } from "../context/SettingsContext";
+} from 'lucide-react';
+import { OfficeCanvas } from '../office/components/OfficeCanvas';
+import { OfficeState } from '../office/engine/officeState';
+import { loadDefaultLayout, loadOfficeAssets } from '../office/assetLoader';
+import { useSettings, TEAM_MANAGER_ID } from '../context/SettingsContext';
 import type {
   AgentConfig,
   Attachment,
   Message,
   SpriteType,
   QASummaryData,
-} from "../context/SettingsContext";
-import type { OfficeLayout } from "../office/types";
+} from '../context/SettingsContext';
+import type { OfficeLayout } from '../office/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Status = "passed" | "failed" | "skipped" | "pending" | "running";
-type FilterKey = "all" | "active" | "passed" | "failed" | "skipped";
-type ViewKey = "dashboard" | "docs";
-type DashboardMode = "list" | "matrix";
-type BrowserKey = "chromium" | "firefox" | "webkit";
-type ErrorType = "Timeout" | "Assertion" | "Locator" | "Network" | "Error";
+type Status = 'passed' | 'failed' | 'skipped' | 'pending' | 'running';
+type FilterKey = 'all' | 'active' | 'passed' | 'failed' | 'skipped';
+type ViewKey = 'dashboard' | 'docs';
+type DashboardMode = 'list' | 'matrix';
+type BrowserKey = 'chromium' | 'firefox' | 'webkit';
+type ErrorType = 'Timeout' | 'Assertion' | 'Locator' | 'Network' | 'Error';
 
 interface BrowserResult {
   browser: BrowserKey;
@@ -85,7 +79,7 @@ interface BrowserResult {
 interface TestStep {
   title: string;
   duration: number;
-  status: "passed" | "failed";
+  status: 'passed' | 'failed';
 }
 
 interface TestCase {
@@ -136,10 +130,10 @@ interface PlaywrightConfig {
   retries: number;
   workers: number;
   browsers: { chromium: boolean; firefox: boolean; webkit: boolean };
-  screenshot: "on" | "off" | "only-on-failure";
-  video: "on" | "off" | "retain-on-failure";
-  trace: "on" | "off" | "retain-on-failure" | "on-first-retry";
-  reporter: "html" | "json" | "junit" | "line" | "dot";
+  screenshot: 'on' | 'off' | 'only-on-failure';
+  video: 'on' | 'off' | 'retain-on-failure';
+  trace: 'on' | 'off' | 'retain-on-failure' | 'on-first-retry';
+  reporter: 'html' | 'json' | 'junit' | 'line' | 'dot';
   headed: boolean;
   forbidOnly: boolean;
   fullyParallel: boolean;
@@ -149,22 +143,22 @@ interface PlaywrightConfig {
 }
 
 const DEFAULT_CONFIG: PlaywrightConfig = {
-  baseUrl: "http://localhost:3000",
-  testDir: "./tests",
-  outputDir: "test-results",
+  baseUrl: 'http://localhost:3000',
+  testDir: './tests',
+  outputDir: 'test-results',
   timeout: 30000,
   retries: 1,
   workers: 4,
   browsers: { chromium: true, firefox: false, webkit: false },
-  screenshot: "only-on-failure",
-  video: "retain-on-failure",
-  trace: "on-first-retry",
-  reporter: "html",
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+  trace: 'on-first-retry',
+  reporter: 'html',
   headed: false,
   forbidOnly: true,
   fullyParallel: true,
-  grep: "",
-  grepInvert: "",
+  grep: '',
+  grepInvert: '',
 };
 
 // ─── SSE / request types ──────────────────────────────────────────────────────
@@ -178,11 +172,11 @@ interface RunRequest {
 
 /** Discriminated union for the three structured summary SSE events */
 type SummaryEvent =
-  | { evt: "summary_start" }
-  | { evt: "summary_chunk"; text?: string }
+  | { evt: 'summary_start' }
+  | { evt: 'summary_chunk'; text?: string }
   | {
-      evt: "summary_done";
-      failures?: QASummaryData["failures"];
+      evt: 'summary_done';
+      failures?: QASummaryData['failures'];
       total?: number;
       passed?: number;
       failed?: number;
@@ -190,28 +184,28 @@ type SummaryEvent =
       duration?: number;
     };
 
-const STORAGE_KEY = "pw_dashboard_config_v1";
-const RUN_HISTORY_KEY = "pw_run_history_v1";
-const API_BASE = "http://localhost:3001";
+const STORAGE_KEY = 'pw_dashboard_config_v1';
+const RUN_HISTORY_KEY = 'pw_run_history_v1';
+const API_BASE = 'http://localhost:3001';
 
 const PW_TEXT_EXTENSIONS = new Set([
-  "ts",
-  "tsx",
-  "js",
-  "jsx",
-  "json",
-  "log",
-  "txt",
-  "md",
-  "css",
-  "html",
-  "xml",
-  "yaml",
-  "yml",
-  "sh",
-  "py",
-  "java",
-  "cs",
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'json',
+  'log',
+  'txt',
+  'md',
+  'css',
+  'html',
+  'xml',
+  'yaml',
+  'yml',
+  'sh',
+  'py',
+  'java',
+  'cs',
 ]);
 
 /** Per-sprite accent palette for PW panel agent cards */
@@ -219,11 +213,11 @@ const PW_SPRITE_ACCENT: Record<
   SpriteType,
   { bg: string; ring: string; text: string; bar: string }
 > = {
-  tester: { bg: "#0d2a1a", ring: "#166534", text: "#4ade80", bar: "#22c55e" },
-  dev: { bg: "#0f1f3d", ring: "#1a3a8f", text: "#60a5fa", bar: "#3b82f6" },
-  analyst: { bg: "#1e0a40", ring: "#7c3aed", text: "#c084fc", bar: "#a855f7" },
-  devops: { bg: "#2a0e02", ring: "#c2410c", text: "#fb923c", bar: "#f97316" },
-  manager: { bg: "#2a1200", ring: "#d97706", text: "#E8A728", bar: "#f59e0b" },
+  tester: { bg: '#0d2a1a', ring: '#166534', text: '#4ade80', bar: '#22c55e' },
+  dev: { bg: '#0f1f3d', ring: '#1a3a8f', text: '#60a5fa', bar: '#3b82f6' },
+  analyst: { bg: '#1e0a40', ring: '#7c3aed', text: '#c084fc', bar: '#a855f7' },
+  devops: { bg: '#2a0e02', ring: '#c2410c', text: '#fb923c', bar: '#f97316' },
+  manager: { bg: '#2a1200', ring: '#d97706', text: '#E8A728', bar: '#f59e0b' },
 };
 
 // ─── PW-Dashboard OfficeState singleton ──────────────────────────────────────
@@ -243,11 +237,11 @@ function fmtRunLabel(runAt: string): string {
     const d = new Date(runAt);
     const now = new Date();
     if (d.toDateString() === now.toDateString()) {
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   } catch {
-    return "?";
+    return '?';
   }
 }
 
@@ -272,9 +266,7 @@ function HistoryChart({
   const maxTotal = Math.max(...displayed.map((r) => r.total), 1);
 
   // Moving-average pass rate (window of 3) — gives a smoother trend than per-bar % alone
-  const passRates = displayed.map((r) =>
-    r.total > 0 ? r.passed / r.total : 0,
-  );
+  const passRates = displayed.map((r) => (r.total > 0 ? r.passed / r.total : 0));
   const movingAvg = passRates.map((_, i) => {
     const start = Math.max(0, i - 2);
     const slice = passRates.slice(start, i + 1);
@@ -286,39 +278,30 @@ function HistoryChart({
       <div
         className="rounded-2xl overflow-hidden mb-6"
         style={{
-          backgroundColor: "var(--bg-card)",
-          boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+          backgroundColor: 'var(--bg-card)',
+          boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
         }}
       >
         <div
           className="flex items-center gap-2 px-4 py-2.5 border-b"
           style={{
-            borderColor: "var(--border)",
-            backgroundColor: "var(--bg-body)",
+            borderColor: 'var(--border)',
+            backgroundColor: 'var(--bg-body)',
           }}
         >
-          <TrendingUp size={13} style={{ color: "#3b82f6" }} />
-          <span
-            className="text-xs font-bold"
-            style={{ color: "var(--text-main)" }}
-          >
+          <TrendingUp size={13} style={{ color: '#3b82f6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
             Run History
           </span>
         </div>
-        <div
-          className="px-4 py-4 text-xs text-center"
-          style={{ color: "var(--text-muted)" }}
-        >
-          No run history yet — click <strong>Run Tests</strong> to record your
-          first run.
+        <div className="px-4 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+          No run history yet — click <strong>Run Tests</strong> to record your first run.
         </div>
       </div>
     );
   }
 
-  const hoveredRun = hoverId
-    ? (displayed.find((r) => r.id === hoverId) ?? null)
-    : null;
+  const hoveredRun = hoverId ? (displayed.find((r) => r.id === hoverId) ?? null) : null;
   const hoveredRate =
     hoveredRun && hoveredRun.total > 0
       ? Math.round((hoveredRun.passed / hoveredRun.total) * 100)
@@ -328,52 +311,48 @@ function HistoryChart({
     <div
       className="rounded-2xl overflow-hidden mb-6"
       style={{
-        backgroundColor: "var(--bg-card)",
-        boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+        backgroundColor: 'var(--bg-card)',
+        boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
       }}
     >
       <div
         className="flex items-center justify-between px-4 py-2.5 border-b"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-body)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-body)',
         }}
       >
         <div className="flex items-center gap-2">
-          <TrendingUp size={13} style={{ color: "#3b82f6" }} />
-          <span
-            className="text-xs font-bold"
-            style={{ color: "var(--text-main)" }}
-          >
+          <TrendingUp size={13} style={{ color: '#3b82f6' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
             Run History
           </span>
-          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-            · {runs.length} run{runs.length !== 1 ? "s" : ""} · hover for
-            details · click to view
+          <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            · {runs.length} run{runs.length !== 1 ? 's' : ''} · hover for details · click to view
           </span>
         </div>
         <div className="flex items-center gap-4">
           {(
             [
-              ["#34C759", "Passed"],
-              ["#ef4444", "Failed"],
-              ["#E8A728", "Skipped"],
-              ["#3b82f6", "Pass-rate trend"],
+              ['#34C759', 'Passed'],
+              ['#ef4444', 'Failed'],
+              ['#E8A728', 'Skipped'],
+              ['#3b82f6', 'Pass-rate trend'],
             ] as const
           ).map(([color, label]) => (
             <span
               key={label}
               className="flex items-center gap-1 text-[11px]"
-              style={{ color: "var(--text-muted)" }}
+              style={{ color: 'var(--text-muted)' }}
             >
               <span
                 className={
-                  label === "Pass-rate trend"
-                    ? "inline-block shrink-0"
-                    : "w-2 h-2 rounded-sm inline-block shrink-0"
+                  label === 'Pass-rate trend'
+                    ? 'inline-block shrink-0'
+                    : 'w-2 h-2 rounded-sm inline-block shrink-0'
                 }
                 style={
-                  label === "Pass-rate trend"
+                  label === 'Pass-rate trend'
                     ? {
                         width: 10,
                         height: 2,
@@ -396,19 +375,19 @@ function HistoryChart({
             style={{
               top: 6,
               right: 12,
-              backgroundColor: "#2D2823",
-              color: "#e2e8f0",
-              border: "1px solid rgba(255,255,255,0.08)",
+              backgroundColor: '#2D2823',
+              color: '#e2e8f0',
+              border: '1px solid rgba(255,255,255,0.08)',
               minWidth: 180,
             }}
           >
             <div className="font-bold text-[11px] mb-1 flex items-center justify-between gap-3">
               <span>
                 {new Date(hoveredRun.runAt).toLocaleString([], {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })}
               </span>
               {hoveredRate != null && (
@@ -417,16 +396,12 @@ function HistoryChart({
                   style={{
                     background:
                       hoveredRate >= 80
-                        ? "rgba(16,185,129,0.20)"
+                        ? 'rgba(16,185,129,0.20)'
                         : hoveredRate >= 50
-                          ? "rgba(251,191,36,0.20)"
-                          : "rgba(239,68,68,0.20)",
+                          ? 'rgba(251,191,36,0.20)'
+                          : 'rgba(239,68,68,0.20)',
                     color:
-                      hoveredRate >= 80
-                        ? "#34d399"
-                        : hoveredRate >= 50
-                          ? "#E8A728"
-                          : "#f87171",
+                      hoveredRate >= 80 ? '#34d399' : hoveredRate >= 50 ? '#E8A728' : '#f87171',
                   }}
                 >
                   {hoveredRate}%
@@ -437,36 +412,32 @@ function HistoryChart({
               <span className="flex items-center gap-1">
                 <span
                   className="w-1.5 h-1.5 rounded-sm inline-block"
-                  style={{ backgroundColor: "#34C759" }}
+                  style={{ backgroundColor: '#34C759' }}
                 />
                 {hoveredRun.passed}
               </span>
               <span className="flex items-center gap-1">
                 <span
                   className="w-1.5 h-1.5 rounded-sm inline-block"
-                  style={{ backgroundColor: "#EF4444" }}
+                  style={{ backgroundColor: '#EF4444' }}
                 />
                 {hoveredRun.failed}
               </span>
               <span className="flex items-center gap-1">
                 <span
                   className="w-1.5 h-1.5 rounded-sm inline-block"
-                  style={{ backgroundColor: "#E8A728" }}
+                  style={{ backgroundColor: '#E8A728' }}
                 />
                 {hoveredRun.skipped}
               </span>
-              <span className="opacity-60 ml-auto">
-                {formatMs(hoveredRun.duration)}
-              </span>
+              <span className="opacity-60 ml-auto">{formatMs(hoveredRun.duration)}</span>
             </div>
             {hoveredRun.spec && (
               <div
                 className="font-mono opacity-60 text-[9px] truncate mt-1"
                 title={hoveredRun.spec}
               >
-                {hoveredRun.spec
-                  .replace(/^tests[\\/]/g, "")
-                  .replace(/\.spec\.(ts|js)/g, "")}
+                {hoveredRun.spec.replace(/^tests[\\/]/g, '').replace(/\.spec\.(ts|js)/g, '')}
               </div>
             )}
           </div>
@@ -494,7 +465,7 @@ function HistoryChart({
                   const y = CHART_H - r * CHART_H;
                   return `${x},${y}`;
                 })
-                .join(" ")}
+                .join(' ')}
             />
           </svg>
           {displayed.map((run, i) => {
@@ -509,74 +480,69 @@ function HistoryChart({
                 key={run.id}
                 onClick={() => onSelect(run.id)}
                 onMouseEnter={() => setHoverId(run.id)}
-                onMouseLeave={() =>
-                  setHoverId((prev) => (prev === run.id ? null : prev))
-                }
+                onMouseLeave={() => setHoverId((prev) => (prev === run.id ? null : prev))}
                 style={{
                   flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
                   gap: 5,
-                  cursor: "pointer",
-                  opacity:
-                    selectedId === null || isSelected || isHover ? 1 : 0.55,
-                  transition: "opacity 150ms",
+                  cursor: 'pointer',
+                  opacity: selectedId === null || isSelected || isHover ? 1 : 0.55,
+                  transition: 'opacity 150ms',
                 }}
               >
                 <div
                   style={{
                     flex: 1,
-                    width: "100%",
-                    position: "relative",
+                    width: '100%',
+                    position: 'relative',
                     outline: isSelected
-                      ? "2px solid #1a3a8f"
+                      ? '2px solid #1a3a8f'
                       : isHover
-                        ? "2px solid rgba(26,58,143,0.4)"
+                        ? '2px solid rgba(26,58,143,0.4)'
                         : undefined,
                     borderRadius: 3,
-                    transform:
-                      isHover && !isSelected ? "translateY(-1px)" : undefined,
-                    transition: "transform 120ms",
+                    transform: isHover && !isSelected ? 'translateY(-1px)' : undefined,
+                    transition: 'transform 120ms',
                   }}
                 >
                   {passH > 0 && (
                     <div
                       style={{
-                        position: "absolute",
+                        position: 'absolute',
                         bottom: 0,
                         left: 0,
                         right: 0,
                         height: passH,
-                        backgroundColor: "#34C759",
-                        borderRadius:
-                          failH === 0 && skipH === 0 ? "3px 3px 0 0" : "0",
+                        backgroundColor: '#34C759',
+                        borderRadius: failH === 0 && skipH === 0 ? '3px 3px 0 0' : '0',
                       }}
                     />
                   )}
                   {failH > 0 && (
                     <div
                       style={{
-                        position: "absolute",
+                        position: 'absolute',
                         bottom: passH,
                         left: 0,
                         right: 0,
                         height: failH,
-                        backgroundColor: "#ef4444",
-                        borderRadius: skipH === 0 ? "3px 3px 0 0" : "0",
+                        backgroundColor: '#ef4444',
+                        borderRadius: skipH === 0 ? '3px 3px 0 0' : '0',
                       }}
                     />
                   )}
                   {skipH > 0 && (
                     <div
                       style={{
-                        position: "absolute",
+                        position: 'absolute',
                         bottom: passH + failH,
                         left: 0,
                         right: 0,
                         height: skipH,
-                        backgroundColor: "#E8A728",
-                        borderRadius: "3px 3px 0 0",
+                        backgroundColor: '#E8A728',
+                        borderRadius: '3px 3px 0 0',
                       }}
                     />
                   )}
@@ -584,8 +550,8 @@ function HistoryChart({
                     <span
                       className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
                       style={{
-                        backgroundColor: "#1a3a8f",
-                        boxShadow: "0 0 0 2px var(--bg-card)",
+                        backgroundColor: '#1a3a8f',
+                        boxShadow: '0 0 0 2px var(--bg-card)',
                       }}
                       title="Latest run"
                     />
@@ -596,8 +562,7 @@ function HistoryChart({
                     fontSize: 9,
                     flexShrink: 0,
                     lineHeight: 1,
-                    color:
-                      isSelected || isHover ? "#1a3a8f" : "var(--text-muted)",
+                    color: isSelected || isHover ? '#1a3a8f' : 'var(--text-muted)',
                     fontWeight: isSelected ? 700 : isHover ? 600 : 400,
                   }}
                 >
@@ -646,27 +611,24 @@ function RunsPanel({
     <div
       className="rounded-2xl overflow-hidden mb-8"
       style={{
-        backgroundColor: "var(--bg-card)",
-        boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+        backgroundColor: 'var(--bg-card)',
+        boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
       }}
     >
       {/* ── header ── */}
       <button
         className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors"
         onClick={() => setOpen((o) => !o)}
-        style={{ backgroundColor: "var(--bg-body)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+        style={{ backgroundColor: 'var(--bg-body)' }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
       >
-        <Clock size={13} style={{ color: "#6366f1" }} />
-        <span
-          className="text-xs font-bold"
-          style={{ color: "var(--text-main)" }}
-        >
+        <Clock size={13} style={{ color: '#6366f1' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
           Run History
         </span>
-        <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-          · {runs.length} run{runs.length !== 1 ? "s" : ""} recorded
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          · {runs.length} run{runs.length !== 1 ? 's' : ''} recorded
         </span>
         {isDemo && (
           <span className="text-[10px] px-2 py-px rounded-full bg-amber-50 text-amber-600 border border-amber-200">
@@ -677,9 +639,9 @@ function RunsPanel({
           <span
             className="text-[10px] font-bold px-2 py-px rounded-full"
             style={{
-              background: "rgba(26,58,143,0.08)",
-              color: "#1a3a8f",
-              border: "1px solid rgba(26,58,143,0.2)",
+              background: 'rgba(26,58,143,0.08)',
+              color: '#1a3a8f',
+              border: '1px solid rgba(26,58,143,0.2)',
             }}
           >
             viewing #{total - runs.findIndex((r) => r.id === selectedId)}
@@ -693,7 +655,7 @@ function RunsPanel({
                 onLoadLatest();
               }}
               className="text-[11px] font-semibold hover:underline"
-              style={{ color: "#1a3a8f" }}
+              style={{ color: '#1a3a8f' }}
             >
               ← Latest
             </button>
@@ -705,20 +667,14 @@ function RunsPanel({
                 setConfirmClear(true);
               }}
               className="text-[11px] font-semibold hover:underline"
-              style={{ color: "var(--text-muted)" }}
+              style={{ color: 'var(--text-muted)' }}
             >
               Clear history
             </button>
           )}
           {!isDemo && confirmClear && (
-            <span
-              className="flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span
-                className="text-[11px]"
-                style={{ color: "var(--text-muted)" }}
-              >
+            <span className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                 Are you sure?
               </span>
               <button
@@ -733,85 +689,73 @@ function RunsPanel({
               <button
                 onClick={() => setConfirmClear(false)}
                 className="text-[11px] font-semibold hover:underline"
-                style={{ color: "var(--text-muted)" }}
+                style={{ color: 'var(--text-muted)' }}
               >
                 Cancel
               </button>
             </span>
           )}
           {open ? (
-            <ChevronUp size={13} style={{ color: "var(--text-muted)" }} />
+            <ChevronUp size={13} style={{ color: 'var(--text-muted)' }} />
           ) : (
-            <ChevronDown size={13} style={{ color: "var(--text-muted)" }} />
+            <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
           )}
         </div>
       </button>
 
       {/* ── table ── */}
       {open && (
-        <div
-          className="overflow-x-auto border-t"
-          style={{ borderColor: "var(--border)" }}
-        >
+        <div className="overflow-x-auto border-t" style={{ borderColor: 'var(--border)' }}>
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderBottom: '1px solid var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
                 <th
                   className="text-left px-4 py-2 font-semibold w-8"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   #
                 </th>
                 <th
                   className="text-left px-2 py-2 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Date
                 </th>
                 <th
                   className="text-left px-2 py-2 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Spec
                 </th>
                 <th
                   className="text-right px-3 py-2 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Total
                 </th>
-                <th
-                  className="text-right px-3 py-2 font-semibold"
-                  style={{ color: "#16A34A" }}
-                >
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#16A34A' }}>
                   ✓
                 </th>
-                <th
-                  className="text-right px-3 py-2 font-semibold"
-                  style={{ color: "#EF4444" }}
-                >
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#EF4444' }}>
                   ✗
                 </th>
-                <th
-                  className="text-right px-3 py-2 font-semibold"
-                  style={{ color: "#D97706" }}
-                >
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#D97706' }}>
                   –
                 </th>
                 <th
                   className="text-right px-3 py-2 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Duration
                 </th>
                 <th
                   className="text-right px-4 py-2 font-semibold"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Pass %
                 </th>
@@ -823,46 +767,35 @@ function RunsPanel({
                 const prevRun = runs[i + 1]; // runs[0] = newest
                 const dFail = prevRun != null ? run.failed - prevRun.failed : 0;
                 const hasDelta = prevRun != null && dFail !== 0;
-                const rate =
-                  run.total > 0
-                    ? Math.round((run.passed / run.total) * 100)
-                    : 0;
+                const rate = run.total > 0 ? Math.round((run.passed / run.total) * 100) : 0;
                 const runNum = total - i;
 
                 return (
                   <tr
                     key={run.id}
                     onClick={() => !isDemo && onSelect(run.id)}
-                    className={`transition-colors ${isDemo ? "" : "cursor-pointer"}`}
+                    className={`transition-colors ${isDemo ? '' : 'cursor-pointer'}`}
                     style={{
-                      borderBottom:
-                        i < runs.length - 1
-                          ? "1px solid var(--border)"
-                          : undefined,
-                      backgroundColor: isSelected
-                        ? "rgba(26,58,143,0.06)"
-                        : "var(--bg-card)",
+                      borderBottom: i < runs.length - 1 ? '1px solid var(--border)' : undefined,
+                      backgroundColor: isSelected ? 'rgba(26,58,143,0.06)' : 'var(--bg-card)',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && !isDemo)
-                        (e.currentTarget as HTMLElement).style.backgroundColor =
-                          "var(--bg-body)";
+                        (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)';
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor =
-                        isSelected ? "rgba(26,58,143,0.06)" : "var(--bg-card)";
+                      (e.currentTarget as HTMLElement).style.backgroundColor = isSelected
+                        ? 'rgba(26,58,143,0.06)'
+                        : 'var(--bg-card)';
                     }}
                   >
                     {/* # */}
                     <td
                       className="px-4 py-2.5 font-mono text-[11px]"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {isSelected ? (
-                        <span
-                          className="font-bold"
-                          style={{ color: "#1a3a8f" }}
-                        >
+                        <span className="font-bold" style={{ color: '#1a3a8f' }}>
                           #{runNum}
                         </span>
                       ) : (
@@ -872,24 +805,21 @@ function RunsPanel({
                     {/* Date + latest badge */}
                     <td className="px-2 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span
-                          className="font-medium"
-                          style={{ color: "var(--text-main)" }}
-                        >
+                        <span className="font-medium" style={{ color: 'var(--text-main)' }}>
                           {new Date(run.runAt).toLocaleString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
                           })}
                         </span>
                         {i === 0 && (
                           <span
                             className="text-[10px] font-bold px-1.5 py-px rounded-full shrink-0"
                             style={{
-                              background: "rgba(26,58,143,0.08)",
-                              color: "#1a3a8f",
-                              border: "1px solid rgba(26,58,143,0.2)",
+                              background: 'rgba(26,58,143,0.08)',
+                              color: '#1a3a8f',
+                              border: '1px solid rgba(26,58,143,0.2)',
                             }}
                           >
                             latest
@@ -901,14 +831,14 @@ function RunsPanel({
                             style={
                               dFail > 0
                                 ? {
-                                    background: "rgba(239,68,68,0.08)",
-                                    color: "#EF4444",
-                                    border: "1px solid rgba(239,68,68,0.2)",
+                                    background: 'rgba(239,68,68,0.08)',
+                                    color: '#EF4444',
+                                    border: '1px solid rgba(239,68,68,0.2)',
                                   }
                                 : {
-                                    background: "rgba(52,199,89,0.08)",
-                                    color: "#16A34A",
-                                    border: "1px solid rgba(52,199,89,0.2)",
+                                    background: 'rgba(52,199,89,0.08)',
+                                    color: '#16A34A',
+                                    border: '1px solid rgba(52,199,89,0.2)',
                                   }
                             }
                           >
@@ -922,40 +852,37 @@ function RunsPanel({
                       {run.spec ? (
                         <span
                           className="font-mono text-[10px] truncate block"
-                          style={{ color: "var(--text-muted)" }}
+                          style={{ color: 'var(--text-muted)' }}
                         >
                           {
                             run.spec
-                              .replace(/^tests[\\/]/g, "") // strip leading tests/
-                              .replace(/,tests[\\/]/g, ", ") // strip tests/ after comma
-                              .replace(/\.spec\.(ts|js)/g, "") // strip .spec.ts extension
+                              .replace(/^tests[\\/]/g, '') // strip leading tests/
+                              .replace(/,tests[\\/]/g, ', ') // strip tests/ after comma
+                              .replace(/\.spec\.(ts|js)/g, '') // strip .spec.ts extension
                           }
                         </span>
                       ) : (
-                        <span
-                          className="text-[10px]"
-                          style={{ color: "var(--text-muted)" }}
-                        >
+                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                           all
                         </span>
                       )}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {run.total}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono font-semibold"
-                      style={{ color: "#16A34A" }}
+                      style={{ color: '#16A34A' }}
                     >
                       {run.passed}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono font-semibold"
                       style={{
-                        color: run.failed > 0 ? "#EF4444" : "var(--text-muted)",
+                        color: run.failed > 0 ? '#EF4444' : 'var(--text-muted)',
                       }}
                     >
                       {run.failed}
@@ -963,21 +890,20 @@ function RunsPanel({
                     <td
                       className="px-3 py-2.5 text-right font-mono"
                       style={{
-                        color:
-                          run.skipped > 0 ? "#D97706" : "var(--text-muted)",
+                        color: run.skipped > 0 ? '#D97706' : 'var(--text-muted)',
                       }}
                     >
                       {run.skipped}
                     </td>
                     <td
                       className="px-3 py-2.5 text-right font-mono text-[11px]"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {formatMs(run.duration)}
                     </td>
                     <td
                       className="px-4 py-2.5 text-right font-bold"
-                      style={{ color: rate >= 80 ? "#16A34A" : "#EF4444" }}
+                      style={{ color: rate >= 80 ? '#16A34A' : '#EF4444' }}
                     >
                       {rate}%
                     </td>
@@ -996,16 +922,14 @@ function RunsPanel({
 
 function generateConfig(c: PlaywrightConfig): string {
   const DEVICE_MAP: Record<string, string> = {
-    chromium: "Desktop Chrome",
-    firefox: "Desktop Firefox",
-    webkit: "Desktop Safari",
+    chromium: 'Desktop Chrome',
+    firefox: 'Desktop Firefox',
+    webkit: 'Desktop Safari',
   };
   const browsers = (Object.keys(c.browsers) as Array<keyof typeof c.browsers>)
     .filter((k) => c.browsers[k])
-    .map(
-      (k) => `    { name: '${k}', use: { ...devices['${DEVICE_MAP[k]}'] } },`,
-    )
-    .join("\n");
+    .map((k) => `    { name: '${k}', use: { ...devices['${DEVICE_MAP[k]}'] } },`)
+    .join('\n');
 
   return `import { defineConfig, devices } from '@playwright/test'
 
@@ -1028,7 +952,7 @@ export default defineConfig({
   },
 
   projects: [
-${browsers || "    // No browsers selected"}
+${browsers || '    // No browsers selected'}
   ],
 })`;
 }
@@ -1036,92 +960,76 @@ ${browsers || "    // No browsers selected"}
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatMs(ms: number) {
-  if (ms === 0) return "—";
+  if (ms === 0) return '—';
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
   const s = size;
-  if (status === "passed")
-    return (
-      <CheckCircle2
-        size={s}
-        className="shrink-0"
-        style={{ color: "#34C759" }}
-      />
-    );
-  if (status === "failed")
-    return (
-      <XCircle size={s} className="shrink-0" style={{ color: "#EF4444" }} />
-    );
-  if (status === "skipped")
-    return (
-      <MinusCircle size={s} className="shrink-0" style={{ color: "#E8A728" }} />
-    );
-  if (status === "running")
+  if (status === 'passed')
+    return <CheckCircle2 size={s} className="shrink-0" style={{ color: '#34C759' }} />;
+  if (status === 'failed')
+    return <XCircle size={s} className="shrink-0" style={{ color: '#EF4444' }} />;
+  if (status === 'skipped')
+    return <MinusCircle size={s} className="shrink-0" style={{ color: '#E8A728' }} />;
+  if (status === 'running')
     return (
       <span className="inline-block shrink-0" style={{ width: s, height: s }}>
         <span className="block w-full h-full rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
       </span>
     );
-  return (
-    <Circle
-      size={s}
-      className="shrink-0"
-      style={{ color: "var(--text-muted)" }}
-    />
-  );
+  return <Circle size={s} className="shrink-0" style={{ color: 'var(--text-muted)' }} />;
 }
 
 function StatusBadge({ status }: { status: Status }) {
-  const base = "text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide";
-  if (status === "passed")
+  const base = 'text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide';
+  if (status === 'passed')
     return (
       <span
         className={`${base}`}
         style={{
-          background: "rgba(52,199,89,0.12)",
-          color: "#16A34A",
-          border: "1px solid rgba(52,199,89,0.2)",
+          background: 'rgba(52,199,89,0.12)',
+          color: '#16A34A',
+          border: '1px solid rgba(52,199,89,0.2)',
         }}
       >
         pass
       </span>
     );
-  if (status === "failed")
+  if (status === 'failed')
     return (
       <span
         className={`${base}`}
         style={{
-          background: "rgba(239,68,68,0.12)",
-          color: "#DC2626",
-          border: "1px solid rgba(239,68,68,0.2)",
+          background: 'rgba(239,68,68,0.12)',
+          color: '#DC2626',
+          border: '1px solid rgba(239,68,68,0.2)',
         }}
       >
         fail
       </span>
     );
-  if (status === "skipped")
+  if (status === 'skipped')
     return (
       <span
         className={`${base}`}
         style={{
-          background: "rgba(232,167,40,0.12)",
-          color: "#D97706",
-          border: "1px solid rgba(232,167,40,0.2)",
+          background: 'rgba(232,167,40,0.12)',
+          color: '#D97706',
+          border: '1px solid rgba(232,167,40,0.2)',
         }}
       >
         skip
       </span>
     );
-  if (status === "running")
+  if (status === 'running')
     return (
       <span
         className={`${base}`}
         style={{
-          background: "rgba(26,58,143,0.12)",
-          color: "#1a3a8f",
-          border: "1px solid rgba(26,58,143,0.2)",
+          background: 'rgba(26,58,143,0.12)',
+          color: '#1a3a8f',
+          border: '1px solid rgba(26,58,143,0.2)',
         }}
       >
         running…
@@ -1131,9 +1039,9 @@ function StatusBadge({ status }: { status: Status }) {
     <span
       className={`${base}`}
       style={{
-        background: "rgba(148,163,184,0.1)",
-        color: "#94a3b8",
-        border: "1px solid rgba(148,163,184,0.15)",
+        background: 'rgba(148,163,184,0.1)',
+        color: '#94a3b8',
+        border: '1px solid rgba(148,163,184,0.15)',
       }}
     >
       pending
@@ -1143,24 +1051,18 @@ function StatusBadge({ status }: { status: Status }) {
 
 // ─── Settings Sub-components ──────────────────────────────────────────────────
 
-function ToggleSwitch({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-      style={{ backgroundColor: checked ? "#1a3a8f" : "#d1d5db" }}
+      style={{ backgroundColor: checked ? '#1a3a8f' : '#d1d5db' }}
     >
       <span
         className="inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition-transform duration-200"
-        style={{ transform: checked ? "translateX(18px)" : "translateX(2px)" }}
+        style={{ transform: checked ? 'translateX(18px)' : 'translateX(2px)' }}
       />
     </button>
   );
@@ -1181,9 +1083,9 @@ function SelectControl({
       onChange={(e) => onChange(e.target.value)}
       className="px-3 py-1.5 rounded-lg border text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
       style={{
-        borderColor: "var(--border)",
-        backgroundColor: "var(--bg-body)",
-        color: "var(--text-main)",
+        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg-body)',
+        color: 'var(--text-main)',
       }}
     >
       {options.map((o) => (
@@ -1199,7 +1101,7 @@ function TextInput({
   value,
   onChange,
   mono = true,
-  width = "w-48",
+  width = 'w-48',
   placeholder,
 }: {
   value: string;
@@ -1214,11 +1116,11 @@ function TextInput({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className={`px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${mono ? "font-mono" : ""} ${width}`}
+      className={`px-3 py-1.5 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${mono ? 'font-mono' : ''} ${width}`}
       style={{
-        borderColor: "var(--border)",
-        backgroundColor: "var(--bg-body)",
-        color: "var(--text-main)",
+        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg-body)',
+        color: 'var(--text-main)',
       }}
     />
   );
@@ -1236,20 +1138,14 @@ function SettingRow({
   return (
     <div
       className="flex items-center justify-between gap-6 py-3 border-b last:border-0"
-      style={{ borderColor: "var(--border)" }}
+      style={{ borderColor: 'var(--border)' }}
     >
       <div className="min-w-0">
-        <p
-          className="text-xs font-semibold"
-          style={{ color: "var(--text-main)" }}
-        >
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
           {label}
         </p>
         {desc && (
-          <p
-            className="text-[11px] mt-0.5 leading-relaxed"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
             {desc}
           </p>
         )}
@@ -1275,37 +1171,34 @@ function SettingCard({
   return (
     <div
       className="rounded-2xl border overflow-hidden shadow-sm"
-      style={{ borderColor: warning ? "#fca5a5" : "var(--border)" }}
+      style={{ borderColor: warning ? '#fca5a5' : 'var(--border)' }}
     >
       <div
         className="flex items-center gap-2.5 px-4 py-3 border-b"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-body)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-body)',
         }}
       >
-        <span style={{ color: warning ? "#ef4444" : "#3b82f6" }}>{icon}</span>
+        <span style={{ color: warning ? '#ef4444' : '#3b82f6' }}>{icon}</span>
         <div className="flex-1 min-w-0">
-          <p
-            className="text-xs font-bold"
-            style={{ color: "var(--text-main)" }}
-          >
+          <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
             {title}
           </p>
-          <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
             {subtitle}
           </p>
         </div>
         {warning && (
           <span
             className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0"
-            style={{ background: "#fee2e2", color: "#b91c1c" }}
+            style={{ background: '#fee2e2', color: '#b91c1c' }}
           >
             <AlertTriangle size={10} /> {warning}
           </span>
         )}
       </div>
-      <div className="px-4" style={{ backgroundColor: "var(--bg-card)" }}>
+      <div className="px-4" style={{ backgroundColor: 'var(--bg-card)' }}>
         {children}
       </div>
     </div>
@@ -1326,54 +1219,54 @@ interface Preset {
 
 /** Shared Playwright config for all SV Students suites (Render free-tier) */
 const SV_CONFIG: Partial<PlaywrightConfig> = {
-  baseUrl: "https://sv-students-recommend.onrender.com",
-  testDir: "./tests",
+  baseUrl: 'https://sv-students-recommend.onrender.com',
+  testDir: './tests',
   timeout: 60000,
   retries: 1,
   workers: 1,
   headed: false,
   fullyParallel: false,
   browsers: { chromium: true, firefox: false, webkit: false },
-  screenshot: "only-on-failure",
-  video: "retain-on-failure",
-  trace: "on-first-retry",
-  reporter: "html",
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+  trace: 'on-first-retry',
+  reporter: 'html',
 };
 
 // Bare filenames — no path prefix — matching what /api/playwright/specs returns.
 // The server prepends 'tests/' when building the Playwright CLI args.
 const SV_ALL_SPECS = [
-  "sv-login.spec.ts",
-  "sv-register.spec.ts",
-  "sv-home.spec.ts",
-  "sv-api.spec.ts",
-  "sv-docs.spec.ts",
-  "sv-a11y.spec.ts",
-  "sv-navigation.spec.ts",
+  'sv-login.spec.ts',
+  'sv-register.spec.ts',
+  'sv-home.spec.ts',
+  'sv-api.spec.ts',
+  'sv-docs.spec.ts',
+  'sv-a11y.spec.ts',
+  'sv-navigation.spec.ts',
 ];
 
 const PRESETS: Preset[] = [
   {
-    label: "Local Dev",
+    label: 'Local Dev',
     icon: <Monitor size={13} />,
-    description: "Headed, all artifacts on, fast feedback loop",
-    color: "#059669",
+    description: 'Headed, all artifacts on, fast feedback loop',
+    color: '#059669',
     config: {
       headed: true,
       retries: 0,
       workers: 2,
       timeout: 30000,
-      trace: "on",
-      screenshot: "on",
-      video: "on",
-      reporter: "html",
+      trace: 'on',
+      screenshot: 'on',
+      video: 'on',
+      reporter: 'html',
     },
   },
   {
-    label: "CI / CD",
+    label: 'CI / CD',
     icon: <Zap size={13} />,
-    description: "Headless, JUnit reporter, 2 retries, 1 worker",
-    color: "#1a3a8f",
+    description: 'Headless, JUnit reporter, 2 retries, 1 worker',
+    color: '#1a3a8f',
     config: {
       headed: false,
       timeout: 60000,
@@ -1381,62 +1274,62 @@ const PRESETS: Preset[] = [
       workers: 1,
       forbidOnly: true,
       fullyParallel: true,
-      trace: "on-first-retry",
-      screenshot: "only-on-failure",
-      video: "retain-on-failure",
-      reporter: "junit",
+      trace: 'on-first-retry',
+      screenshot: 'only-on-failure',
+      video: 'retain-on-failure',
+      reporter: 'junit',
     },
   },
   {
-    label: "SV: All",
+    label: 'SV: All',
     icon: <FlaskConical size={13} />,
-    description: "Full SV Students suite — all 7 spec files",
-    color: "#0891b2",
+    description: 'Full SV Students suite — all 7 spec files',
+    color: '#0891b2',
     specs: SV_ALL_SPECS,
     config: SV_CONFIG,
   },
   {
-    label: "SV: Login",
+    label: 'SV: Login',
     icon: <Hash size={13} />,
-    description: "Login structure, validation, forgot-password & register",
-    color: "#7c3aed",
-    specs: ["sv-login.spec.ts", "sv-register.spec.ts"],
+    description: 'Login structure, validation, forgot-password & register',
+    color: '#7c3aed',
+    specs: ['sv-login.spec.ts', 'sv-register.spec.ts'],
     config: SV_CONFIG,
   },
   {
-    label: "SV: Home",
+    label: 'SV: Home',
     icon: <Layers size={13} />,
-    description: "Home feed — auth redirect, structure, filters, modals",
-    color: "#d97706",
-    specs: ["sv-home.spec.ts"],
+    description: 'Home feed — auth redirect, structure, filters, modals',
+    color: '#d97706',
+    specs: ['sv-home.spec.ts'],
     config: SV_CONFIG,
   },
   {
-    label: "SV: API",
+    label: 'SV: API',
     icon: <Globe size={13} />,
-    description: "Public & authenticated REST API endpoints",
-    color: "#059669",
-    specs: ["sv-api.spec.ts"],
+    description: 'Public & authenticated REST API endpoints',
+    color: '#059669',
+    specs: ['sv-api.spec.ts'],
     config: SV_CONFIG,
   },
   {
-    label: "SV: Docs & A11y",
+    label: 'SV: Docs & A11y',
     icon: <BookOpen size={13} />,
-    description: "Swagger UI rendering + Hebrew accessibility page",
-    color: "#e11d48",
-    specs: ["sv-docs.spec.ts", "sv-a11y.spec.ts"],
+    description: 'Swagger UI rendering + Hebrew accessibility page',
+    color: '#e11d48',
+    specs: ['sv-docs.spec.ts', 'sv-a11y.spec.ts'],
     config: SV_CONFIG,
   },
 ];
 
 // ─── Settings View ────────────────────────────────────────────────────────────
 
-const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig["reporter"], string> = {
-  html: "Interactive HTML report — best for local debugging and sharing results",
-  json: "Raw JSON output — ideal for CI pipelines and custom tooling",
-  junit: "JUnit XML — compatible with Jenkins, GitLab CI, and most CI/CD tools",
-  line: "Single-line per test — minimal and fast output in terminal",
-  dot: "One dot per test — ultra-compact, ideal for large suites in CI",
+const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
+  html: 'Interactive HTML report — best for local debugging and sharing results',
+  json: 'Raw JSON output — ideal for CI pipelines and custom tooling',
+  junit: 'JUnit XML — compatible with Jenkins, GitLab CI, and most CI/CD tools',
+  line: 'Single-line per test — minimal and fast output in terminal',
+  dot: 'One dot per test — ultra-compact, ideal for large suites in CI',
 };
 
 function SettingsView({
@@ -1453,10 +1346,8 @@ function SettingsView({
   const configCode = useMemo(() => generateConfig(config), [config]);
   const noBrowsers = !Object.values(config.browsers).some(Boolean);
 
-  const set = <K extends keyof PlaywrightConfig>(
-    key: K,
-    value: PlaywrightConfig[K],
-  ) => onChange({ ...config, [key]: value });
+  const set = <K extends keyof PlaywrightConfig>(key: K, value: PlaywrightConfig[K]) =>
+    onChange({ ...config, [key]: value });
 
   const copyConfig = async () => {
     await navigator.clipboard.writeText(configCode);
@@ -1465,19 +1356,18 @@ function SettingsView({
   };
 
   const downloadConfig = () => {
-    const blob = new Blob([configCode], { type: "text/plain" });
+    const blob = new Blob([configCode], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = "playwright.config.ts";
+    a.download = 'playwright.config.ts';
     a.click();
     URL.revokeObjectURL(url);
     setDownloaded(true);
     setTimeout(() => setDownloaded(false), 2000);
   };
 
-  const applyPreset = (preset: Preset) =>
-    onChange({ ...config, ...preset.config });
+  const applyPreset = (preset: Preset) => onChange({ ...config, ...preset.config });
 
   return (
     <div className="flex flex-col gap-5">
@@ -1485,32 +1375,26 @@ function SettingsView({
       {!noPresets && (
         <div
           className="rounded-2xl overflow-hidden"
-          style={{ boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)" }}
+          style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
         >
           <div
             className="flex items-center gap-2 px-4 py-2.5 border-b"
             style={{
-              borderColor: "var(--border)",
-              backgroundColor: "var(--bg-body)",
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-body)',
             }}
           >
-            <Zap size={13} style={{ color: "#8b5cf6" }} />
-            <span
-              className="text-xs font-bold"
-              style={{ color: "var(--text-main)" }}
-            >
+            <Zap size={13} style={{ color: '#8b5cf6' }} />
+            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
               Quick Presets
             </span>
-            <span
-              className="text-[11px]"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
               — one click to apply a battle-tested configuration
             </span>
           </div>
           <div
             className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4"
-            style={{ backgroundColor: "var(--bg-card)" }}
+            style={{ backgroundColor: 'var(--bg-card)' }}
           >
             {PRESETS.map((preset) => (
               <button
@@ -1518,30 +1402,27 @@ function SettingsView({
                 onClick={() => applyPreset(preset)}
                 className="flex flex-col items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = preset.color;
-                  e.currentTarget.style.backgroundColor = "var(--bg-card)";
+                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border)";
-                  e.currentTarget.style.backgroundColor = "var(--bg-body)";
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-body)';
                 }}
               >
                 <div className="flex items-center gap-1.5">
                   <span style={{ color: preset.color }}>{preset.icon}</span>
-                  <span
-                    className="text-xs font-bold"
-                    style={{ color: "var(--text-main)" }}
-                  >
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                     {preset.label}
                   </span>
                 </div>
                 <span
                   className="text-[11px] leading-relaxed"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {preset.description}
                 </span>
@@ -1561,88 +1442,60 @@ function SettingsView({
             title="General"
             subtitle="Base URL, timeouts, parallelism and CI options"
           >
-            <SettingRow
-              label="Base URL"
-              desc="Root URL used in page.goto('/path') calls"
-            >
-              <TextInput
-                value={config.baseUrl}
-                onChange={(v) => set("baseUrl", v)}
-                width="w-52"
-              />
+            <SettingRow label="Base URL" desc="Root URL used in page.goto('/path') calls">
+              <TextInput value={config.baseUrl} onChange={(v) => set('baseUrl', v)} width="w-52" />
             </SettingRow>
-            <SettingRow
-              label="Timeout"
-              desc="Default assertion + action timeout per test"
-            >
+            <SettingRow label="Timeout" desc="Default assertion + action timeout per test">
               <SelectControl
                 value={String(config.timeout)}
-                onChange={(v) => set("timeout", Number(v))}
+                onChange={(v) => set('timeout', Number(v))}
                 options={[
-                  { value: "10000", label: "10 s" },
-                  { value: "20000", label: "20 s" },
-                  { value: "30000", label: "30 s" },
-                  { value: "60000", label: "60 s" },
-                  { value: "120000", label: "120 s" },
+                  { value: '10000', label: '10 s' },
+                  { value: '20000', label: '20 s' },
+                  { value: '30000', label: '30 s' },
+                  { value: '60000', label: '60 s' },
+                  { value: '120000', label: '120 s' },
                 ]}
               />
             </SettingRow>
-            <SettingRow
-              label="Retries"
-              desc="Automatically retry failing tests"
-            >
+            <SettingRow label="Retries" desc="Automatically retry failing tests">
               <SelectControl
                 value={String(config.retries)}
-                onChange={(v) => set("retries", Number(v))}
+                onChange={(v) => set('retries', Number(v))}
                 options={[
-                  { value: "0", label: "0 — disabled" },
-                  { value: "1", label: "1 retry" },
-                  { value: "2", label: "2 retries" },
-                  { value: "3", label: "3 retries" },
+                  { value: '0', label: '0 — disabled' },
+                  { value: '1', label: '1 retry' },
+                  { value: '2', label: '2 retries' },
+                  { value: '3', label: '3 retries' },
                 ]}
               />
             </SettingRow>
-            <SettingRow
-              label="Workers"
-              desc="Parallel worker processes for test execution"
-            >
+            <SettingRow label="Workers" desc="Parallel worker processes for test execution">
               <SelectControl
                 value={String(config.workers)}
-                onChange={(v) => set("workers", Number(v))}
+                onChange={(v) => set('workers', Number(v))}
                 options={[
-                  { value: "1", label: "1 (serial)" },
-                  { value: "2", label: "2 workers" },
-                  { value: "4", label: "4 workers" },
-                  { value: "8", label: "8 workers" },
+                  { value: '1', label: '1 (serial)' },
+                  { value: '2', label: '2 workers' },
+                  { value: '4', label: '4 workers' },
+                  { value: '8', label: '8 workers' },
                 ]}
               />
             </SettingRow>
-            <SettingRow
-              label="Fully Parallel"
-              desc="Each test file runs in its own worker process"
-            >
+            <SettingRow label="Fully Parallel" desc="Each test file runs in its own worker process">
               <ToggleSwitch
                 checked={config.fullyParallel}
-                onChange={(v) => set("fullyParallel", v)}
+                onChange={(v) => set('fullyParallel', v)}
               />
             </SettingRow>
             <SettingRow
               label="Forbid .only"
               desc="Fail the run if test.only is accidentally committed"
             >
-              <ToggleSwitch
-                checked={config.forbidOnly}
-                onChange={(v) => set("forbidOnly", v)}
-              />
+              <ToggleSwitch checked={config.forbidOnly} onChange={(v) => set('forbidOnly', v)} />
             </SettingRow>
-            <SettingRow
-              label="Headed mode"
-              desc="Run tests with a visible browser window"
-            >
-              <ToggleSwitch
-                checked={config.headed}
-                onChange={(v) => set("headed", v)}
-              />
+            <SettingRow label="Headed mode" desc="Run tests with a visible browser window">
+              <ToggleSwitch checked={config.headed} onChange={(v) => set('headed', v)} />
             </SettingRow>
           </SettingCard>
 
@@ -1652,15 +1505,8 @@ function SettingsView({
             title="Test Paths"
             subtitle="Directories for specs and output artifacts"
           >
-            <SettingRow
-              label="Test directory"
-              desc="Root folder Playwright scans for spec files"
-            >
-              <TextInput
-                value={config.testDir}
-                onChange={(v) => set("testDir", v)}
-                width="w-44"
-              />
+            <SettingRow label="Test directory" desc="Root folder Playwright scans for spec files">
+              <TextInput value={config.testDir} onChange={(v) => set('testDir', v)} width="w-44" />
             </SettingRow>
             <SettingRow
               label="Output directory"
@@ -1668,7 +1514,7 @@ function SettingsView({
             >
               <TextInput
                 value={config.outputDir}
-                onChange={(v) => set("outputDir", v)}
+                onChange={(v) => set('outputDir', v)}
                 width="w-44"
               />
             </SettingRow>
@@ -1679,40 +1525,38 @@ function SettingsView({
             icon={<Monitor size={14} />}
             title="Browsers"
             subtitle="Select which browser engines to run tests against"
-            warning={noBrowsers ? "None selected" : undefined}
+            warning={noBrowsers ? 'None selected' : undefined}
           >
             {(
               [
                 {
-                  key: "chromium",
-                  label: "Chromium",
-                  desc: "Chrome & Edge — fastest, widest coverage",
+                  key: 'chromium',
+                  label: 'Chromium',
+                  desc: 'Chrome & Edge — fastest, widest coverage',
                 },
                 {
-                  key: "firefox",
-                  label: "Firefox",
-                  desc: "Gecko engine — catches Firefox-specific bugs",
+                  key: 'firefox',
+                  label: 'Firefox',
+                  desc: 'Gecko engine — catches Firefox-specific bugs',
                 },
                 {
-                  key: "webkit",
-                  label: "WebKit",
-                  desc: "Safari engine — essential for macOS & iOS",
+                  key: 'webkit',
+                  label: 'WebKit',
+                  desc: 'Safari engine — essential for macOS & iOS',
                 },
               ] as const
             ).map(({ key, label, desc }) => (
               <SettingRow key={key} label={label} desc={desc}>
                 <ToggleSwitch
                   checked={config.browsers[key]}
-                  onChange={(v) =>
-                    set("browsers", { ...config.browsers, [key]: v })
-                  }
+                  onChange={(v) => set('browsers', { ...config.browsers, [key]: v })}
                 />
               </SettingRow>
             ))}
             {noBrowsers && (
               <div
                 className="flex items-center gap-2 py-2.5 text-[11px]"
-                style={{ color: "#b91c1c" }}
+                style={{ color: '#b91c1c' }}
               >
                 <AlertTriangle size={12} className="shrink-0" />
                 At least one browser must be enabled to run tests.
@@ -1726,45 +1570,37 @@ function SettingsView({
             title="Artifacts"
             subtitle="Control when screenshots, videos and traces are saved"
           >
-            <SettingRow
-              label="Screenshots"
-              desc="Capture a PNG snapshot of the page"
-            >
+            <SettingRow label="Screenshots" desc="Capture a PNG snapshot of the page">
               <SelectControl
                 value={config.screenshot}
-                onChange={(v) =>
-                  set("screenshot", v as PlaywrightConfig["screenshot"])
-                }
+                onChange={(v) => set('screenshot', v as PlaywrightConfig['screenshot'])}
                 options={[
-                  { value: "off", label: "Off" },
-                  { value: "only-on-failure", label: "On failure only" },
-                  { value: "on", label: "Always" },
+                  { value: 'off', label: 'Off' },
+                  { value: 'only-on-failure', label: 'On failure only' },
+                  { value: 'on', label: 'Always' },
                 ]}
               />
             </SettingRow>
             <SettingRow label="Video" desc="Record a video of each test run">
               <SelectControl
                 value={config.video}
-                onChange={(v) => set("video", v as PlaywrightConfig["video"])}
+                onChange={(v) => set('video', v as PlaywrightConfig['video'])}
                 options={[
-                  { value: "off", label: "Off" },
-                  { value: "retain-on-failure", label: "Keep on failure" },
-                  { value: "on", label: "Always" },
+                  { value: 'off', label: 'Off' },
+                  { value: 'retain-on-failure', label: 'Keep on failure' },
+                  { value: 'on', label: 'Always' },
                 ]}
               />
             </SettingRow>
-            <SettingRow
-              label="Trace"
-              desc="Playwright trace for time-travel debugging"
-            >
+            <SettingRow label="Trace" desc="Playwright trace for time-travel debugging">
               <SelectControl
                 value={config.trace}
-                onChange={(v) => set("trace", v as PlaywrightConfig["trace"])}
+                onChange={(v) => set('trace', v as PlaywrightConfig['trace'])}
                 options={[
-                  { value: "off", label: "Off" },
-                  { value: "on-first-retry", label: "On first retry" },
-                  { value: "retain-on-failure", label: "Keep on failure" },
-                  { value: "on", label: "Always" },
+                  { value: 'off', label: 'Off' },
+                  { value: 'on-first-retry', label: 'On first retry' },
+                  { value: 'retain-on-failure', label: 'Keep on failure' },
+                  { value: 'on', label: 'Always' },
                 ]}
               />
             </SettingRow>
@@ -1782,7 +1618,7 @@ function SettingsView({
             >
               <TextInput
                 value={config.grep}
-                onChange={(v) => set("grep", v)}
+                onChange={(v) => set('grep', v)}
                 width="w-52"
                 placeholder="e.g. @smoke or Login"
               />
@@ -1793,7 +1629,7 @@ function SettingsView({
             >
               <TextInput
                 value={config.grepInvert}
-                onChange={(v) => set("grepInvert", v)}
+                onChange={(v) => set('grepInvert', v)}
                 width="w-52"
                 placeholder="e.g. @slow or flaky"
               />
@@ -1808,35 +1644,30 @@ function SettingsView({
           >
             <div className="pt-3 pb-2">
               <div className="grid grid-cols-5 gap-2 mb-3">
-                {(["html", "json", "junit", "line", "dot"] as const).map(
-                  (r) => (
-                    <button
-                      key={r}
-                      onClick={() => set("reporter", r)}
-                      className="py-2 rounded-xl border text-xs font-bold transition-all"
-                      style={
-                        config.reporter === r
-                          ? {
-                              background: "#1a3a8f",
-                              color: "#fff",
-                              borderColor: "#1a3a8f",
-                            }
-                          : {
-                              background: "var(--bg-body)",
-                              color: "var(--text-muted)",
-                              borderColor: "var(--border)",
-                            }
-                      }
-                    >
-                      {r}
-                    </button>
-                  ),
-                )}
+                {(['html', 'json', 'junit', 'line', 'dot'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => set('reporter', r)}
+                    className="py-2 rounded-xl border text-xs font-bold transition-all"
+                    style={
+                      config.reporter === r
+                        ? {
+                            background: '#1a3a8f',
+                            color: '#fff',
+                            borderColor: '#1a3a8f',
+                          }
+                        : {
+                            background: 'var(--bg-body)',
+                            color: 'var(--text-muted)',
+                            borderColor: 'var(--border)',
+                          }
+                    }
+                  >
+                    {r}
+                  </button>
+                ))}
               </div>
-              <p
-                className="text-[11px] leading-relaxed"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                 {REPORTER_DESCRIPTIONS[config.reporter]}
               </p>
             </div>
@@ -1847,30 +1678,27 @@ function SettingsView({
         <div className="lg:col-span-2">
           <div
             className="sticky top-4 rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             {/* Header */}
             <div
               className="flex items-center justify-between px-4 py-3 border-b"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-card)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-card)',
               }}
             >
               <div className="flex items-center gap-2">
-                <Code2 size={13} style={{ color: "var(--text-muted)" }} />
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <Code2 size={13} style={{ color: 'var(--text-muted)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
                   playwright.config.ts
                 </span>
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
                   style={{
-                    background: "rgba(52,199,89,0.10)",
-                    color: "#16A34A",
-                    border: "1px solid rgba(52,199,89,0.25)",
+                    background: 'rgba(52,199,89,0.10)',
+                    color: '#16A34A',
+                    border: '1px solid rgba(52,199,89,0.25)',
                   }}
                 >
                   Live
@@ -1880,20 +1708,16 @@ function SettingsView({
                 <button
                   onClick={copyConfig}
                   className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors hover:opacity-70"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                   title="Copy to clipboard"
                 >
-                  {copied ? (
-                    <Check size={12} className="text-emerald-500" />
-                  ) : (
-                    <Copy size={12} />
-                  )}
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <button
                   onClick={downloadConfig}
                   className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors hover:opacity-70"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                   title="Download as playwright.config.ts"
                 >
                   {downloaded ? (
@@ -1901,7 +1725,7 @@ function SettingsView({
                   ) : (
                     <Download size={12} />
                   )}
-                  {downloaded ? "Saved!" : ".ts"}
+                  {downloaded ? 'Saved!' : '.ts'}
                 </button>
               </div>
             </div>
@@ -1911,14 +1735,13 @@ function SettingsView({
               <div
                 className="flex items-center gap-2 px-4 py-2.5 text-[11px] font-medium border-b"
                 style={{
-                  background: "#fef2f2",
-                  borderColor: "#fecaca",
-                  color: "#b91c1c",
+                  background: '#fef2f2',
+                  borderColor: '#fecaca',
+                  color: '#b91c1c',
                 }}
               >
                 <AlertTriangle size={12} className="shrink-0" />
-                No browsers selected — the generated config will skip all
-                projects.
+                No browsers selected — the generated config will skip all projects.
               </div>
             )}
 
@@ -1926,9 +1749,9 @@ function SettingsView({
             <pre
               className="text-[11px] font-mono p-4 overflow-auto leading-relaxed"
               style={{
-                backgroundColor: "#1e1e2e",
-                color: "#cdd6f4",
-                maxHeight: "68vh",
+                backgroundColor: '#1e1e2e',
+                color: '#cdd6f4',
+                maxHeight: '68vh',
               }}
             >
               {configCode}
@@ -1944,31 +1767,25 @@ function SettingsView({
 
 /** Parse a Playwright error string and return a human-readable category */
 function parseErrorType(error: string): ErrorType {
-  if (/timeout/i.test(error)) return "Timeout";
-  if (/toHave|toBe|toContain|expect/i.test(error)) return "Assertion";
-  if (/locator|strict mode|resolved to/i.test(error)) return "Locator";
-  if (/net::|ERR_|fetch|request/i.test(error)) return "Network";
-  return "Error";
+  if (/timeout/i.test(error)) return 'Timeout';
+  if (/toHave|toBe|toContain|expect/i.test(error)) return 'Assertion';
+  if (/locator|strict mode|resolved to/i.test(error)) return 'Locator';
+  if (/net::|ERR_|fetch|request/i.test(error)) return 'Network';
+  return 'Error';
 }
 
-const ERROR_TYPE_STYLES: Record<
-  ErrorType,
-  { bg: string; color: string; border: string }
-> = {
-  Timeout: { bg: "#fef3c7", color: "#92400e", border: "#fde68a" },
-  Assertion: { bg: "#fee2e2", color: "#991b1b", border: "#fecaca" },
-  Locator: { bg: "#ede9fe", color: "#5b21b6", border: "#ddd6fe" },
-  Network: { bg: "#e0f2fe", color: "#0c4a6e", border: "#bae6fd" },
-  Error: { bg: "#f1f5f9", color: "#475569", border: "#e2e8f0" },
+const ERROR_TYPE_STYLES: Record<ErrorType, { bg: string; color: string; border: string }> = {
+  Timeout: { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  Assertion: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca' },
+  Locator: { bg: '#ede9fe', color: '#5b21b6', border: '#ddd6fe' },
+  Network: { bg: '#e0f2fe', color: '#0c4a6e', border: '#bae6fd' },
+  Error: { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
 };
 
-const BROWSER_META: Record<
-  BrowserKey,
-  { label: string; color: string; emoji: string }
-> = {
-  chromium: { label: "Chromium", color: "#4285f4", emoji: "🔵" },
-  firefox: { label: "Firefox", color: "#ff6611", emoji: "🦊" },
-  webkit: { label: "WebKit", color: "#999999", emoji: "🧡" },
+const BROWSER_META: Record<BrowserKey, { label: string; color: string; emoji: string }> = {
+  chromium: { label: 'Chromium', color: '#4285f4', emoji: '🔵' },
+  firefox: { label: 'Firefox', color: '#ff6611', emoji: '🦊' },
+  webkit: { label: 'WebKit', color: '#999999', emoji: '🧡' },
 };
 
 // ─── Browser Matrix View ──────────────────────────────────────────────────────
@@ -1977,21 +1794,20 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
   const testsWithCross = suites
     .flatMap((s) => s.tests)
     .filter((t) => t.browserResults && t.browserResults.length > 0);
-  const browsers: BrowserKey[] = ["chromium", "firefox", "webkit"];
+  const browsers: BrowserKey[] = ['chromium', 'firefox', 'webkit'];
 
   if (testsWithCross.length === 0) {
     return (
       <div
         className="text-center py-16 rounded-2xl border"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-card)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-card)',
         }}
       >
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          No cross-browser data — add{" "}
-          <code className="font-mono text-xs">browserResults</code> to your
-          tests.
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          No cross-browser data — add <code className="font-mono text-xs">browserResults</code> to
+          your tests.
         </p>
       </div>
     );
@@ -1999,33 +1815,25 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
 
   function cellStatus(test: TestCase, browser: BrowserKey): Status | null {
     if (!test.browserResults) return null;
-    return (
-      test.browserResults.find((r) => r.browser === browser)?.status ?? null
-    );
+    return test.browserResults.find((r) => r.browser === browser)?.status ?? null;
   }
 
   const StatusCell = ({ status }: { status: Status | null }) => {
     if (!status)
       return (
-        <td
-          className="px-3 py-2 text-center text-xs"
-          style={{ color: "var(--text-muted)" }}
-        >
+        <td className="px-3 py-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
           —
         </td>
       );
     const bgMap: Record<Status, string> = {
-      passed: "rgba(16,185,129,0.1)",
-      failed: "rgba(239,68,68,0.1)",
-      skipped: "rgba(251,191,36,0.1)",
-      pending: "rgba(148,163,184,0.08)",
-      running: "rgba(59,130,246,0.1)",
+      passed: 'rgba(16,185,129,0.1)',
+      failed: 'rgba(239,68,68,0.1)',
+      skipped: 'rgba(251,191,36,0.1)',
+      pending: 'rgba(148,163,184,0.08)',
+      running: 'rgba(59,130,246,0.1)',
     };
     return (
-      <td
-        className="px-3 py-2 text-center"
-        style={{ backgroundColor: bgMap[status] }}
-      >
+      <td className="px-3 py-2 text-center" style={{ backgroundColor: bgMap[status] }}>
         <div className="flex justify-center">
           <StatusIcon status={status} size={13} />
         </div>
@@ -2037,33 +1845,28 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
   const bysuite = suites
     .map((s) => ({
       ...s,
-      tests: s.tests.filter(
-        (t) => t.browserResults && t.browserResults.length > 0,
-      ),
+      tests: s.tests.filter((t) => t.browserResults && t.browserResults.length > 0),
     }))
     .filter((s) => s.tests.length > 0);
 
   return (
     <div
       className="rounded-2xl border overflow-hidden shadow-sm"
-      style={{ borderColor: "var(--border)" }}
+      style={{ borderColor: 'var(--border)' }}
     >
       {/* Header */}
       <div
         className="flex items-center gap-2 px-4 py-2.5 border-b"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-body)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-body)',
         }}
       >
-        <Globe size={13} style={{ color: "#7c3aed" }} />
-        <span
-          className="text-xs font-bold"
-          style={{ color: "var(--text-main)" }}
-        >
+        <Globe size={13} style={{ color: '#7c3aed' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
           Browser Matrix
         </span>
-        <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
           — test results per browser project
         </span>
         <div className="ml-auto flex items-center gap-3">
@@ -2071,7 +1874,7 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
             <span
               key={b}
               className="flex items-center gap-1 text-[11px]"
-              style={{ color: "var(--text-muted)" }}
+              style={{ color: 'var(--text-muted)' }}
             >
               <span>{BROWSER_META[b].emoji}</span> {BROWSER_META[b].label}
             </span>
@@ -2085,13 +1888,13 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
           <thead>
             <tr
               style={{
-                borderBottom: "1px solid var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderBottom: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
               <th
                 className="text-left px-4 py-2 font-semibold w-full"
-                style={{ color: "var(--text-muted)" }}
+                style={{ color: 'var(--text-muted)' }}
               >
                 Test
               </th>
@@ -2114,9 +1917,9 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
                     colSpan={4}
                     className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest"
                     style={{
-                      color: "var(--text-muted)",
-                      backgroundColor: "var(--bg-body)",
-                      borderBottom: "1px solid var(--border)",
+                      color: 'var(--text-muted)',
+                      backgroundColor: 'var(--bg-body)',
+                      borderBottom: '1px solid var(--border)',
                     }}
                   >
                     {suite.title}
@@ -2127,22 +1930,17 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
                     key={test.id}
                     style={{
                       borderBottom:
-                        i < suite.tests.length - 1
-                          ? "1px solid var(--border)"
-                          : undefined,
-                      backgroundColor: "var(--bg-card)",
+                        i < suite.tests.length - 1 ? '1px solid var(--border)' : undefined,
+                      backgroundColor: 'var(--bg-card)',
                     }}
                   >
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <StatusIcon status={test.status} size={13} />
-                        <span
-                          className="truncate max-w-xs"
-                          style={{ color: "var(--text-main)" }}
-                        >
+                        <span className="truncate max-w-xs" style={{ color: 'var(--text-main)' }}>
                           {test.title}
                         </span>
-                        {test.retries && test.status === "passed" && (
+                        {test.retries && test.status === 'passed' && (
                           <span className="text-[9px] font-bold px-1.5 py-px rounded-full bg-amber-100 text-amber-700 shrink-0">
                             FLAKY
                           </span>
@@ -2152,8 +1950,8 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
                             key={tag}
                             className="text-[9px] font-mono px-1.5 py-px rounded border shrink-0"
                             style={{
-                              color: "var(--text-muted)",
-                              borderColor: "var(--border)",
+                              color: 'var(--text-muted)',
+                              borderColor: 'var(--border)',
                             }}
                           >
                             {tag}
@@ -2180,7 +1978,7 @@ function BrowserMatrixView({ suites }: { suites: TestSuite[] }) {
 function FlakyPanel({ suites }: { suites: TestSuite[] }) {
   const flakyTests = suites.flatMap((s) =>
     s.tests
-      .filter((t) => (t.retries ?? 0) > 0 && t.status === "passed")
+      .filter((t) => (t.retries ?? 0) > 0 && t.status === 'passed')
       .map((t) => ({ ...t, suiteFile: s.file, suiteTitle: s.title })),
   );
 
@@ -2189,46 +1987,36 @@ function FlakyPanel({ suites }: { suites: TestSuite[] }) {
   return (
     <div
       className="mt-4 rounded-2xl border shadow-sm overflow-hidden"
-      style={{ borderColor: "#E8A728", backgroundColor: "var(--bg-card)" }}
+      style={{ borderColor: '#E8A728', backgroundColor: 'var(--bg-card)' }}
     >
       <div
         className="flex items-center gap-2 px-4 py-3 border-b"
-        style={{ borderColor: "#fde68a", backgroundColor: "#fffbeb" }}
+        style={{ borderColor: '#fde68a', backgroundColor: '#fffbeb' }}
       >
-        <AlertTriangle size={13} style={{ color: "#d97706" }} />
-        <span className="text-xs font-bold" style={{ color: "#92400e" }}>
+        <AlertTriangle size={13} style={{ color: '#d97706' }} />
+        <span className="text-xs font-bold" style={{ color: '#92400e' }}>
           Flaky Tests
         </span>
-        <span className="text-[11px]" style={{ color: "#b45309" }}>
+        <span className="text-[11px]" style={{ color: '#b45309' }}>
           — passed only after retrying
         </span>
         <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-          {flakyTests.length} test{flakyTests.length > 1 ? "s" : ""}
+          {flakyTests.length} test{flakyTests.length > 1 ? 's' : ''}
         </span>
       </div>
       <div>
         {flakyTests.map((test, i) => (
           <div
             key={test.id}
-            className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? "border-t" : ""}`}
-            style={{ borderColor: "var(--border)" }}
+            className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`}
+            style={{ borderColor: 'var(--border)' }}
           >
-            <AlertTriangle
-              size={13}
-              style={{ color: "#f59e0b" }}
-              className="shrink-0"
-            />
+            <AlertTriangle size={13} style={{ color: '#f59e0b' }} className="shrink-0" />
             <div className="flex-1 min-w-0">
-              <p
-                className="text-xs truncate"
-                style={{ color: "var(--text-main)" }}
-              >
+              <p className="text-xs truncate" style={{ color: 'var(--text-main)' }}>
                 {test.title}
               </p>
-              <p
-                className="text-[10px] font-mono"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
                 {test.suiteFile}
               </p>
             </div>
@@ -2237,8 +2025,8 @@ function FlakyPanel({ suites }: { suites: TestSuite[] }) {
                 key={tag}
                 className="text-[9px] font-mono px-1.5 py-px rounded border shrink-0"
                 style={{
-                  color: "var(--text-muted)",
-                  borderColor: "var(--border)",
+                  color: 'var(--text-muted)',
+                  borderColor: 'var(--border)',
                 }}
               >
                 {tag}
@@ -2247,10 +2035,7 @@ function FlakyPanel({ suites }: { suites: TestSuite[] }) {
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
               {test.retries} retry
             </span>
-            <span
-              className="text-xs font-mono shrink-0"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <span className="text-xs font-mono shrink-0" style={{ color: 'var(--text-muted)' }}>
               {formatMs(test.duration)}
             </span>
           </div>
@@ -2259,14 +2044,13 @@ function FlakyPanel({ suites }: { suites: TestSuite[] }) {
       <div
         className="px-4 py-2.5 border-t text-[11px]"
         style={{
-          borderColor: "#fde68a",
-          backgroundColor: "#fffbeb",
-          color: "#b45309",
+          borderColor: '#fde68a',
+          backgroundColor: '#fffbeb',
+          color: '#b45309',
         }}
       >
-        💡 Flaky tests destabilise CI. Investigate network dependencies, race
-        conditions, or use <code className="font-mono">test.setTimeout()</code>{" "}
-        to isolate the root cause.
+        💡 Flaky tests destabilise CI. Investigate network dependencies, race conditions, or use{' '}
+        <code className="font-mono">test.setTimeout()</code> to isolate the root cause.
       </div>
     </div>
   );
@@ -2279,14 +2063,14 @@ function StepTimeline({ steps }: { steps: TestStep[] }) {
   return (
     <div
       className="mx-4 mb-3 rounded-xl border overflow-hidden"
-      style={{ borderColor: "var(--border)" }}
+      style={{ borderColor: 'var(--border)' }}
     >
       <div
         className="px-3 py-1.5 border-b text-[10px] font-bold uppercase tracking-widest"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-body)",
-          color: "var(--text-muted)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-body)',
+          color: 'var(--text-muted)',
         }}
       >
         Steps
@@ -2294,38 +2078,36 @@ function StepTimeline({ steps }: { steps: TestStep[] }) {
       {steps.map((step, i) => (
         <div
           key={i}
-          className={`flex items-center gap-3 px-3 py-2 ${i > 0 ? "border-t" : ""}`}
+          className={`flex items-center gap-3 px-3 py-2 ${i > 0 ? 'border-t' : ''}`}
           style={{
-            borderColor: "var(--border)",
-            backgroundColor:
-              step.status === "failed" ? "rgba(239,68,68,0.05)" : undefined,
+            borderColor: 'var(--border)',
+            backgroundColor: step.status === 'failed' ? 'rgba(239,68,68,0.05)' : undefined,
           }}
         >
           <StatusIcon status={step.status} size={11} />
           <span
             className="flex-1 text-[11px] font-mono truncate"
             style={{
-              color: step.status === "failed" ? "#dc2626" : "var(--text-main)",
+              color: step.status === 'failed' ? '#dc2626' : 'var(--text-main)',
             }}
           >
             {step.title}
           </span>
           <div
             className="w-24 h-1 rounded-full overflow-hidden shrink-0"
-            style={{ backgroundColor: "var(--border)" }}
+            style={{ backgroundColor: 'var(--border)' }}
           >
             <div
               className="h-full rounded-full"
               style={{
                 width: `${(step.duration / maxDur) * 100}%`,
-                backgroundColor:
-                  step.status === "failed" ? "#ef4444" : "#34C759",
+                backgroundColor: step.status === 'failed' ? '#ef4444' : '#34C759',
               }}
             />
           </div>
           <span
             className="text-[10px] font-mono w-14 text-right shrink-0"
-            style={{ color: "var(--text-muted)" }}
+            style={{ color: 'var(--text-muted)' }}
           >
             {formatMs(step.duration)}
           </span>
@@ -2338,7 +2120,7 @@ function StepTimeline({ steps }: { steps: TestStep[] }) {
 // ─── Docs View ────────────────────────────────────────────────────────────────
 
 /** Syntax-highlighted code block (Catppuccin-dark theme matching the config preview) */
-function CodeBlock({ code, lang = "ts" }: { code: string; lang?: string }) {
+function CodeBlock({ code, lang = 'ts' }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     await navigator.clipboard.writeText(code.trim());
@@ -2348,30 +2130,27 @@ function CodeBlock({ code, lang = "ts" }: { code: string; lang?: string }) {
   return (
     <div
       className="relative rounded-xl overflow-hidden border my-2"
-      style={{ borderColor: "rgba(255,255,255,0.08)" }}
+      style={{ borderColor: 'rgba(255,255,255,0.08)' }}
     >
       <div
         className="flex items-center justify-between px-3 py-1.5"
-        style={{ backgroundColor: "#181825" }}
+        style={{ backgroundColor: '#181825' }}
       >
-        <span
-          className="text-[10px] font-mono font-semibold"
-          style={{ color: "#6c7086" }}
-        >
+        <span className="text-[10px] font-mono font-semibold" style={{ color: '#6c7086' }}>
           {lang}
         </span>
         <button
           onClick={copy}
           className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-opacity hover:opacity-70"
-          style={{ color: copied ? "#a6e3a1" : "#6c7086" }}
+          style={{ color: copied ? '#a6e3a1' : '#6c7086' }}
         >
           {copied ? <Check size={10} /> : <Copy size={10} />}
-          {copied ? "Copied!" : "Copy"}
+          {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
       <pre
         className="text-[11.5px] font-mono px-4 py-3 overflow-x-auto leading-relaxed"
-        style={{ backgroundColor: "#1e1e2e", color: "#cdd6f4", margin: 0 }}
+        style={{ backgroundColor: '#1e1e2e', color: '#cdd6f4', margin: 0 }}
       >
         {code.trim()}
       </pre>
@@ -2394,18 +2173,15 @@ function DocSection({
   return (
     <section id={id} className="scroll-mt-4">
       <div className="flex items-center gap-2 mb-3">
-        <span style={{ color: "#1a3a8f" }}>{icon}</span>
-        <h2
-          className="text-sm font-black tracking-tight"
-          style={{ color: "var(--text-main)" }}
-        >
+        <span style={{ color: '#1a3a8f' }}>{icon}</span>
+        <h2 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
           {title}
         </h2>
         <a
           href={`#${id}`}
           className="opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity ml-auto"
         >
-          <Hash size={12} style={{ color: "var(--text-muted)" }} />
+          <Hash size={12} style={{ color: 'var(--text-muted)' }} />
         </a>
       </div>
       <div className="flex flex-col gap-2">{children}</div>
@@ -2418,7 +2194,7 @@ function RefRow({
   label,
   desc,
   badge,
-  badgeColor = "#1a3a8f",
+  badgeColor = '#1a3a8f',
 }: {
   label: string;
   desc: string;
@@ -2429,20 +2205,17 @@ function RefRow({
     <div
       className="flex items-start gap-3 px-3 py-2.5 rounded-xl border"
       style={{
-        borderColor: "var(--border)",
-        backgroundColor: "var(--bg-body)",
+        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg-body)',
       }}
     >
       <code
         className="text-[11px] font-mono font-semibold shrink-0 mt-px"
-        style={{ color: "#89b4fa" }}
+        style={{ color: '#89b4fa' }}
       >
         {label}
       </code>
-      <span
-        className="flex-1 text-[11px] leading-relaxed"
-        style={{ color: "var(--text-muted)" }}
-      >
+      <span className="flex-1 text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
         {desc}
       </span>
       {badge && (
@@ -2470,9 +2243,9 @@ function DocsLink({ href, label }: { href: string; label: string }) {
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-lg border transition-opacity hover:opacity-70"
       style={{
-        borderColor: "var(--border)",
-        backgroundColor: "var(--bg-body)",
-        color: "#1a3a8f",
+        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg-body)',
+        color: '#1a3a8f',
       }}
     >
       {label} <ExternalLink size={10} />
@@ -2482,19 +2255,19 @@ function DocsLink({ href, label }: { href: string; label: string }) {
 
 function DocsView() {
   const tocItems = [
-    { id: "quickstart", label: "Quick Start", icon: <Terminal size={12} /> },
+    { id: 'quickstart', label: 'Quick Start', icon: <Terminal size={12} /> },
     {
-      id: "locators",
-      label: "Locator Strategies",
+      id: 'locators',
+      label: 'Locator Strategies',
       icon: <MousePointer2 size={12} />,
     },
     {
-      id: "assertions",
-      label: "Core Assertions",
+      id: 'assertions',
+      label: 'Core Assertions',
       icon: <FlaskConical size={12} />,
     },
-    { id: "patterns", label: "Common Patterns", icon: <Layers size={12} /> },
-    { id: "cli", label: "CLI Reference", icon: <Terminal size={12} /> },
+    { id: 'patterns', label: 'Common Patterns', icon: <Layers size={12} /> },
+    { id: 'cli', label: 'CLI Reference', icon: <Terminal size={12} /> },
   ];
 
   return (
@@ -2503,7 +2276,7 @@ function DocsView() {
       <aside className="hidden lg:flex flex-col gap-1 shrink-0 sticky top-4 w-44">
         <p
           className="text-[10px] font-bold uppercase tracking-widest mb-1"
-          style={{ color: "var(--text-muted)" }}
+          style={{ color: 'var(--text-muted)' }}
         >
           On this page
         </p>
@@ -2512,13 +2285,9 @@ function DocsView() {
             key={id}
             href={`#${id}`}
             className="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-lg transition-colors hover:opacity-80"
-            style={{ color: "var(--text-muted)" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = "var(--bg-card)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = "transparent")
-            }
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-card)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             {icon} {label}
           </a>
@@ -2526,100 +2295,69 @@ function DocsView() {
 
         <div
           className="mt-4 pt-4 border-t flex flex-col gap-2"
-          style={{ borderColor: "var(--border)" }}
+          style={{ borderColor: 'var(--border)' }}
         >
           <p
             className="text-[10px] font-bold uppercase tracking-widest mb-1"
-            style={{ color: "var(--text-muted)" }}
+            style={{ color: 'var(--text-muted)' }}
           >
             Official Docs
           </p>
-          <DocsLink
-            href="https://playwright.dev/docs/intro"
-            label="Playwright"
-          />
-          <DocsLink
-            href="https://playwright.dev/docs/locators"
-            label="Locators"
-          />
-          <DocsLink
-            href="https://playwright.dev/docs/test-assertions"
-            label="Assertions"
-          />
-          <DocsLink
-            href="https://playwright.dev/docs/api/class-page"
-            label="Page API"
-          />
+          <DocsLink href="https://playwright.dev/docs/intro" label="Playwright" />
+          <DocsLink href="https://playwright.dev/docs/locators" label="Locators" />
+          <DocsLink href="https://playwright.dev/docs/test-assertions" label="Assertions" />
+          <DocsLink href="https://playwright.dev/docs/api/class-page" label="Page API" />
         </div>
       </aside>
 
       {/* ── Main content ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-8">
         {/* ── Quick Start ─────────────────────────────────── */}
-        <DocSection
-          id="quickstart"
-          icon={<Terminal size={14} />}
-          title="Quick Start"
-        >
-          <p
-            className="text-[12px] leading-relaxed"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Install Playwright, generate your config, and run your first test in
-            under 2 minutes.
+        <DocSection id="quickstart" icon={<Terminal size={14} />} title="Quick Start">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Install Playwright, generate your config, and run your first test in under 2 minutes.
           </p>
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 1 — Install
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock lang="bash" code={`npm init playwright@latest`} />
-              <p
-                className="text-[11px] mt-2"
-                style={{ color: "var(--text-muted)" }}
-              >
-                The wizard creates{" "}
-                <code className="font-mono">playwright.config.ts</code>, a{" "}
-                <code className="font-mono">tests/</code> directory, and
-                installs browser binaries.
+              <p className="text-[11px] mt-2" style={{ color: 'var(--text-muted)' }}>
+                The wizard creates <code className="font-mono">playwright.config.ts</code>, a{' '}
+                <code className="font-mono">tests/</code> directory, and installs browser binaries.
               </p>
             </div>
           </div>
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 2 — Write your first test
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="typescript"
                 code={`import { test, expect } from '@playwright/test'
@@ -2635,23 +2373,20 @@ test('home page has correct title', async ({ page }) => {
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 3 — Run
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="bash"
                 code={`npx playwright test              # headless, all browsers
@@ -2664,43 +2399,30 @@ npx playwright show-report      # open HTML report`}
         </DocSection>
 
         {/* ── Locator Strategies ──────────────────────────── */}
-        <DocSection
-          id="locators"
-          icon={<MousePointer2 size={14} />}
-          title="Locator Strategies"
-        >
-          <p
-            className="text-[12px] leading-relaxed"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Playwright recommends locators in this priority order — higher is
-            more resilient to UI changes.
+        <DocSection id="locators" icon={<MousePointer2 size={14} />} title="Locator Strategies">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Playwright recommends locators in this priority order — higher is more resilient to UI
+            changes.
           </p>
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
             style={{
-              borderColor: "var(--border)",
-              backgroundColor: "var(--bg-card)",
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-card)',
             }}
           >
             <div
               className="px-4 py-2 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 Priority order
               </span>
-              <span
-                className="text-[11px]"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                 — prefer top entries first
               </span>
             </div>
@@ -2781,173 +2503,118 @@ page.locator('div > div:nth-child(3) > span')`}
         </DocSection>
 
         {/* ── Core Assertions ─────────────────────────────── */}
-        <DocSection
-          id="assertions"
-          icon={<FlaskConical size={14} />}
-          title="Core Assertions"
-        >
-          <p
-            className="text-[12px] leading-relaxed"
-            style={{ color: "var(--text-muted)" }}
-          >
-            All Playwright assertions are <strong>auto-retrying</strong> — they
-            keep checking until the condition is met or the timeout expires.
+        <DocSection id="assertions" icon={<FlaskConical size={14} />} title="Core Assertions">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            All Playwright assertions are <strong>auto-retrying</strong> — they keep checking until
+            the condition is met or the timeout expires.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Visibility */}
             <div
               className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: "var(--border)" }}
+              style={{ borderColor: 'var(--border)' }}
             >
               <div
                 className="px-3 py-2 border-b"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
-                <p
-                  className="text-xs font-bold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                   Visibility
                 </p>
               </div>
               <div
                 className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: "var(--bg-card)" }}
+                style={{ backgroundColor: 'var(--bg-card)' }}
               >
-                <RefRow
-                  label="toBeVisible()"
-                  desc="Element is in DOM and not hidden."
-                />
-                <RefRow
-                  label="toBeHidden()"
-                  desc="Element is absent or display:none."
-                />
-                <RefRow
-                  label="toBeInViewport()"
-                  desc="Element is within the visible viewport."
-                />
+                <RefRow label="toBeVisible()" desc="Element is in DOM and not hidden." />
+                <RefRow label="toBeHidden()" desc="Element is absent or display:none." />
+                <RefRow label="toBeInViewport()" desc="Element is within the visible viewport." />
               </div>
             </div>
 
             {/* State */}
             <div
               className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: "var(--border)" }}
+              style={{ borderColor: 'var(--border)' }}
             >
               <div
                 className="px-3 py-2 border-b"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
-                <p
-                  className="text-xs font-bold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                   Element State
                 </p>
               </div>
               <div
                 className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: "var(--bg-card)" }}
+                style={{ backgroundColor: 'var(--bg-card)' }}
               >
-                <RefRow
-                  label="toBeEnabled()"
-                  desc="Form control is not disabled."
-                />
-                <RefRow
-                  label="toBeChecked()"
-                  desc="Checkbox or radio is checked."
-                />
-                <RefRow
-                  label="toBeFocused()"
-                  desc="Element has keyboard focus."
-                />
+                <RefRow label="toBeEnabled()" desc="Form control is not disabled." />
+                <RefRow label="toBeChecked()" desc="Checkbox or radio is checked." />
+                <RefRow label="toBeFocused()" desc="Element has keyboard focus." />
               </div>
             </div>
 
             {/* Content */}
             <div
               className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: "var(--border)" }}
+              style={{ borderColor: 'var(--border)' }}
             >
               <div
                 className="px-3 py-2 border-b"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
-                <p
-                  className="text-xs font-bold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                   Content
                 </p>
               </div>
               <div
                 className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: "var(--bg-card)" }}
+                style={{ backgroundColor: 'var(--bg-card)' }}
               >
                 <RefRow
                   label="toHaveText()"
                   desc="Element's text content matches (string or regex)."
                 />
-                <RefRow
-                  label="toContainText()"
-                  desc="Element's text contains the substring."
-                />
-                <RefRow
-                  label="toHaveValue()"
-                  desc="Input / select has the expected value."
-                />
-                <RefRow
-                  label="toHaveAttribute()"
-                  desc="Element has a specific attribute value."
-                />
+                <RefRow label="toContainText()" desc="Element's text contains the substring." />
+                <RefRow label="toHaveValue()" desc="Input / select has the expected value." />
+                <RefRow label="toHaveAttribute()" desc="Element has a specific attribute value." />
               </div>
             </div>
 
             {/* Page */}
             <div
               className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: "var(--border)" }}
+              style={{ borderColor: 'var(--border)' }}
             >
               <div
                 className="px-3 py-2 border-b"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
-                <p
-                  className="text-xs font-bold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                   Page-level
                 </p>
               </div>
               <div
                 className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: "var(--bg-card)" }}
+                style={{ backgroundColor: 'var(--bg-card)' }}
               >
-                <RefRow
-                  label="toHaveTitle()"
-                  desc="Page <title> matches string or regex."
-                />
-                <RefRow
-                  label="toHaveURL()"
-                  desc="Current URL matches string or regex."
-                />
-                <RefRow
-                  label="toHaveScreenshot()"
-                  desc="Visual snapshot matches baseline PNG."
-                />
+                <RefRow label="toHaveTitle()" desc="Page <title> matches string or regex." />
+                <RefRow label="toHaveURL()" desc="Current URL matches string or regex." />
+                <RefRow label="toHaveScreenshot()" desc="Visual snapshot matches baseline PNG." />
               </div>
             </div>
           </div>
@@ -2975,36 +2642,26 @@ await expect.soft(page.getByTestId('badge')).toHaveText('Pro')`}
         </DocSection>
 
         {/* ── Common Patterns ─────────────────────────────── */}
-        <DocSection
-          id="patterns"
-          icon={<Layers size={14} />}
-          title="Common Patterns"
-        >
+        <DocSection id="patterns" icon={<Layers size={14} />} title="Common Patterns">
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 Page Object Model (POM)
               </span>
-              <span
-                className="text-[11px]"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                 — one class per page, reusable across tests
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="typescript"
                 code={`// pages/LoginPage.ts
@@ -3039,23 +2696,20 @@ test('successful login', async ({ page }) => {
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 Fixtures — shared setup across tests
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="typescript"
                 code={`// fixtures.ts
@@ -3085,23 +2739,20 @@ test('dashboard loads', async ({ page, loggedIn }) => {
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 API request interception
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="typescript"
                 code={`// Mock an API response to control test data
@@ -3125,23 +2776,20 @@ expect(request.method()).toBe('POST')`}
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <span
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 Hooks — before / after
               </span>
             </div>
-            <div className="p-4" style={{ backgroundColor: "var(--bg-card)" }}>
+            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <CodeBlock
                 lang="typescript"
                 code={`test.describe('Cart', () => {
@@ -3169,78 +2817,67 @@ expect(request.method()).toBe('POST')`}
         </DocSection>
 
         {/* ── CLI Reference ───────────────────────────────── */}
-        <DocSection
-          id="cli"
-          icon={<Terminal size={14} />}
-          title="CLI Reference"
-        >
+        <DocSection id="cli" icon={<Terminal size={14} />} title="CLI Reference">
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
             style={{
-              borderColor: "var(--border)",
-              backgroundColor: "var(--bg-card)",
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg-card)',
             }}
           >
             <div
               className="px-4 py-2 border-b"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
               }}
             >
-              <p
-                className="text-xs font-bold"
-                style={{ color: "var(--text-main)" }}
-              >
+              <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 npx playwright test [options]
               </p>
             </div>
             <div className="p-3 flex flex-col gap-1.5">
               {[
-                { flag: "--headed", desc: "Run with a visible browser window" },
+                { flag: '--headed', desc: 'Run with a visible browser window' },
                 {
-                  flag: "--ui",
-                  desc: "Open the interactive Playwright UI mode",
+                  flag: '--ui',
+                  desc: 'Open the interactive Playwright UI mode',
                 },
                 {
-                  flag: "--debug",
-                  desc: "Run in debug mode — pauses before each action",
+                  flag: '--debug',
+                  desc: 'Run in debug mode — pauses before each action',
                 },
                 {
-                  flag: "--project=chromium",
-                  desc: "Run only in the specified project/browser",
+                  flag: '--project=chromium',
+                  desc: 'Run only in the specified project/browser',
                 },
                 {
                   flag: '--grep "login"',
-                  desc: "Run only tests whose title matches the pattern",
+                  desc: 'Run only tests whose title matches the pattern',
                 },
                 {
-                  flag: "--workers=4",
-                  desc: "Override number of parallel workers",
+                  flag: '--workers=4',
+                  desc: 'Override number of parallel workers',
                 },
-                { flag: "--retries=2", desc: "Override retry count" },
+                { flag: '--retries=2', desc: 'Override retry count' },
                 {
-                  flag: "--reporter=json",
-                  desc: "Override reporter (html | json | junit | line | dot)",
-                },
-                {
-                  flag: "--timeout=60000",
-                  desc: "Override per-test timeout in ms",
+                  flag: '--reporter=json',
+                  desc: 'Override reporter (html | json | junit | line | dot)',
                 },
                 {
-                  flag: "--last-failed",
-                  desc: "Re-run only the tests that failed last time",
+                  flag: '--timeout=60000',
+                  desc: 'Override per-test timeout in ms',
                 },
                 {
-                  flag: "--config=pw.config.ts",
-                  desc: "Use a custom config file",
+                  flag: '--last-failed',
+                  desc: 'Re-run only the tests that failed last time',
+                },
+                {
+                  flag: '--config=pw.config.ts',
+                  desc: 'Use a custom config file',
                 },
               ].map(({ flag, desc }) => (
-                <RefRow
-                  key={flag}
-                  label={`--${flag.replace(/^--/, "")}`}
-                  desc={desc}
-                />
+                <RefRow key={flag} label={`--${flag.replace(/^--/, '')}`} desc={desc} />
               ))}
             </div>
           </div>
@@ -3286,13 +2923,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ArtifactModal({
-  state,
-  onClose,
-}: {
-  state: ArtifactModalState;
-  onClose: () => void;
-}) {
+function ArtifactModal({ state, onClose }: { state: ArtifactModalState; onClose: () => void }) {
   const [artifacts, setArtifacts] = useState<ArtifactFile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -3311,61 +2942,42 @@ function ArtifactModal({
   }, [state.testId]);
 
   const extType = (name: string) => {
-    const ext = name.split(".").pop()?.toUpperCase() ?? "?";
+    const ext = name.split('.').pop()?.toUpperCase() ?? '?';
     return ext;
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative rounded-2xl border shadow-2xl p-6 w-full max-w-md"
         style={{
-          backgroundColor: "var(--bg-card)",
-          borderColor: "var(--border)",
+          backgroundColor: 'var(--bg-card)',
+          borderColor: 'var(--border)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3
-            className="font-semibold text-sm"
-            style={{ color: "var(--text-main)" }}
-          >
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--text-main)' }}>
             Test Artifacts
           </h3>
-          <button
-            onClick={onClose}
-            className="hover:opacity-70 transition-opacity"
-          >
-            <X size={16} style={{ color: "var(--text-muted)" }} />
+          <button onClick={onClose} className="hover:opacity-70 transition-opacity">
+            <X size={16} style={{ color: 'var(--text-muted)' }} />
           </button>
         </div>
-        <p
-          className="text-xs mb-4 font-mono truncate"
-          style={{ color: "var(--text-muted)" }}
-        >
+        <p className="text-xs mb-4 font-mono truncate" style={{ color: 'var(--text-muted)' }}>
           {state.testTitle}
         </p>
 
         {loading ? (
-          <p
-            className="text-xs text-center py-4"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
             Loading artifacts…
           </p>
         ) : artifacts.length === 0 ? (
-          <p
-            className="text-xs text-center py-4"
-            style={{ color: "var(--text-muted)" }}
-          >
-            No artifacts found. Run tests with{" "}
-            <code className="font-mono">screenshot: &apos;on&apos;</code> or{" "}
-            <code className="font-mono">trace: &apos;on&apos;</code> to generate
-            files.
+          <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
+            No artifacts found. Run tests with{' '}
+            <code className="font-mono">screenshot: &apos;on&apos;</code> or{' '}
+            <code className="font-mono">trace: &apos;on&apos;</code> to generate files.
           </p>
         ) : (
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
@@ -3378,24 +2990,22 @@ function ArtifactModal({
                 rel="noreferrer"
                 className="flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs hover:opacity-80 transition-opacity no-underline"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-body)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-body)',
                 }}
               >
                 <span
                   className="font-mono truncate flex-1 mr-2"
-                  style={{ color: "var(--text-main)" }}
+                  style={{ color: 'var(--text-main)' }}
                 >
                   {file.name}
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span style={{ color: "var(--text-muted)" }}>
-                    {formatBytes(file.size)}
-                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>{formatBytes(file.size)}</span>
                   <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-semibold text-[10px]">
                     {extType(file.name)}
                   </span>
-                  <Download size={11} style={{ color: "var(--text-muted)" }} />
+                  <Download size={11} style={{ color: 'var(--text-muted)' }} />
                 </div>
               </a>
             ))}
@@ -3423,8 +3033,8 @@ function FailedActions({
     const payload = {
       summary: `[QA] Test failure: ${test.title}`,
       description: `**File:** \`${suiteFile}\`\n**Error:**\n\`\`\`\n${test.error}\n\`\`\``,
-      labels: ["automated-test", "playwright"],
-      priority: "High",
+      labels: ['automated-test', 'playwright'],
+      priority: 'High',
     };
     navigator.clipboard
       .writeText(JSON.stringify(payload, null, 2))
@@ -3434,26 +3044,23 @@ function FailedActions({
       })
       .catch(() => {
         // Fallback: show the JSON in a small alert for browsers that block clipboard
-        prompt("Copy this Jira payload:", JSON.stringify(payload, null, 2));
+        prompt('Copy this Jira payload:', JSON.stringify(payload, null, 2));
       });
   };
 
   const viewTrace = () => {
-    window.open("http://localhost:3001/playwright-report/index.html", "_blank");
+    window.open('http://localhost:3001/playwright-report/index.html', '_blank');
   };
 
   return (
     <div
       className="flex items-center gap-1.5 px-5 py-2 border-t"
       style={{
-        borderColor: "var(--border)",
-        backgroundColor: "rgba(239,68,68,0.04)",
+        borderColor: 'var(--border)',
+        backgroundColor: 'rgba(239,68,68,0.04)',
       }}
     >
-      <span
-        className="text-[11px] font-medium mr-1"
-        style={{ color: "var(--text-muted)" }}
-      >
+      <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--text-muted)' }}>
         Actions:
       </span>
       <button
@@ -3477,9 +3084,7 @@ function FailedActions({
         <Eye size={11} /> View Report
       </button>
       <button
-        onClick={() =>
-          onViewArtifacts({ testId: test.id, testTitle: test.title })
-        }
+        onClick={() => onViewArtifacts({ testId: test.id, testTitle: test.title })}
         className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-50 text-neutral-600 hover:bg-neutral-100 transition-colors border border-neutral-200"
       >
         <Camera size={11} /> View Artifacts
@@ -3510,12 +3115,12 @@ function EditorView({
   onRunSpec: (spec: string) => void;
 }) {
   const [activeFile, setActiveFile] = useState<string | null>(specs[0] ?? null);
-  const [content, setContent] = useState("");
-  const [savedContent, setSavedContent] = useState("");
+  const [content, setContent] = useState('');
+  const [savedContent, setSavedContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [delConfirm, setDelConfirm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -3535,9 +3140,7 @@ function EditorView({
     if (!activeFile) return;
     setLoading(true);
     setError(null);
-    fetch(
-      `${API_BASE}/api/playwright/file?name=${encodeURIComponent(activeFile)}`,
-    )
+    fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(activeFile)}`)
       .then(async (r) => {
         const text = await r.text();
         try {
@@ -3546,7 +3149,7 @@ function EditorView({
             setContent(d.content);
             setSavedContent(d.content);
           } else {
-            setError(d.error ?? "Failed to load file");
+            setError(d.error ?? 'Failed to load file');
           }
         } catch {
           setError(
@@ -3557,9 +3160,8 @@ function EditorView({
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         setError(
-          msg.toLowerCase().includes("fetch") ||
-            msg.toLowerCase().includes("network")
-            ? "Cannot connect to localhost:3001 — make sure the server is running (npm run dev)"
+          msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')
+            ? 'Cannot connect to localhost:3001 — make sure the server is running (npm run dev)'
             : msg,
         );
       })
@@ -3572,42 +3174,42 @@ function EditorView({
     setError(null);
     try {
       const r = await fetch(`${API_BASE}/api/playwright/file`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: activeFile, content }),
       });
       const d = await r.json();
       if (d.ok) {
         setSavedContent(content);
-        setSaveMsg("Saved!");
+        setSaveMsg('Saved!');
         setTimeout(() => setSaveMsg(null), 2000);
-      } else setError(d.error ?? "Save failed");
+      } else setError(d.error ?? 'Save failed');
     } catch {
-      setError("Save failed — server not reachable");
+      setError('Save failed — server not reachable');
     } finally {
       setSaving(false);
     }
   }, [activeFile, content]);
 
   const createFile = useCallback(async () => {
-    const name = newName.trim().replace(/\.spec\.(ts|js)$/, "") + ".spec.ts";
+    const name = newName.trim().replace(/\.spec\.(ts|js)$/, '') + '.spec.ts';
     setError(null);
     try {
       const r = await fetch(`${API_BASE}/api/playwright/file`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, content: NEW_SPEC_STUB }),
       });
       const d = await r.json();
       if (d.ok) {
         setShowNew(false);
-        setNewName("");
+        setNewName('');
         onReloadSpecs();
         // Small delay so specs list refreshes before we select
         setTimeout(() => setActiveFile(name), 200);
-      } else setError(d.error ?? "Create failed");
+      } else setError(d.error ?? 'Create failed');
     } catch {
-      setError("Create failed — server not reachable");
+      setError('Create failed — server not reachable');
     }
   }, [newName, onReloadSpecs]);
 
@@ -3615,24 +3217,21 @@ function EditorView({
     async (name: string) => {
       setError(null);
       try {
-        const r = await fetch(
-          `${API_BASE}/api/playwright/file?name=${encodeURIComponent(name)}`,
-          {
-            method: "DELETE",
-          },
-        );
+        const r = await fetch(`${API_BASE}/api/playwright/file?name=${encodeURIComponent(name)}`, {
+          method: 'DELETE',
+        });
         const d = await r.json();
         if (d.ok) {
           setDelConfirm(null);
           if (activeFile === name) {
             setActiveFile(null);
-            setContent("");
-            setSavedContent("");
+            setContent('');
+            setSavedContent('');
           }
           onReloadSpecs();
-        } else setError(d.error ?? "Delete failed");
+        } else setError(d.error ?? 'Delete failed');
       } catch {
-        setError("Delete failed — server not reachable");
+        setError('Delete failed — server not reachable');
       }
     },
     [activeFile, onReloadSpecs],
@@ -3640,46 +3239,43 @@ function EditorView({
 
   // Tab → insert 2 spaces
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Tab") {
+    if (e.key === 'Tab') {
       e.preventDefault();
       const el = e.currentTarget;
       const s = el.selectionStart;
       const end = el.selectionEnd;
-      const next = content.slice(0, s) + "  " + content.slice(end);
+      const next = content.slice(0, s) + '  ' + content.slice(end);
       setContent(next);
       requestAnimationFrame(() => {
         el.selectionStart = el.selectionEnd = s + 2;
       });
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       saveFile();
     }
   };
 
-  const lineCount = content.split("\n").length;
+  const lineCount = content.split('\n').length;
 
   return (
     <div
       className="flex gap-0 rounded-2xl border overflow-hidden shadow-sm"
-      style={{ borderColor: "var(--border)", minHeight: "72vh" }}
+      style={{ borderColor: 'var(--border)', minHeight: '72vh' }}
     >
       {/* ── Left sidebar: file list ── */}
       <div
         className="w-52 shrink-0 flex flex-col border-r"
         style={{
-          borderColor: "var(--border)",
-          backgroundColor: "var(--bg-card)",
+          borderColor: 'var(--border)',
+          backgroundColor: 'var(--bg-card)',
         }}
       >
         <div
           className="flex items-center justify-between px-3 py-2.5 border-b"
-          style={{ borderColor: "var(--border)" }}
+          style={{ borderColor: 'var(--border)' }}
         >
-          <span
-            className="text-xs font-bold"
-            style={{ color: "var(--text-main)" }}
-          >
+          <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
             Tests
           </span>
           <div className="flex items-center gap-1">
@@ -3687,7 +3283,7 @@ function EditorView({
               onClick={onReloadSpecs}
               title="Refresh"
               className="p-1 rounded hover:opacity-70"
-              style={{ color: "var(--text-muted)" }}
+              style={{ color: 'var(--text-muted)' }}
             >
               <RefreshCw size={11} />
             </button>
@@ -3695,9 +3291,7 @@ function EditorView({
               onClick={() => setShowNew((v) => !v)}
               title="New spec file"
               className="p-1 rounded transition-colors"
-              style={
-                showNew ? { color: "#1a3a8f" } : { color: "var(--text-muted)" }
-              }
+              style={showNew ? { color: '#1a3a8f' } : { color: 'var(--text-muted)' }}
             >
               <Plus size={13} />
             </button>
@@ -3708,7 +3302,7 @@ function EditorView({
         {showNew && (
           <div
             className="px-2 py-2 border-b flex flex-col gap-1.5"
-            style={{ borderColor: "var(--border)" }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <input
               autoFocus
@@ -3716,28 +3310,28 @@ function EditorView({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") createFile();
-                if (e.key === "Escape") {
+                if (e.key === 'Enter') createFile();
+                if (e.key === 'Escape') {
                   setShowNew(false);
-                  setNewName("");
+                  setNewName('');
                 }
               }}
               placeholder="my-test"
               className="w-full px-2 py-1 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
               style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--bg-body)",
-                color: "var(--text-main)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--bg-body)',
+                color: 'var(--text-main)',
               }}
             />
-            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
               .spec.ts will be appended
             </p>
             <button
               onClick={createFile}
               disabled={!newName.trim()}
               className="w-full py-1 rounded-lg text-xs font-semibold disabled:opacity-40"
-              style={{ backgroundColor: "#1a3a8f", color: "#fff" }}
+              style={{ backgroundColor: '#1a3a8f', color: '#fff' }}
             >
               Create
             </button>
@@ -3747,10 +3341,7 @@ function EditorView({
         {/* File list */}
         <div className="flex-1 overflow-y-auto py-1">
           {specs.length === 0 && (
-            <p
-              className="px-3 py-4 text-[11px] text-center"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <p className="px-3 py-4 text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>
               No spec files found
             </p>
           )}
@@ -3761,29 +3352,27 @@ function EditorView({
               style={
                 activeFile === s
                   ? {
-                      backgroundColor: "rgba(26,58,143,0.08)",
-                      borderLeft: "2px solid #1a3a8f",
+                      backgroundColor: 'rgba(26,58,143,0.08)',
+                      borderLeft: '2px solid #1a3a8f',
                     }
-                  : { borderLeft: "2px solid transparent" }
+                  : { borderLeft: '2px solid transparent' }
               }
               onClick={() => setActiveFile(s)}
               onMouseEnter={(e) => {
                 if (activeFile !== s)
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "var(--bg-body)";
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-body)';
               }}
               onMouseLeave={(e) => {
-                if (activeFile !== s)
-                  (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                if (activeFile !== s) (e.currentTarget as HTMLElement).style.backgroundColor = '';
               }}
             >
               <span
                 className="text-[11px] font-mono truncate"
                 style={{
-                  color: activeFile === s ? "#1a3a8f" : "var(--text-main)",
+                  color: activeFile === s ? '#1a3a8f' : 'var(--text-main)',
                 }}
               >
-                {s.replace(/\.spec\.(ts|js)$/, "")}
+                {s.replace(/\.spec\.(ts|js)$/, '')}
                 <span className="opacity-40">.spec.ts</span>
               </span>
               {delConfirm === s ? (
@@ -3800,7 +3389,7 @@ function EditorView({
                   <button
                     onClick={() => setDelConfirm(null)}
                     className="text-[10px]"
-                    style={{ color: "var(--text-muted)" }}
+                    style={{ color: 'var(--text-muted)' }}
                   >
                     ✕
                   </button>
@@ -3812,7 +3401,7 @@ function EditorView({
                     setDelConfirm(s);
                   }}
                   className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity p-0.5 rounded"
-                  style={{ color: "#ef4444" }}
+                  style={{ color: '#ef4444' }}
                   title="Delete file"
                 >
                   <Trash2 size={10} />
@@ -3829,17 +3418,14 @@ function EditorView({
         <div
           className="flex items-center justify-between px-4 py-2 border-b shrink-0"
           style={{
-            borderColor: "var(--border)",
-            backgroundColor: "var(--bg-card)",
+            borderColor: 'var(--border)',
+            backgroundColor: 'var(--bg-card)',
           }}
         >
           <div className="flex items-center gap-2">
-            <FileText size={12} style={{ color: "var(--text-muted)" }} />
-            <span
-              className="text-xs font-mono font-semibold"
-              style={{ color: "var(--text-main)" }}
-            >
-              {activeFile ?? "—"}
+            <FileText size={12} style={{ color: 'var(--text-muted)' }} />
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--text-main)' }}>
+              {activeFile ?? '—'}
             </span>
             {isDirty && (
               <span
@@ -3848,9 +3434,7 @@ function EditorView({
               />
             )}
             {saveMsg && (
-              <span className="text-[11px] font-semibold text-emerald-500">
-                {saveMsg}
-              </span>
+              <span className="text-[11px] font-semibold text-emerald-500">{saveMsg}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -3866,7 +3450,7 @@ function EditorView({
                   <button
                     onClick={() => setLoadKey((k) => k + 1)}
                     className="text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0"
-                    style={{ borderColor: "#ef4444", color: "#ef4444" }}
+                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
                     title="Retry loading file"
                   >
                     Retry
@@ -3874,10 +3458,7 @@ function EditorView({
                 )}
               </div>
             )}
-            <span
-              className="text-[10px]"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
               {lineCount} lines
             </span>
             <button
@@ -3887,35 +3468,31 @@ function EditorView({
               style={
                 isDirty && !saving
                   ? {
-                      backgroundColor: "#1a3a8f",
-                      borderColor: "#1a3a8f",
-                      color: "#fff",
+                      backgroundColor: '#1a3a8f',
+                      borderColor: '#1a3a8f',
+                      color: '#fff',
                     }
                   : {
-                      borderColor: "var(--border)",
-                      backgroundColor: "var(--bg-card)",
-                      color: "var(--text-muted)",
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-muted)',
                     }
               }
               title="Save (Ctrl+S)"
             >
-              {saving ? (
-                <RotateCcw size={11} className="animate-spin" />
-              ) : (
-                <Save size={11} />
-              )}
-              {saving ? "Saving…" : "Save"}
+              {saving ? <RotateCcw size={11} className="animate-spin" /> : <Save size={11} />}
+              {saving ? 'Saving…' : 'Save'}
             </button>
             <button
               onClick={() => activeFile && onRunSpec(activeFile)}
               disabled={!activeFile || isDirty}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40"
               style={{
-                backgroundColor: "#059669",
-                borderColor: "#059669",
-                color: "#fff",
+                backgroundColor: '#059669',
+                borderColor: '#059669',
+                color: '#fff',
               }}
-              title={isDirty ? "Save before running" : "Run this spec"}
+              title={isDirty ? 'Save before running' : 'Run this spec'}
             >
               <Play size={11} /> Run
             </button>
@@ -3926,16 +3503,16 @@ function EditorView({
         {!activeFile ? (
           <div
             className="flex-1 flex items-center justify-center flex-col gap-3"
-            style={{ backgroundColor: "#1e1e2e" }}
+            style={{ backgroundColor: '#1e1e2e' }}
           >
-            <PenLine size={32} style={{ color: "#4c4f69" }} />
-            <p className="text-sm" style={{ color: "#6c7086" }}>
+            <PenLine size={32} style={{ color: '#4c4f69' }} />
+            <p className="text-sm" style={{ color: '#6c7086' }}>
               Select a spec file to edit
             </p>
             <button
               onClick={() => setShowNew(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
-              style={{ backgroundColor: "#1a3a8f", color: "#fff" }}
+              style={{ backgroundColor: '#1a3a8f', color: '#fff' }}
             >
               <Plus size={12} /> New spec file
             </button>
@@ -3943,24 +3520,17 @@ function EditorView({
         ) : loading ? (
           <div
             className="flex-1 flex items-center justify-center"
-            style={{ backgroundColor: "#1e1e2e" }}
+            style={{ backgroundColor: '#1e1e2e' }}
           >
-            <RotateCcw
-              size={18}
-              className="animate-spin"
-              style={{ color: "#6c7086" }}
-            />
+            <RotateCcw size={18} className="animate-spin" style={{ color: '#6c7086' }} />
           </div>
         ) : (
-          <div
-            className="flex flex-1 overflow-hidden"
-            style={{ backgroundColor: "#1e1e2e" }}
-          >
+          <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: '#1e1e2e' }}>
             {/* Line numbers */}
             <div
               ref={lineNumbersRef}
               className="select-none text-right pr-3 pl-3 py-3 text-[12px] font-mono leading-[1.6] shrink-0 overflow-hidden pointer-events-none"
-              style={{ color: "#4c4f69", minWidth: "3rem", userSelect: "none" }}
+              style={{ color: '#4c4f69', minWidth: '3rem', userSelect: 'none' }}
             >
               {Array.from({ length: lineCount }, (_, i) => (
                 <div key={i + 1}>{i + 1}</div>
@@ -3974,16 +3544,14 @@ function EditorView({
               onKeyDown={handleKeyDown}
               onScroll={(e) => {
                 if (lineNumbersRef.current)
-                  lineNumbersRef.current.scrollTop = (
-                    e.target as HTMLTextAreaElement
-                  ).scrollTop;
+                  lineNumbersRef.current.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
               }}
               spellCheck={false}
               className="flex-1 resize-none focus:outline-none py-3 pr-4 text-[12.5px] font-mono leading-[1.6]"
               style={{
-                backgroundColor: "#1e1e2e",
-                color: "#cdd6f4",
-                caretColor: "#cdd6f4",
+                backgroundColor: '#1e1e2e',
+                color: '#cdd6f4',
+                caretColor: '#cdd6f4',
                 tabSize: 2,
               }}
             />
@@ -4019,27 +3587,23 @@ function PwMarkdownContent({
       {parts.map((part, i) => {
         const fm = /^```([\w]*)\n([\s\S]*?)```$/.exec(part);
         if (fm) {
-          const lang = fm[1] || "text";
+          const lang = fm[1] || 'text';
           const code = fm[2].trimEnd();
-          const isRunnable =
-            !!onRunCode && /^(typescript|javascript|ts|js)$/i.test(lang);
+          const isRunnable = !!onRunCode && /^(typescript|javascript|ts|js)$/i.test(lang);
           return (
             <div
               key={i}
               className="relative my-1.5 rounded-lg overflow-hidden"
-              style={{ background: "#0d1117", border: "1px solid #30363d" }}
+              style={{ background: '#0d1117', border: '1px solid #30363d' }}
             >
               <div
                 className="flex items-center justify-between px-2 py-1"
                 style={{
-                  background: "#161b22",
-                  borderBottom: "1px solid #30363d",
+                  background: '#161b22',
+                  borderBottom: '1px solid #30363d',
                 }}
               >
-                <span
-                  className="text-[9px] font-mono uppercase"
-                  style={{ color: "#8b949e" }}
-                >
+                <span className="text-[9px] font-mono uppercase" style={{ color: '#8b949e' }}>
                   {lang}
                 </span>
                 <div className="flex items-center gap-1">
@@ -4053,41 +3617,37 @@ function PwMarkdownContent({
                       disabled={running === i}
                       className="text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-0.5"
                       style={{
-                        color: running === i ? "#58a6ff" : "#3fb950",
-                        background:
-                          running === i
-                            ? "rgba(88,166,255,0.1)"
-                            : "rgba(63,185,80,0.08)",
-                        border: `1px solid ${running === i ? "rgba(88,166,255,0.3)" : "rgba(63,185,80,0.25)"}`,
+                        color: running === i ? '#58a6ff' : '#3fb950',
+                        background: running === i ? 'rgba(88,166,255,0.1)' : 'rgba(63,185,80,0.08)',
+                        border: `1px solid ${running === i ? 'rgba(88,166,255,0.3)' : 'rgba(63,185,80,0.25)'}`,
                         opacity: running !== null && running !== i ? 0.5 : 1,
                       }}
                     >
-                      {running === i ? "⟳ Queued" : "▶ Run in Dashboard"}
+                      {running === i ? '⟳ Queued' : '▶ Run in Dashboard'}
                     </button>
                   )}
                   <button
                     onClick={() => copyCode(code, i)}
                     className="text-[9px] px-1.5 py-0.5 rounded transition-colors"
                     style={{
-                      color: copied === i ? "#3fb950" : "#8b949e",
-                      background:
-                        copied === i ? "rgba(63,185,80,0.1)" : "transparent",
+                      color: copied === i ? '#3fb950' : '#8b949e',
+                      background: copied === i ? 'rgba(63,185,80,0.1)' : 'transparent',
                     }}
                   >
-                    {copied === i ? "✓ Copied" : "Copy"}
+                    {copied === i ? '✓ Copied' : 'Copy'}
                   </button>
                 </div>
               </div>
               <pre
                 className="px-3 py-2 overflow-x-auto font-mono text-[10px]"
-                style={{ color: "#e6edf3", margin: 0 }}
+                style={{ color: '#e6edf3', margin: 0 }}
               >
                 <code>{code}</code>
               </pre>
             </div>
           );
         }
-        const lines = part.split("\n");
+        const lines = part.split('\n');
         return (
           <span key={i}>
             {lines.map((line, li) => {
@@ -4101,8 +3661,8 @@ function PwMarkdownContent({
                           key={si}
                           className="px-0.5 rounded text-[10px] font-mono"
                           style={{
-                            background: "rgba(110,118,129,0.2)",
-                            color: "#f0883e",
+                            background: 'rgba(110,118,129,0.2)',
+                            color: '#f0883e',
                           }}
                         >
                           {seg.slice(1, -1)}
@@ -4110,12 +3670,11 @@ function PwMarkdownContent({
                       );
                     if (/^\*\*[^*]+\*\*$/.test(seg))
                       return (
-                        <strong key={si} style={{ color: "#e6edf3" }}>
+                        <strong key={si} style={{ color: '#e6edf3' }}>
                           {seg.slice(2, -2)}
                         </strong>
                       );
-                    if (/^\*[^*]+\*$/.test(seg))
-                      return <em key={si}>{seg.slice(1, -1)}</em>;
+                    if (/^\*[^*]+\*$/.test(seg)) return <em key={si}>{seg.slice(1, -1)}</em>;
                     return <span key={si}>{seg}</span>;
                   })}
                   {li < lines.length - 1 && <br />}
@@ -4140,56 +3699,51 @@ function PwMessageBubble({
   agents: AgentConfig[];
   onRunCode?: (code: string, agentName?: string) => void;
 }) {
-  const isUser = msg.role === "user";
+  const isUser = msg.role === 'user';
   const agent = msg.agentId ? agents.find((a) => a.id === msg.agentId) : null;
   const accent = agent ? PW_SPRITE_ACCENT[agent.characterSprite] : null;
-  const avatarBg = isUser ? "#1e3a5f" : (accent?.bg ?? "#0f2a1a");
-  const avatarRing = isUser ? "#1a3a8f" : (accent?.ring ?? "#166534");
-  const avatarText = isUser ? "#93c5fd" : (accent?.text ?? "#4ade80");
-  const initials = isUser
-    ? "U"
-    : (msg.senderName?.slice(0, 2).toUpperCase() ?? "AI");
+  const avatarBg = isUser ? '#1e3a5f' : (accent?.bg ?? '#0f2a1a');
+  const avatarRing = isUser ? '#1a3a8f' : (accent?.ring ?? '#166534');
+  const avatarText = isUser ? '#93c5fd' : (accent?.text ?? '#4ade80');
+  const initials = isUser ? 'U' : (msg.senderName?.slice(0, 2).toUpperCase() ?? 'AI');
 
   // ── Multi-agent collaboration: detect role from the " · label" suffix the
   // server adds to senderName (e.g. "Bug Triager · Critique (round 1)") and
   // render it as a colour-coded role pill so the user can tell at a glance
   // who is drafting / critiquing / synthesising.
-  const senderParts = (msg.senderName ?? "").split(" · ");
+  const senderParts = (msg.senderName ?? '').split(' · ');
   const agentLabel = senderParts[0];
-  const roleLabel =
-    senderParts.length > 1 ? senderParts.slice(1).join(" · ") : null;
+  const roleLabel = senderParts.length > 1 ? senderParts.slice(1).join(' · ') : null;
   const rolePalette = (() => {
     if (!roleLabel) return null;
     const l = roleLabel.toLowerCase();
-    if (l.includes("synthesis") || l.includes("final"))
+    if (l.includes('synthesis') || l.includes('final'))
       return {
-        bg: "rgba(16,185,129,0.16)",
-        color: "#34d399",
-        border: "rgba(16,185,129,0.30)",
+        bg: 'rgba(16,185,129,0.16)',
+        color: '#34d399',
+        border: 'rgba(16,185,129,0.30)',
       }; // synthesis = emerald
-    if (l.includes("critique") || l.includes("review"))
+    if (l.includes('critique') || l.includes('review'))
       return {
-        bg: "rgba(245,158,11,0.16)",
-        color: "#E8A728",
-        border: "rgba(245,158,11,0.30)",
+        bg: 'rgba(245,158,11,0.16)',
+        color: '#E8A728',
+        border: 'rgba(245,158,11,0.30)',
       }; // critic = amber
-    if (l.includes("draft") || l.includes("refined") || l.includes("round"))
+    if (l.includes('draft') || l.includes('refined') || l.includes('round'))
       return {
-        bg: "rgba(59,130,246,0.16)",
-        color: "#60a5fa",
-        border: "rgba(59,130,246,0.30)",
+        bg: 'rgba(59,130,246,0.16)',
+        color: '#60a5fa',
+        border: 'rgba(59,130,246,0.30)',
       }; // primary = blue
     return {
-      bg: "rgba(148,163,184,0.16)",
-      color: "#cbd5e1",
-      border: "rgba(148,163,184,0.30)",
+      bg: 'rgba(148,163,184,0.16)',
+      color: '#cbd5e1',
+      border: 'rgba(148,163,184,0.30)',
     };
   })();
 
   return (
-    <div
-      className={`flex gap-2 ${isUser ? "flex-row-reverse" : "flex-row"} items-end`}
-    >
+    <div className={`flex gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end`}>
       <div
         className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold"
         style={{
@@ -4200,12 +3754,10 @@ function PwMessageBubble({
       >
         {initials}
       </div>
-      <div
-        className={`flex flex-col gap-0.5 max-w-[88%] ${isUser ? "items-end" : "items-start"}`}
-      >
+      <div className={`flex flex-col gap-0.5 max-w-[88%] ${isUser ? 'items-end' : 'items-start'}`}>
         <span
           className="text-[9px] font-medium px-0.5 flex items-center gap-1.5 flex-wrap"
-          style={{ color: "var(--text-muted)" }}
+          style={{ color: 'var(--text-muted)' }}
         >
           <span>{agentLabel}</span>
           {roleLabel && rolePalette && (
@@ -4223,32 +3775,30 @@ function PwMessageBubble({
           )}
           <span className="font-normal opacity-60">
             {new Date(msg.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
+              hour: '2-digit',
+              minute: '2-digit',
             })}
           </span>
         </span>
         <div
           className="rounded-xl px-2.5 py-2"
           style={{
-            background: isUser
-              ? "linear-gradient(135deg,#1e3a5f,#1a3050)"
-              : "var(--bg-card)",
-            border: `1px solid ${isUser ? "#1e4080" : "var(--border)"}`,
-            color: "var(--text-main)",
-            wordBreak: "break-word",
+            background: isUser ? 'linear-gradient(135deg,#1e3a5f,#1a3050)' : 'var(--bg-card)',
+            border: `1px solid ${isUser ? '#1e4080' : 'var(--border)'}`,
+            color: 'var(--text-main)',
+            wordBreak: 'break-word',
           }}
         >
           {msg.attachments
-            ?.filter((a) => !a.type.startsWith("image/"))
+            ?.filter((a) => !a.type.startsWith('image/'))
             .map((att, i) => (
               <span
                 key={i}
                 className="inline-flex items-center gap-1 mr-1 mb-1.5 px-1.5 py-0.5 rounded text-[9px]"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  color: "var(--text-muted)",
-                  border: "1px solid var(--border)",
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border)',
                 }}
               >
                 <FileText size={8} />
@@ -4256,7 +3806,7 @@ function PwMessageBubble({
               </span>
             ))}
           {msg.attachments
-            ?.filter((a) => a.type.startsWith("image/"))
+            ?.filter((a) => a.type.startsWith('image/'))
             .map((att, i) => (
               <img
                 key={i}
@@ -4264,22 +3814,16 @@ function PwMessageBubble({
                 alt={att.name}
                 className="max-w-full rounded-lg mb-1.5 block"
                 style={{
-                  border: "1px solid var(--border)",
+                  border: '1px solid var(--border)',
                   maxHeight: 150,
-                  objectFit: "cover",
+                  objectFit: 'cover',
                 }}
               />
             ))}
           {isUser ? (
-            <span className="text-[11px] leading-relaxed whitespace-pre-wrap">
-              {msg.content}
-            </span>
+            <span className="text-[11px] leading-relaxed whitespace-pre-wrap">{msg.content}</span>
           ) : msg.content ? (
-            <PwMarkdownContent
-              text={msg.content}
-              onRunCode={onRunCode}
-              agentName={agent?.name}
-            />
+            <PwMarkdownContent text={msg.content} onRunCode={onRunCode} agentName={agent?.name} />
           ) : (
             <span className="flex gap-0.5 items-center py-0.5">
               {[0, 1, 2].map((i) => (
@@ -4295,8 +3839,8 @@ function PwMessageBubble({
             <span
               className="inline-block w-1.5 h-3 ml-0.5 animate-pulse rounded-sm align-middle"
               style={{
-                background: accent?.bar ?? "#4ade80",
-                verticalAlign: "middle",
+                background: accent?.bar ?? '#4ade80',
+                verticalAlign: 'middle',
               }}
             />
           )}
@@ -4315,12 +3859,7 @@ interface PwOfficePanelProps {
   onRunAll?: () => void;
 }
 
-function PwOfficePanel({
-  running,
-  suites,
-  onRunCode,
-  onRunAll,
-}: PwOfficePanelProps) {
+function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelProps) {
   const {
     agents,
     settings,
@@ -4343,13 +3882,13 @@ function PwOfficePanel({
   const abortRef = useRef<AbortController | null>(null);
 
   const [assetsReady, setAssetsReady] = useState(false);
-  const [inputText, setInputText] = useState("");
+  const [inputText, setInputText] = useState('');
   const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
 
   // Default selected agent to first available
   useEffect(() => {
@@ -4358,7 +3897,7 @@ function PwOfficePanel({
 
   // Auto-scroll chat to bottom
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingMsgId]);
 
   // ── Mount: init singleton + load assets ──────────────────────────────────
@@ -4375,8 +3914,7 @@ function PwOfficePanel({
           }
           const active =
             running ||
-            (hasFailures &&
-              (_agent.id === "agent-triage" || _agent.id === "agent-healer"));
+            (hasFailures && (_agent.id === 'agent-triage' || _agent.id === 'agent-healer'));
           os.setAgentActive(numId, active);
         });
         setAssetsReady(true);
@@ -4385,9 +3923,7 @@ function PwOfficePanel({
   }, []);
 
   // ── Derive failure flag ───────────────────────────────────────────────────
-  const hasFailures = suites.some((s) =>
-    s.tests.some((t) => t.status === "failed"),
-  );
+  const hasFailures = suites.some((s) => s.tests.some((t) => t.status === 'failed'));
 
   // ── Sync: drive animations from test state ────────────────────────────────
   useEffect(() => {
@@ -4395,9 +3931,7 @@ function PwOfficePanel({
     agents.forEach((agent, idx) => {
       const numId = pwAgentNumId(idx);
       const active =
-        running ||
-        (hasFailures &&
-          (agent.id === "agent-triage" || agent.id === "agent-healer"));
+        running || (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'));
       _pwOfficeState!.setAgentActive(numId, active);
     });
   }, [agents, running, hasFailures]);
@@ -4425,7 +3959,7 @@ function PwOfficePanel({
       if (!textarea) return;
       const pos = textarea.selectionStart;
       const text = inputText;
-      const atIdx = text.lastIndexOf("@", pos - 1);
+      const atIdx = text.lastIndexOf('@', pos - 1);
       if (atIdx === -1) return;
       const next = `${text.slice(0, atIdx)}@${agentName} ${text.slice(pos)}`;
       setInputText(next);
@@ -4451,29 +3985,27 @@ function PwOfficePanel({
 
   const handleKeyDownChat = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentionQuery !== null && mentionMatches.length > 0) {
-      if (e.key === "ArrowDown") {
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
         setMentionIndex((i) => (i + 1) % mentionMatches.length);
         return;
       }
-      if (e.key === "ArrowUp") {
+      if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setMentionIndex(
-          (i) => (i - 1 + mentionMatches.length) % mentionMatches.length,
-        );
+        setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length);
         return;
       }
-      if (e.key === "Enter" || e.key === "Tab") {
+      if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
         insertMention(mentionMatches[mentionIndex].name);
         return;
       }
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         setMentionQuery(null);
         return;
       }
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void handleSend();
     }
@@ -4485,8 +4017,8 @@ function PwOfficePanel({
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     files.forEach((file) => {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-      if (file.type.startsWith("image/")) {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = () =>
           setPendingFiles((prev) => [
@@ -4506,26 +4038,22 @@ function PwOfficePanel({
           setInputText((prev) => (prev ? `${prev}\n\n${inlined}` : inlined));
           setPendingFiles((prev) => [
             ...prev,
-            { name: file.name, type: "text/plain", content: text },
+            { name: file.name, type: 'text/plain', content: text },
           ]);
         };
         reader.readAsText(file);
       }
     });
-    e.target.value = "";
+    e.target.value = '';
   };
 
   // ── Parse @-mentions ──────────────────────────────────────────────────────
 
   const parseTaggedAgents = useCallback(
     (text: string) => {
-      const names = [...text.matchAll(/@([\w]+(?:\s[\w]+)*)/g)].map((m) =>
-        m[1].trim(),
-      );
+      const names = [...text.matchAll(/@([\w]+(?:\s[\w]+)*)/g)].map((m) => m[1].trim());
       const matched = names
-        .map((name) =>
-          agents.find((a) => a.name.toLowerCase() === name.toLowerCase()),
-        )
+        .map((name) => agents.find((a) => a.name.toLowerCase() === name.toLowerCase()))
         .filter((a): a is AgentConfig => a !== undefined);
       return [...new Map(matched.map((a) => [a.id, a])).values()];
     },
@@ -4542,19 +4070,19 @@ function PwOfficePanel({
     setMentionQuery(null);
     setErrorBanner(null);
 
-    const imageAtts = pendingFiles.filter((f) => f.type.startsWith("image/"));
+    const imageAtts = pendingFiles.filter((f) => f.type.startsWith('image/'));
     const allAtts = pendingFiles;
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
-      role: "user",
+      role: 'user',
       content: text,
-      senderName: "User",
+      senderName: 'User',
       timestamp: Date.now(),
       attachments: allAtts.length > 0 ? allAtts : undefined,
     };
     appendMessage(userMsg);
-    setInputText("");
+    setInputText('');
     setPendingFiles([]);
 
     // ── Slash-command interception: @AgentName /command ────────────────────
@@ -4564,14 +4092,11 @@ function PwOfficePanel({
       const cmdAgent = agents.find(
         (a) => a.name.toLowerCase() === mentionedName.toLowerCase().trim(),
       );
-      if (
-        cmdAgent &&
-        ["run", "run-all", "fix-failures"].includes(command.toLowerCase())
-      ) {
-        setAgentStatus(cmdAgent.id, "working");
+      if (cmdAgent && ['run', 'run-all', 'fix-failures'].includes(command.toLowerCase())) {
+        setAgentStatus(cmdAgent.id, 'working');
         const cmdMsg: Message = {
           id: crypto.randomUUID(),
-          role: "model",
+          role: 'model',
           content: `▶ Command \`/${command}\` received — triggering automation suite…`,
           senderName: cmdAgent.name,
           agentId: cmdAgent.id,
@@ -4580,7 +4105,7 @@ function PwOfficePanel({
         appendMessage(cmdMsg);
         // Kick off test run and restore idle state when done
         onRunAll?.();
-        setTimeout(() => setAgentStatus(cmdAgent.id, "idle"), 5000);
+        setTimeout(() => setAgentStatus(cmdAgent.id, 'idle'), 5000);
         setStreamingMsgId(null);
         return;
       }
@@ -4598,18 +4123,16 @@ function PwOfficePanel({
     if (targets.length === 0) return;
 
     setActiveTyping(targets.map((a) => a.id));
-    targets.forEach((a) => setAgentStatus(a.id, "working"));
+    targets.forEach((a) => setAgentStatus(a.id, 'working'));
 
     const modelMsgId = crypto.randomUUID();
     const respondentName =
-      targets.length === 1
-        ? targets[0].name
-        : targets.map((a) => a.name).join(" + ");
+      targets.length === 1 ? targets[0].name : targets.map((a) => a.name).join(' + ');
 
     const modelMsg: Message = {
       id: modelMsgId,
-      role: "model",
-      content: "",
+      role: 'model',
+      content: '',
       senderName: respondentName,
       agentId: targets.length === 1 ? targets[0].id : undefined,
       timestamp: Date.now(),
@@ -4627,11 +4150,11 @@ function PwOfficePanel({
     abortRef.current = controller;
 
     try {
-      const isOllama = settings.provider === "ollama";
+      const isOllama = settings.provider === 'ollama';
       const resp = await fetch(`${API_BASE}/api/qa-agent`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${settings.geminiApiKey}`,
         },
         body: JSON.stringify({
@@ -4657,25 +4180,18 @@ function PwOfficePanel({
           // Auto-enable when the user tags 2+ agents (intent: "team huddle") or
           // tags the manager (intent: "go through the team"). Gemini-only.
           collaborate:
-            !isOllama &&
-            (targets.length >= 2 ||
-              targets.some((a) => a.id === TEAM_MANAGER_ID)),
+            !isOllama && (targets.length >= 2 || targets.some((a) => a.id === TEAM_MANAGER_ID)),
           maxRounds: 2,
         }),
         signal: controller.signal,
       });
 
       if (!resp.ok || !resp.body) {
-        const errData = (await resp
-          .json()
-          .catch(() => ({ error: `HTTP ${resp.status}` }))) as {
+        const errData = (await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }))) as {
           error?: string;
         };
-        appendChunk(
-          modelMsgId,
-          `\n\n[Error: ${errData.error ?? "Unknown error"}]`,
-        );
-        targets.forEach((a) => setAgentStatus(a.id, "error"));
+        appendChunk(modelMsgId, `\n\n[Error: ${errData.error ?? 'Unknown error'}]`);
+        targets.forEach((a) => setAgentStatus(a.id, 'error'));
         setActiveTyping([]);
         setStreamingMsgId(null);
         return;
@@ -4683,7 +4199,7 @@ function PwOfficePanel({
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
+      let buffer = '';
 
       // Multi-agent collaboration mode: the server emits `turn_start | chunk |
       // turn_done` events as the team passes work back and forth. Each turn
@@ -4695,10 +4211,10 @@ function PwOfficePanel({
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
         for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
+          if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (!raw) continue;
           try {
@@ -4706,34 +4222,30 @@ function PwOfficePanel({
               chunk?: string;
               done?: boolean;
               error?: string;
-              evt?: "turn_start" | "turn_done" | "turn_verdict";
+              evt?: 'turn_start' | 'turn_done' | 'turn_verdict';
               agentId?: string;
               agentName?: string;
-              role?: "primary" | "critic" | "synthesis";
+              role?: 'primary' | 'critic' | 'synthesis';
               round?: number;
               label?: string;
-              verdict?: "lgtm" | "needs_work";
+              verdict?: 'lgtm' | 'needs_work';
             };
             if (payload.error) {
               appendChunk(activeMsgId, `\n\n[Error: ${payload.error}]`);
-              targets.forEach((a) => setAgentStatus(a.id, "error"));
+              targets.forEach((a) => setAgentStatus(a.id, 'error'));
               setActiveTyping([]);
               setStreamingMsgId(null);
               return;
             }
             // Collaboration turn boundary — replace the initial placeholder
             // on the first turn_start, then create a fresh message per subsequent turn.
-            if (payload.evt === "turn_start" && payload.agentId) {
+            if (payload.evt === 'turn_start' && payload.agentId) {
               const senderName = payload.label
-                ? `${payload.agentName ?? "Agent"} · ${payload.label}`
-                : (payload.agentName ?? "Agent");
+                ? `${payload.agentName ?? 'Agent'} · ${payload.label}`
+                : (payload.agentName ?? 'Agent');
               // First turn reuses modelMsgId (and clears its placeholder name);
               // subsequent turns spawn a brand-new message.
-              if (
-                activeMsgId === modelMsgId &&
-                payload.round === 1 &&
-                payload.role === "primary"
-              ) {
+              if (activeMsgId === modelMsgId && payload.round === 1 && payload.role === 'primary') {
                 updateMessage(modelMsgId, {
                   senderName,
                   agentId: payload.agentId,
@@ -4742,8 +4254,8 @@ function PwOfficePanel({
                 const newId = crypto.randomUUID();
                 appendMessage({
                   id: newId,
-                  role: "model",
-                  content: "",
+                  role: 'model',
+                  content: '',
                   senderName,
                   agentId: payload.agentId,
                   timestamp: Date.now(),
@@ -4751,26 +4263,26 @@ function PwOfficePanel({
                 activeMsgId = newId;
                 setStreamingMsgId(newId);
               }
-              if (payload.agentId) setAgentStatus(payload.agentId, "working");
+              if (payload.agentId) setAgentStatus(payload.agentId, 'working');
               continue;
             }
-            if (payload.evt === "turn_done") {
-              if (payload.agentId) setAgentStatus(payload.agentId, "idle");
+            if (payload.evt === 'turn_done') {
+              if (payload.agentId) setAgentStatus(payload.agentId, 'idle');
               continue;
             }
-            if (payload.evt === "turn_verdict") {
+            if (payload.evt === 'turn_verdict') {
               // Inline marker — appended to current message so the user sees the critic's verdict
               const tag =
-                payload.verdict === "lgtm"
-                  ? "\n\n✅ Verdict: LGTM"
-                  : "\n\n🔁 Verdict: needs another pass";
+                payload.verdict === 'lgtm'
+                  ? '\n\n✅ Verdict: LGTM'
+                  : '\n\n🔁 Verdict: needs another pass';
               appendChunk(activeMsgId, tag);
               continue;
             }
             if (payload.chunk) appendChunk(activeMsgId, payload.chunk);
             if (payload.done) {
               targets.forEach((a) => {
-                setAgentStatus(a.id, "idle");
+                setAgentStatus(a.id, 'idle');
                 removeActiveTyping(a.id);
               });
               setStreamingMsgId(null);
@@ -4782,10 +4294,10 @@ function PwOfficePanel({
         }
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      const errMsg = err instanceof Error ? err.message : "Network error";
+      if (err instanceof Error && err.name === 'AbortError') return;
+      const errMsg = err instanceof Error ? err.message : 'Network error';
       appendChunk(modelMsgId, `\n\n[Error: ${errMsg}]`);
-      targets.forEach((a) => setAgentStatus(a.id, "error"));
+      targets.forEach((a) => setAgentStatus(a.id, 'error'));
       setActiveTyping([]);
       setStreamingMsgId(null);
     }
@@ -4812,7 +4324,7 @@ function PwOfficePanel({
     setStreamingMsgId(null);
     setActiveTyping([]);
     agents.forEach((a) => {
-      if (activeTypingAgents.includes(a.id)) setAgentStatus(a.id, "idle");
+      if (activeTypingAgents.includes(a.id)) setAgentStatus(a.id, 'idle');
     });
   };
 
@@ -4824,20 +4336,17 @@ function PwOfficePanel({
       <div
         className="shrink-0 flex items-center justify-between px-3"
         style={{
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-body)",
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-body)',
           height: 34,
         }}
       >
         <div className="flex items-center gap-1.5">
           <span className="text-sm leading-none">🏢</span>
-          <span
-            className="text-[11px] font-bold"
-            style={{ color: "var(--text-main)" }}
-          >
+          <span className="text-[11px] font-bold" style={{ color: 'var(--text-main)' }}>
             QA Office
           </span>
-          <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
+          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
             · {agents.length} agents
           </span>
         </div>
@@ -4845,36 +4354,34 @@ function PwOfficePanel({
           {running && (
             <span
               className="flex items-center gap-1 text-[9px] font-semibold"
-              style={{ color: "#60a5fa" }}
+              style={{ color: '#60a5fa' }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />{" "}
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />{' '}
               Running
             </span>
           )}
           {!running && hasFailures && (
             <span
               className="flex items-center gap-1 text-[9px] font-semibold"
-              style={{ color: "#f87171" }}
+              style={{ color: '#f87171' }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />{" "}
-              Failures
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" /> Failures
             </span>
           )}
           {!running && !hasFailures && agents.length > 0 && (
             <span
               className="flex items-center gap-1 text-[9px] font-semibold"
-              style={{ color: "#34d399" }}
+              style={{ color: '#34d399' }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />{" "}
-              All idle
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> All idle
             </span>
           )}
           {/* Provider toggle */}
           <div
             className="flex items-center rounded overflow-hidden"
-            style={{ border: "1px solid var(--border)", fontSize: 8 }}
+            style={{ border: '1px solid var(--border)', fontSize: 8 }}
           >
-            {(["gemini", "ollama"] as const).map((p) => (
+            {(['gemini', 'ollama'] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => updateSettings({ provider: p })}
@@ -4882,14 +4389,14 @@ function PwOfficePanel({
                 style={{
                   background:
                     settings.provider === p
-                      ? p === "gemini"
-                        ? "#1a3a8f"
-                        : "#065f46"
-                      : "transparent",
-                  color: settings.provider === p ? "#fff" : "var(--text-muted)",
+                      ? p === 'gemini'
+                        ? '#1a3a8f'
+                        : '#065f46'
+                      : 'transparent',
+                  color: settings.provider === p ? '#fff' : 'var(--text-muted)',
                 }}
               >
-                {p === "gemini" ? "✨" : "🦙"}
+                {p === 'gemini' ? '✨' : '🦙'}
               </button>
             ))}
           </div>
@@ -4920,9 +4427,9 @@ function PwOfficePanel({
       <div
         className="w-full shrink-0 relative"
         style={{
-          background: "#1a1a2e",
-          overflow: "hidden",
-          aspectRatio: "21 / 12",
+          background: '#1a1a2e',
+          overflow: 'hidden',
+          aspectRatio: '21 / 12',
         }}
       >
         {assetsReady && _pwOfficeState ? (
@@ -4947,17 +4454,16 @@ function PwOfficePanel({
       <div
         className="shrink-0 flex items-center gap-1 px-2 py-1.5 overflow-x-auto"
         style={{
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-body)",
-          scrollbarWidth: "none",
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-body)',
+          scrollbarWidth: 'none',
         }}
       >
         {agents.map((agent) => {
           const accent = PW_SPRITE_ACCENT[agent.characterSprite];
           const active =
             running ||
-            (hasFailures &&
-              (agent.id === "agent-triage" || agent.id === "agent-healer"));
+            (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'));
           const isTyping = activeTypingAgents.includes(agent.id);
           const isSelected = agent.id === selectedAgentId;
           return (
@@ -4966,22 +4472,20 @@ function PwOfficePanel({
               onClick={() => setSelectedAgentId(agent.id)}
               className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium shrink-0 transition-all"
               style={{
-                background: isSelected ? accent.bg : "transparent",
-                border: `1px solid ${isSelected ? accent.ring : "var(--border)"}`,
-                color: isSelected ? accent.text : "var(--text-muted)",
-                boxShadow: isSelected
-                  ? `0 0 0 1px ${accent.ring}40`
-                  : undefined,
+                background: isSelected ? accent.bg : 'transparent',
+                border: `1px solid ${isSelected ? accent.ring : 'var(--border)'}`,
+                color: isSelected ? accent.text : 'var(--text-muted)',
+                boxShadow: isSelected ? `0 0 0 1px ${accent.ring}40` : undefined,
               }}
               title={agent.role}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${active || isTyping ? "animate-pulse" : ""}`}
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${active || isTyping ? 'animate-pulse' : ''}`}
                 style={{
-                  backgroundColor: active || isTyping ? "#60a5fa" : accent.bar,
+                  backgroundColor: active || isTyping ? '#60a5fa' : accent.bar,
                 }}
               />
-              {agent.name.split(" ")[0]}
+              {agent.name.split(' ')[0]}
             </button>
           );
         })}
@@ -4990,7 +4494,7 @@ function PwOfficePanel({
       {/* ── Chat toolbar ─────────────────────────────────────────────────── */}
       <div
         className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b"
-        style={{ borderColor: "var(--border)", background: "var(--bg-body)" }}
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-body)' }}
       >
         {/* Full agent selector (synced with strip above) */}
         <select
@@ -4998,10 +4502,10 @@ function PwOfficePanel({
           onChange={(e) => setSelectedAgentId(e.target.value)}
           className="flex-1 min-w-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
           style={{
-            background: "var(--bg-card)",
-            color: "var(--text-main)",
-            border: "1px solid var(--border)",
-            outline: "none",
+            background: 'var(--bg-card)',
+            color: 'var(--text-main)',
+            border: '1px solid var(--border)',
+            outline: 'none',
           }}
         >
           {agents.map((a) => (
@@ -5013,7 +4517,7 @@ function PwOfficePanel({
         <button
           onClick={clearHistory}
           className="shrink-0 p-1 rounded hover:text-red-400 transition-colors"
-          style={{ color: "var(--text-muted)" }}
+          style={{ color: 'var(--text-muted)' }}
           title="Clear history"
         >
           <Trash2 size={10} />
@@ -5021,26 +4525,26 @@ function PwOfficePanel({
       </div>
 
       {/* ── Hints / banners ──────────────────────────────────────────────── */}
-      {settings.provider === "ollama" && settings.ollamaModel && (
+      {settings.provider === 'ollama' && settings.ollamaModel && (
         <div
           className="shrink-0 px-2 py-0.5 text-[9px]"
-          style={{ background: "#052e16", color: "#4ade80" }}
+          style={{ background: '#052e16', color: '#4ade80' }}
         >
           🦙 {settings.ollamaModel} · local
         </div>
       )}
-      {settings.provider === "ollama" && !settings.ollamaModel.trim() && (
+      {settings.provider === 'ollama' && !settings.ollamaModel.trim() && (
         <div
           className="shrink-0 px-2 py-0.5 text-[9px]"
-          style={{ background: "#451a03", color: "#E8A728" }}
+          style={{ background: '#451a03', color: '#E8A728' }}
         >
           ⚠ No Ollama model — configure in Settings
         </div>
       )}
-      {settings.provider === "gemini" && !settings.geminiApiKey.trim() && (
+      {settings.provider === 'gemini' && !settings.geminiApiKey.trim() && (
         <div
           className="shrink-0 px-2 py-0.5 text-[9px]"
-          style={{ background: "#451a03", color: "#E8A728" }}
+          style={{ background: '#451a03', color: '#E8A728' }}
         >
           ⚠ No Gemini API key — configure in Settings
         </div>
@@ -5048,7 +4552,7 @@ function PwOfficePanel({
       {errorBanner && (
         <div
           className="shrink-0 flex items-center gap-1 px-2 py-0.5 text-[9px]"
-          style={{ background: "#2d0a0a", color: "#fca5a5" }}
+          style={{ background: '#2d0a0a', color: '#fca5a5' }}
         >
           <span className="flex-1">{errorBanner}</span>
           <button onClick={() => setErrorBanner(null)}>
@@ -5061,24 +4565,22 @@ function PwOfficePanel({
       {pendingFiles.length > 0 && (
         <div
           className="shrink-0 flex flex-wrap gap-1 px-2 py-1 border-b"
-          style={{ borderColor: "var(--border)" }}
+          style={{ borderColor: 'var(--border)' }}
         >
           {pendingFiles.map((f, i) => (
             <span
               key={i}
               className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px]"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                color: "var(--text-muted)",
-                border: "1px solid var(--border)",
+                background: 'rgba(255,255,255,0.06)',
+                color: 'var(--text-muted)',
+                border: '1px solid var(--border)',
               }}
             >
               <FileText size={8} />
               {f.name}
               <button
-                onClick={() =>
-                  setPendingFiles((prev) => prev.filter((_, j) => j !== i))
-                }
+                onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
                 className="hover:text-red-400"
               >
                 <X size={8} />
@@ -5091,31 +4593,25 @@ function PwOfficePanel({
       {/* ── Messages (scrollable, fills remaining height) ─────────────────── */}
       <div
         className="flex-1 min-h-0 overflow-y-auto px-2 py-2 flex flex-col gap-2"
-        style={{ background: "var(--bg-body)" }}
+        style={{ background: 'var(--bg-body)' }}
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center select-none">
-            <p
-              className="text-xs font-semibold"
-              style={{ color: "var(--text-main)" }}
-            >
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
               Chat with your team
             </p>
-            <p
-              className="text-[10px] max-w-[240px]"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Select an agent above or type{" "}
+            <p className="text-[10px] max-w-[240px]" style={{ color: 'var(--text-muted)' }}>
+              Select an agent above or type{' '}
               <code
                 style={{
-                  fontFamily: "monospace",
-                  background: "var(--bg-muted)",
-                  padding: "0 3px",
+                  fontFamily: 'monospace',
+                  background: 'var(--bg-muted)',
+                  padding: '0 3px',
                   borderRadius: 3,
                 }}
               >
                 @Name
-              </code>{" "}
+              </code>{' '}
               to target them
             </p>
             <div className="flex flex-wrap gap-1 justify-center max-w-[280px]">
@@ -5155,7 +4651,7 @@ function PwOfficePanel({
       {mentionQuery !== null && mentionMatches.length > 0 && (
         <div
           className="mx-2 mb-1 rounded-lg overflow-hidden border"
-          style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
         >
           {mentionMatches.map((a, i) => {
             const ac = PW_SPRITE_ACCENT[a.characterSprite];
@@ -5165,12 +4661,9 @@ function PwOfficePanel({
                 onClick={() => insertMention(a.name)}
                 className="w-full flex items-center gap-2 px-2 py-1 text-left transition-colors"
                 style={{
-                  background:
-                    i === mentionIndex ? "var(--bg-body)" : "transparent",
+                  background: i === mentionIndex ? 'var(--bg-body)' : 'transparent',
                   borderBottom:
-                    i < mentionMatches.length - 1
-                      ? "1px solid var(--border)"
-                      : undefined,
+                    i < mentionMatches.length - 1 ? '1px solid var(--border)' : undefined,
                 }}
               >
                 <span
@@ -5179,16 +4672,10 @@ function PwOfficePanel({
                 >
                   {a.name.slice(0, 2).toUpperCase()}
                 </span>
-                <span
-                  className="text-[10px] font-semibold"
-                  style={{ color: "var(--text-main)" }}
-                >
+                <span className="text-[10px] font-semibold" style={{ color: 'var(--text-main)' }}>
                   {a.name}
                 </span>
-                <span
-                  className="text-[9px]"
-                  style={{ color: "var(--text-muted)" }}
-                >
+                <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
                   {a.role}
                 </span>
               </button>
@@ -5200,7 +4687,7 @@ function PwOfficePanel({
       {/* ── Input ────────────────────────────────────────────────────────── */}
       <div
         className="shrink-0 flex flex-col gap-1 px-2 py-2 border-t"
-        style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+        style={{ borderColor: 'var(--border)', background: 'var(--bg-card)' }}
       >
         <div className="flex items-end gap-1.5">
           <textarea
@@ -5208,13 +4695,13 @@ function PwOfficePanel({
             value={inputText}
             onChange={handleInputChange}
             onKeyDown={handleKeyDownChat}
-            placeholder={`Ask ${agents.find((a) => a.id === selectedAgentId)?.name ?? "agent"} or @mention…`}
+            placeholder={`Ask ${agents.find((a) => a.id === selectedAgentId)?.name ?? 'agent'} or @mention…`}
             rows={2}
             className="flex-1 resize-none rounded-lg px-2 py-1.5 text-[11px] leading-relaxed outline-none"
             style={{
-              background: "var(--bg-body)",
-              color: "var(--text-main)",
-              border: "1px solid var(--border)",
+              background: 'var(--bg-body)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border)',
             }}
           />
           <input
@@ -5229,9 +4716,9 @@ function PwOfficePanel({
             onClick={() => fileInputRef.current?.click()}
             className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity"
             style={{
-              background: "var(--bg-body)",
-              color: "var(--text-muted)",
-              border: "1px solid var(--border)",
+              background: 'var(--bg-body)',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border)',
             }}
             title="Attach file"
           >
@@ -5241,7 +4728,7 @@ function PwOfficePanel({
             <button
               onClick={handleStop}
               className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "#374151", color: "#fff" }}
+              style={{ background: '#374151', color: '#fff' }}
               title="Stop"
             >
               <Square size={10} />
@@ -5251,20 +4738,17 @@ function PwOfficePanel({
               onClick={() => void handleSend()}
               disabled={!inputText.trim() && pendingFiles.length === 0}
               className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center disabled:opacity-40 transition-opacity"
-              style={{ background: "#1a3a8f", color: "#fff" }}
+              style={{ background: '#1a3a8f', color: '#fff' }}
               title="Send (Enter)"
             >
               <Send size={11} />
             </button>
           )}
         </div>
-        <p
-          className="text-[8px] text-center"
-          style={{ color: "var(--text-muted)" }}
-        >
+        <p className="text-[8px] text-center" style={{ color: 'var(--text-muted)' }}>
           {anyTyping
-            ? `${activeTypingAgents.map((id) => agents.find((a) => a.id === id)?.name ?? id).join(", ")} typing…`
-            : "Enter · Shift+Enter for newline · @ to mention"}
+            ? `${activeTypingAgents.map((id) => agents.find((a) => a.id === id)?.name ?? id).join(', ')} typing…`
+            : 'Enter · Shift+Enter for newline · @ to mention'}
         </p>
       </div>
     </div>
@@ -5275,36 +4759,24 @@ function PwOfficePanel({
 
 export default function PlaywrightDashboard() {
   // ── Global settings + chat context ─────────────────────────────────────────
-  const {
-    settings,
-    appendMessage,
-    appendChunk,
-    updateMessage,
-    agents: allAgents,
-  } = useSettings();
+  const { settings, appendMessage, appendChunk, updateMessage, agents: allAgents } = useSettings();
 
   const [suites, setSuites] = useState<TestSuite[]>([]);
   const [running, setRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<FilterKey>("active");
-  const [activeView, setActiveView] = useState<ViewKey>("dashboard");
+  const [activeTab, setActiveTab] = useState<FilterKey>('active');
+  const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [config, setConfig] = useState<PlaywrightConfig>(DEFAULT_CONFIG);
   const [savedConfig, setSavedConfig] = useState<PlaywrightConfig | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [configTab, setConfigTab] = useState<"config" | "editor">("config");
-  const [dashboardMode, setDashboardMode] = useState<DashboardMode>("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [configTab, setConfigTab] = useState<'config' | 'editor'>('config');
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>('list');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSuites, setExpandedSuites] = useState<Record<string, boolean>>({});
+  const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
   const [hoveredTest, setHoveredTest] = useState<string | null>(null);
-  const [artifactModal, setArtifactModal] = useState<ArtifactModalState | null>(
-    null,
-  );
+  const [artifactModal, setArtifactModal] = useState<ArtifactModalState | null>(null);
   // ── Real-data states ────────────────────────────────────────────────────────
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -5321,14 +4793,11 @@ export default function PlaywrightDashboard() {
   useEffect(() => {
     if (!specPickerOpen) return;
     const handler = (e: MouseEvent) => {
-      if (
-        specPickerRef.current &&
-        !specPickerRef.current.contains(e.target as Node)
-      )
+      if (specPickerRef.current && !specPickerRef.current.contains(e.target as Node))
         setSpecPickerOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [specPickerOpen]);
   // ── Multi-run history ────────────────────────────────────────────────────────
   const [runHistory, setRunHistory] = useState<RunRecord[]>(() => {
@@ -5342,7 +4811,7 @@ export default function PlaywrightDashboard() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [browsersOk, setBrowsersOk] = useState<boolean | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(
-    () => localStorage.getItem("pw_setup_banner_dismissed") === "1",
+    () => localStorage.getItem('pw_setup_banner_dismissed') === '1',
   );
 
   // ── Derived counts ──────────────────────────────────────────────────────────
@@ -5350,22 +4819,17 @@ export default function PlaywrightDashboard() {
   const counts = useMemo(
     () => ({
       total: allTests.length,
-      passed: allTests.filter((t) => t.status === "passed").length,
-      failed: allTests.filter((t) => t.status === "failed").length,
-      skipped: allTests.filter((t) => t.status === "skipped").length,
-      pending: allTests.filter((t) => t.status === "pending").length,
+      passed: allTests.filter((t) => t.status === 'passed').length,
+      failed: allTests.filter((t) => t.status === 'failed').length,
+      skipped: allTests.filter((t) => t.status === 'skipped').length,
+      pending: allTests.filter((t) => t.status === 'pending').length,
     }),
     [allTests],
   );
-  const totalDuration = useMemo(
-    () => allTests.reduce((a, t) => a + t.duration, 0),
-    [allTests],
-  );
+  const totalDuration = useMemo(() => allTests.reduce((a, t) => a + t.duration, 0), [allTests]);
   const passRate = useMemo(() => {
     const denominator = counts.total - counts.skipped - counts.pending;
-    return denominator > 0
-      ? Math.round((counts.passed / denominator) * 100)
-      : 0;
+    return denominator > 0 ? Math.round((counts.passed / denominator) * 100) : 0;
   }, [counts]);
 
   // ── Changed settings count (vs defaults) ───────────────────────────────────
@@ -5412,10 +4876,7 @@ export default function PlaywrightDashboard() {
   // ── Persist runHistory to localStorage so it survives page refresh ──────────
   useEffect(() => {
     try {
-      localStorage.setItem(
-        RUN_HISTORY_KEY,
-        JSON.stringify(runHistory.slice(0, 30)),
-      );
+      localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(runHistory.slice(0, 30)));
     } catch {
       /* quota */
     }
@@ -5423,17 +4884,15 @@ export default function PlaywrightDashboard() {
 
   // ── isSaved: true when current config matches what's persisted ──────────────
   const isSaved = useMemo(
-    () =>
-      savedConfig !== null &&
-      JSON.stringify(config) === JSON.stringify(savedConfig),
+    () => savedConfig !== null && JSON.stringify(config) === JSON.stringify(savedConfig),
     [config, savedConfig],
   );
 
   // ── saveConfig ──────────────────────────────────────────────────────────────
   const saveConfig = useCallback(() => {
     const savedAt = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, savedAt }));
     setSavedConfig(config);
@@ -5468,13 +4927,9 @@ export default function PlaywrightDashboard() {
       setServerOnline(true);
       setLastRunAt(data.runAt ?? null);
       setSelectedRunId(runId ?? null);
-      setExpandedSuites(
-        Object.fromEntries(data.suites.map((s) => [s.id, true])),
-      );
+      setExpandedSuites(Object.fromEntries(data.suites.map((s) => [s.id, true])));
       // Restore the archived stdout when viewing an old run; clear when switching to latest.
-      setRunLog(
-        runId && Array.isArray(data.runLog) ? data.runLog.slice(-999) : [],
-      );
+      setRunLog(runId && Array.isArray(data.runLog) ? data.runLog.slice(-999) : []);
     } catch {
       setServerOnline(false);
       setDemoMode(true);
@@ -5496,7 +4951,7 @@ export default function PlaywrightDashboard() {
 
   const clearHistory = useCallback(async () => {
     try {
-      await fetch(`${API_BASE}/api/playwright/history`, { method: "DELETE" });
+      await fetch(`${API_BASE}/api/playwright/history`, { method: 'DELETE' });
       setRunHistory([]);
       setSelectedRunId(null);
       // Reload the latest pw-results.json (not a specific archived run)
@@ -5570,14 +5025,13 @@ export default function PlaywrightDashboard() {
           ...s,
           tests: s.tests.filter((t) => {
             const matchesTab =
-              activeTab === "all"
+              activeTab === 'all'
                 ? true
-                : activeTab === "active"
-                  ? t.status === "passed" || t.status === "failed"
+                : activeTab === 'active'
+                  ? t.status === 'passed' || t.status === 'failed'
                   : t.status === activeTab;
             const matchesSearch =
-              !searchQuery ||
-              t.title.toLowerCase().includes(searchQuery.toLowerCase());
+              !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesTab && matchesSearch;
           }),
         }))
@@ -5598,21 +5052,19 @@ export default function PlaywrightDashboard() {
       setShowLog(true);
       setRunLog([]);
       setExpandedErrors({});
-      setSearchQuery("");
-      setActiveView("dashboard");
+      setSearchQuery('');
+      setActiveView('dashboard');
       setSuites((prev) =>
         prev.map((s) => ({
           ...s,
           tests: s.tests.map((t) => ({
             ...t,
-            status: "pending" as Status,
+            status: 'pending' as Status,
             duration: 0,
           })),
         })),
       );
-      setExpandedSuites((prev) =>
-        Object.fromEntries(Object.keys(prev).map((k) => [k, true])),
-      );
+      setExpandedSuites((prev) => Object.fromEntries(Object.keys(prev).map((k) => [k, true])));
 
       // Phase 2 (AI summary) tracking — same protocol used by runDynamicTest
       let summaryMsgId: string | null = null;
@@ -5628,34 +5080,33 @@ export default function PlaywrightDashboard() {
           provider: settings.provider,
           ollamaBaseUrl: settings.ollamaBaseUrl,
           ollamaModel: settings.ollamaModel,
-          agentName: "Dashboard",
+          agentName: 'Dashboard',
         };
         const response = await fetch(`${API_BASE}/api/playwright/run`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bodyWithCreds),
           signal: controller.signal,
         });
-        if (!response.ok || !response.body)
-          throw new Error(`Server ${response.status}`);
+        if (!response.ok || !response.body) throw new Error(`Server ${response.status}`);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        let buffer = '';
         outer: while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n");
-          buffer = parts.pop() ?? "";
+          const parts = buffer.split('\n');
+          buffer = parts.pop() ?? '';
           for (const line of parts) {
-            if (!line.startsWith("data: ")) continue;
+            if (!line.startsWith('data: ')) continue;
             const raw = line.slice(6);
 
             // First try to parse as a structured event object
             let evt: SummaryEvent | Record<string, unknown> | null = null;
             try {
               const parsed = JSON.parse(raw);
-              if (parsed && typeof parsed === "object" && "evt" in parsed) {
+              if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
                 evt = parsed as SummaryEvent | Record<string, unknown>;
               }
             } catch {
@@ -5664,39 +5115,36 @@ export default function PlaywrightDashboard() {
 
             if (evt) {
               // ── Phase 2: summary_start / summary_chunk / summary_done ─────────
-              if (evt.evt === "summary_start") {
+              if (evt.evt === 'summary_start') {
                 inSummaryPhase = true;
                 setRunning(false); // tests are done — let the UI relax
 
-                const mgrAgent = allAgents.find(
-                  (a) => a.id === TEAM_MANAGER_ID,
-                );
-                const mgrName = mgrAgent?.name ?? "Edi M";
+                const mgrAgent = allAgents.find((a) => a.id === TEAM_MANAGER_ID);
+                const mgrName = mgrAgent?.name ?? 'Edi M';
                 const newMsgId = `run-summary-${Date.now()}`;
                 summaryMsgId = newMsgId;
 
                 appendMessage({
                   id: newMsgId,
-                  role: "model",
-                  content: "",
+                  role: 'model',
+                  content: '',
                   senderName: mgrName,
                   agentId: TEAM_MANAGER_ID,
                   timestamp: Date.now(),
-                  type: "qa_summary",
+                  type: 'qa_summary',
                 });
-              } else if (evt.evt === "summary_chunk" && summaryMsgId) {
-                const chunk = typeof evt.text === "string" ? evt.text : "";
+              } else if (evt.evt === 'summary_chunk' && summaryMsgId) {
+                const chunk = typeof evt.text === 'string' ? evt.text : '';
                 if (chunk) appendChunk(summaryMsgId, chunk);
-              } else if (evt.evt === "summary_done") {
+              } else if (evt.evt === 'summary_done') {
                 if (summaryMsgId && evt.failures) {
                   updateMessage(summaryMsgId, {
                     summaryData: {
-                      total: typeof evt.total === "number" ? evt.total : 0,
-                      passed: typeof evt.passed === "number" ? evt.passed : 0,
-                      failed: typeof evt.failed === "number" ? evt.failed : 0,
-                      duration:
-                        typeof evt.duration === "number" ? evt.duration : 0,
-                      failures: evt.failures as QASummaryData["failures"],
+                      total: typeof evt.total === 'number' ? evt.total : 0,
+                      passed: typeof evt.passed === 'number' ? evt.passed : 0,
+                      failed: typeof evt.failed === 'number' ? evt.failed : 0,
+                      duration: typeof evt.duration === 'number' ? evt.duration : 0,
+                      failures: evt.failures as QASummaryData['failures'],
                     },
                   });
                 }
@@ -5713,11 +5161,10 @@ export default function PlaywrightDashboard() {
             } catch {
               msg = raw;
             }
-            if (msg.startsWith("[DONE]")) {
+            if (msg.startsWith('[DONE]')) {
               // [DONE] signals end of Phase 1. Keep reading for summary_start
               // unless the user has no credentials AND is on Gemini — then bail.
-              if (!settings.geminiApiKey && settings.provider === "gemini")
-                break outer;
+              if (!settings.geminiApiKey && settings.provider === 'gemini') break outer;
               continue;
             }
             setRunLog((prev) => [...prev.slice(-999), msg]);
@@ -5728,10 +5175,10 @@ export default function PlaywrightDashboard() {
         await new Promise((r) => setTimeout(r, 120));
         await fetchHistory();
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
+        if (err instanceof DOMException && err.name === 'AbortError') {
           setRunLog((prev) => [
             ...prev,
-            "[TIMEOUT] Test run exceeded 10 minutes and was cancelled.",
+            '[TIMEOUT] Test run exceeded 10 minutes and was cancelled.',
           ]);
         } else {
           setRunLog((prev) => [
@@ -5744,15 +5191,7 @@ export default function PlaywrightDashboard() {
         setRunning(false);
       }
     },
-    [
-      fetchResults,
-      fetchHistory,
-      settings,
-      appendMessage,
-      appendChunk,
-      updateMessage,
-      allAgents,
-    ],
+    [fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents],
   );
 
   // ── Run a single spec from editor ─────────────────────────────────────────
@@ -5769,7 +5208,7 @@ export default function PlaywrightDashboard() {
       if (!serverOnline) {
         setShowLog(true);
         setRunLog([
-          `[OFFLINE] Server not running — cannot execute dynamic test from ${agentName ?? "agent"}`,
+          `[OFFLINE] Server not running — cannot execute dynamic test from ${agentName ?? 'agent'}`,
         ]);
         return;
       }
@@ -5777,12 +5216,10 @@ export default function PlaywrightDashboard() {
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
       setRunning(true);
       setShowLog(true);
-      setRunLog([
-        `[INFO] Dynamic test from ${agentName ?? "agent"} — executing…`,
-      ]);
+      setRunLog([`[INFO] Dynamic test from ${agentName ?? 'agent'} — executing…`]);
       setExpandedErrors({});
-      setSearchQuery("");
-      setActiveView("dashboard");
+      setSearchQuery('');
+      setActiveView('dashboard');
 
       // Phase 2 tracking — AI summary streamed into chat
       let summaryMsgId: string | null = null;
@@ -5790,8 +5227,8 @@ export default function PlaywrightDashboard() {
 
       try {
         const response = await fetch(`${API_BASE}/api/run-dynamic-test`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code,
             agentName,
@@ -5804,26 +5241,25 @@ export default function PlaywrightDashboard() {
           }),
           signal: controller.signal,
         });
-        if (!response.ok || !response.body)
-          throw new Error(`Server ${response.status}`);
+        if (!response.ok || !response.body) throw new Error(`Server ${response.status}`);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        let buffer = '';
         outer: while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n");
-          buffer = parts.pop() ?? "";
+          const parts = buffer.split('\n');
+          buffer = parts.pop() ?? '';
           for (const line of parts) {
-            if (!line.startsWith("data: ")) continue;
+            if (!line.startsWith('data: ')) continue;
             const raw = line.slice(6);
 
             // Try parsing as a structured event object first
             let evt: SummaryEvent | Record<string, unknown> | null = null;
             try {
               const parsed = JSON.parse(raw);
-              if (parsed && typeof parsed === "object" && "evt" in parsed) {
+              if (parsed && typeof parsed === 'object' && 'evt' in parsed) {
                 evt = parsed as SummaryEvent | Record<string, unknown>;
               }
             } catch {
@@ -5832,41 +5268,38 @@ export default function PlaywrightDashboard() {
 
             if (evt) {
               // ── Phase 2: structured summary events ──────────────────────────
-              if (evt.evt === "summary_start") {
+              if (evt.evt === 'summary_start') {
                 inSummaryPhase = true;
                 setRunning(false); // stop spinner — tests are done
 
                 // Find Edi M agent config for display name / agentId
-                const mgrAgent = allAgents.find(
-                  (a) => a.id === TEAM_MANAGER_ID,
-                );
-                const mgrName = mgrAgent?.name ?? "Edi M";
+                const mgrAgent = allAgents.find((a) => a.id === TEAM_MANAGER_ID);
+                const mgrName = mgrAgent?.name ?? 'Edi M';
                 const newMsgId = `dyn-summary-${Date.now()}`;
                 summaryMsgId = newMsgId;
 
                 appendMessage({
                   id: newMsgId,
-                  role: "model",
-                  content: "",
+                  role: 'model',
+                  content: '',
                   senderName: mgrName,
                   agentId: TEAM_MANAGER_ID,
                   timestamp: Date.now(),
-                  type: "qa_summary",
+                  type: 'qa_summary',
                 });
-              } else if (evt.evt === "summary_chunk" && summaryMsgId) {
-                const chunk = typeof evt.text === "string" ? evt.text : "";
+              } else if (evt.evt === 'summary_chunk' && summaryMsgId) {
+                const chunk = typeof evt.text === 'string' ? evt.text : '';
                 if (chunk) appendChunk(summaryMsgId, chunk);
-              } else if (evt.evt === "summary_done") {
+              } else if (evt.evt === 'summary_done') {
                 // Attach structured failure data if provided
                 if (summaryMsgId && evt.failures) {
                   updateMessage(summaryMsgId, {
                     summaryData: {
-                      total: typeof evt.total === "number" ? evt.total : 0,
-                      passed: typeof evt.passed === "number" ? evt.passed : 0,
-                      failed: typeof evt.failed === "number" ? evt.failed : 0,
-                      duration:
-                        typeof evt.duration === "number" ? evt.duration : 0,
-                      failures: evt.failures as QASummaryData["failures"],
+                      total: typeof evt.total === 'number' ? evt.total : 0,
+                      passed: typeof evt.passed === 'number' ? evt.passed : 0,
+                      failed: typeof evt.failed === 'number' ? evt.failed : 0,
+                      duration: typeof evt.duration === 'number' ? evt.duration : 0,
+                      failures: evt.failures as QASummaryData['failures'],
                     },
                   });
                 }
@@ -5884,11 +5317,10 @@ export default function PlaywrightDashboard() {
             } catch {
               msg = raw;
             }
-            if (msg.startsWith("[DONE]")) {
+            if (msg.startsWith('[DONE]')) {
               // [DONE] signals end of Phase 1 — wait for summary events unless none coming
               // (If AI credentials missing the server may skip summary phase entirely)
-              if (!settings.geminiApiKey && settings.provider === "gemini")
-                break outer;
+              if (!settings.geminiApiKey && settings.provider === 'gemini') break outer;
               // else keep reading for summary_start
               continue;
             }
@@ -5900,10 +5332,10 @@ export default function PlaywrightDashboard() {
         await new Promise((r) => setTimeout(r, 120));
         await fetchHistory();
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
+        if (err instanceof DOMException && err.name === 'AbortError') {
           setRunLog((prev) => [
             ...prev,
-            "[TIMEOUT] Dynamic test exceeded 10 minutes and was cancelled.",
+            '[TIMEOUT] Dynamic test exceeded 10 minutes and was cancelled.',
           ]);
         } else {
           setRunLog((prev) => [
@@ -5933,8 +5365,8 @@ export default function PlaywrightDashboard() {
     if (!serverOnline) {
       setShowLog(true);
       setRunLog([
-        "[OFFLINE] Server is not running. Start it with: npm run dev",
-        "[OFFLINE] Waiting for server to come online…",
+        '[OFFLINE] Server is not running. Start it with: npm run dev',
+        '[OFFLINE] Waiting for server to come online…',
       ]);
       return;
     }
@@ -5949,9 +5381,9 @@ export default function PlaywrightDashboard() {
 
   const reset = () => {
     setSuites([]);
-    setActiveTab("all");
+    setActiveTab('all');
     setExpandedErrors({});
-    setSearchQuery("");
+    setSearchQuery('');
     setDemoMode(true);
     setLastRunAt(null);
     setSelectedRunId(null);
@@ -5977,44 +5409,37 @@ export default function PlaywrightDashboard() {
       })),
     };
     const blob = new Blob([JSON.stringify(report, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = "playwright-report.json";
+    a.download = 'playwright-report.json';
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const toggleSuite = (id: string) =>
-    setExpandedSuites((p) => ({ ...p, [id]: !p[id] }));
-  const toggleError = (id: string) =>
-    setExpandedErrors((p) => ({ ...p, [id]: !p[id] }));
+  const toggleSuite = (id: string) => setExpandedSuites((p) => ({ ...p, [id]: !p[id] }));
+  const toggleError = (id: string) => setExpandedErrors((p) => ({ ...p, [id]: !p[id] }));
 
   function suiteStatus(suite: TestSuite): Status {
-    if (suite.tests.some((t) => t.status === "running")) return "running";
-    if (suite.tests.some((t) => t.status === "failed")) return "failed";
-    if (suite.tests.every((t) => t.status === "passed")) return "passed";
-    if (
-      suite.tests.every((t) => t.status === "skipped" || t.status === "pending")
-    )
-      return "skipped";
-    return "pending";
+    if (suite.tests.some((t) => t.status === 'running')) return 'running';
+    if (suite.tests.some((t) => t.status === 'failed')) return 'failed';
+    if (suite.tests.every((t) => t.status === 'passed')) return 'passed';
+    if (suite.tests.every((t) => t.status === 'skipped' || t.status === 'pending'))
+      return 'skipped';
+    return 'pending';
   }
 
   return (
-    <div
-      className="min-h-screen flex"
-      style={{ backgroundColor: "var(--bg-body)" }}
-    >
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-body)' }}>
       {/* ── Left: pixel-agents canvas sidebar (lg+) ──────────────────────── */}
       <aside
         className="hidden lg:flex flex-col shrink-0 sticky top-14 overflow-hidden"
         style={{
           width: 360,
-          height: "calc(100vh - 3.5rem)",
-          borderRight: "1px solid var(--border)",
+          height: 'calc(100vh - 3.5rem)',
+          borderRight: '1px solid var(--border)',
         }}
       >
         <PwOfficePanel
@@ -6038,10 +5463,10 @@ export default function PlaywrightDashboard() {
                   className="text-2xl font-black tracking-tight"
                   style={{
                     background:
-                      "linear-gradient(135deg, var(--text-main) 0%, #3b82f6 60%, #8b5cf6 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
+                      'linear-gradient(135deg, var(--text-main) 0%, #3b82f6 60%, #8b5cf6 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                   }}
                 >
                   Playwright Dashboard
@@ -6050,14 +5475,14 @@ export default function PlaywrightDashboard() {
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{
-                      background: "rgba(52,199,89,0.10)",
-                      color: "#16A34A",
-                      border: "1px solid rgba(52,199,89,0.25)",
+                      background: 'rgba(52,199,89,0.10)',
+                      color: '#16A34A',
+                      border: '1px solid rgba(52,199,89,0.25)',
                     }}
                   >
                     <span
                       className="w-1.5 h-1.5 rounded-full animate-pulse inline-block"
-                      style={{ backgroundColor: "#34C759" }}
+                      style={{ backgroundColor: '#34C759' }}
                     />
                     Live
                   </span>
@@ -6066,14 +5491,14 @@ export default function PlaywrightDashboard() {
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{
-                      background: "rgba(232,167,40,0.10)",
-                      color: "#92400e",
-                      border: "1px solid rgba(232,167,40,0.30)",
+                      background: 'rgba(232,167,40,0.10)',
+                      color: '#92400e',
+                      border: '1px solid rgba(232,167,40,0.30)',
                     }}
                   >
                     <span
                       className="w-1.5 h-1.5 rounded-full inline-block"
-                      style={{ backgroundColor: "#E8A728" }}
+                      style={{ backgroundColor: '#E8A728' }}
                     />
                     Demo
                   </span>
@@ -6082,9 +5507,9 @@ export default function PlaywrightDashboard() {
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{
-                      background: "#fef2f2",
-                      color: "#991b1b",
-                      border: "1px solid #fecaca",
+                      background: '#fef2f2',
+                      color: '#991b1b',
+                      border: '1px solid #fecaca',
                     }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
@@ -6097,32 +5522,32 @@ export default function PlaywrightDashboard() {
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                   style={{
-                    backgroundColor: "var(--bg-card)",
-                    color: "var(--text-muted)",
-                    border: "1px solid var(--border)",
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <FolderOpen size={9} /> {suites.length} suite
-                  {suites.length === 1 ? "" : "s"}
+                  {suites.length === 1 ? '' : 's'}
                 </span>
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                   style={{
-                    backgroundColor: "var(--bg-card)",
-                    color: "var(--text-muted)",
-                    border: "1px solid var(--border)",
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <Hash size={9} /> {counts.total} test
-                  {counts.total === 1 ? "" : "s"}
+                  {counts.total === 1 ? '' : 's'}
                 </span>
                 {totalDuration > 0 && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                     style={{
-                      backgroundColor: "var(--bg-card)",
-                      color: "var(--text-muted)",
-                      border: "1px solid var(--border)",
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
                     }}
                   >
                     <Clock size={9} /> {formatMs(totalDuration)}
@@ -6132,15 +5557,15 @@ export default function PlaywrightDashboard() {
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                     style={{
-                      backgroundColor: "var(--bg-card)",
-                      color: "var(--text-muted)",
-                      border: "1px solid var(--border)",
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
                     }}
                   >
-                    <RotateCcw size={9} /> last run{" "}
+                    <RotateCcw size={9} /> last run{' '}
                     {new Date(lastRunAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </span>
                 )}
@@ -6148,9 +5573,9 @@ export default function PlaywrightDashboard() {
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
                     style={{
-                      backgroundColor: "rgba(59,130,246,0.10)",
-                      color: "#1a3a8f",
-                      border: "1px solid rgba(59,130,246,0.20)",
+                      backgroundColor: 'rgba(59,130,246,0.10)',
+                      color: '#1a3a8f',
+                      border: '1px solid rgba(59,130,246,0.20)',
                     }}
                   >
                     <RotateCcw size={9} className="animate-spin" /> loading…
@@ -6164,19 +5589,19 @@ export default function PlaywrightDashboard() {
               <div
                 className="flex items-center gap-0.5 p-1 rounded-xl border"
                 style={{
-                  borderColor: "var(--border)",
-                  backgroundColor: "var(--bg-card)",
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--bg-card)',
                 }}
               >
                 {[
                   {
-                    key: "dashboard" as const,
-                    label: "Dashboard",
+                    key: 'dashboard' as const,
+                    label: 'Dashboard',
                     icon: <LayoutDashboard size={12} />,
                   },
                   {
-                    key: "docs" as const,
-                    label: "Docs",
+                    key: 'docs' as const,
+                    label: 'Docs',
                     icon: <BookOpen size={12} />,
                   },
                 ].map(({ key, label, icon }) => (
@@ -6187,11 +5612,11 @@ export default function PlaywrightDashboard() {
                     style={
                       activeView === key
                         ? {
-                            backgroundColor: "var(--bg-body)",
-                            color: "#1a3a8f",
-                            boxShadow: "0 1px 3px rgba(0,0,0,.08)",
+                            backgroundColor: 'var(--bg-body)',
+                            color: '#1a3a8f',
+                            boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                           }
-                        : { color: "var(--text-muted)" }
+                        : { color: 'var(--text-muted)' }
                     }
                   >
                     {icon}
@@ -6201,7 +5626,7 @@ export default function PlaywrightDashboard() {
               </div>
 
               {/* Dashboard actions */}
-              {activeView === "dashboard" && (
+              {activeView === 'dashboard' && (
                 <>
                   {/* Multi-spec picker */}
                   {availableSpecs.length > 0 && (
@@ -6212,39 +5637,36 @@ export default function PlaywrightDashboard() {
                         style={
                           specPickerOpen || selectedSpecs.size > 0
                             ? {
-                                borderColor: "#1a3a8f",
-                                backgroundColor: "rgba(37,99,235,0.07)",
-                                color: "#1a3a8f",
+                                borderColor: '#1a3a8f',
+                                backgroundColor: 'rgba(37,99,235,0.07)',
+                                color: '#1a3a8f',
                               }
                             : {
-                                borderColor: "var(--border)",
-                                backgroundColor: "var(--bg-card)",
-                                color: "var(--text-main)",
+                                borderColor: 'var(--border)',
+                                backgroundColor: 'var(--bg-card)',
+                                color: 'var(--text-main)',
                               }
                         }
                       >
                         <CheckSquare size={12} />
                         {selectedSpecs.size === 0
-                          ? "All specs"
-                          : `${selectedSpecs.size} spec${selectedSpecs.size > 1 ? "s" : ""}`}
+                          ? 'All specs'
+                          : `${selectedSpecs.size} spec${selectedSpecs.size > 1 ? 's' : ''}`}
                         <ChevronDown size={11} />
                       </button>
                       {specPickerOpen && (
                         <div
                           className="absolute top-full left-0 mt-1 z-50 rounded-xl border shadow-lg overflow-hidden min-w-[220px]"
                           style={{
-                            borderColor: "var(--border)",
-                            backgroundColor: "var(--bg-card)",
+                            borderColor: 'var(--border)',
+                            backgroundColor: 'var(--bg-card)',
                           }}
                         >
                           <div
                             className="flex items-center justify-between px-3 py-2 border-b text-[11px]"
-                            style={{ borderColor: "var(--border)" }}
+                            style={{ borderColor: 'var(--border)' }}
                           >
-                            <span
-                              className="font-bold"
-                              style={{ color: "var(--text-main)" }}
-                            >
+                            <span className="font-bold" style={{ color: 'var(--text-main)' }}>
                               Select specs to run
                             </span>
                             <button
@@ -6256,11 +5678,9 @@ export default function PlaywrightDashboard() {
                                 )
                               }
                               className="font-semibold hover:underline"
-                              style={{ color: "#1a3a8f" }}
+                              style={{ color: '#1a3a8f' }}
                             >
-                              {selectedSpecs.size === availableSpecs.length
-                                ? "None"
-                                : "All"}
+                              {selectedSpecs.size === availableSpecs.length ? 'None' : 'All'}
                             </button>
                           </div>
                           {availableSpecs.map((s) => (
@@ -6269,7 +5689,7 @@ export default function PlaywrightDashboard() {
                               className="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-opacity-50"
                               style={{
                                 backgroundColor: selectedSpecs.has(s)
-                                  ? "rgba(37,99,235,0.06)"
+                                  ? 'rgba(37,99,235,0.06)'
                                   : undefined,
                               }}
                             >
@@ -6288,23 +5708,23 @@ export default function PlaywrightDashboard() {
                               />
                               <span
                                 className="text-[11px] font-mono"
-                                style={{ color: "var(--text-main)" }}
+                                style={{ color: 'var(--text-main)' }}
                               >
-                                {s.replace(/\.spec\.(ts|js)$/, "")}
+                                {s.replace(/\.spec\.(ts|js)$/, '')}
                                 <span className="opacity-40">.spec.ts</span>
                               </span>
                             </label>
                           ))}
                           <div
                             className="px-3 py-2 border-t"
-                            style={{ borderColor: "var(--border)" }}
+                            style={{ borderColor: 'var(--border)' }}
                           >
                             <button
                               onClick={() => setSpecPickerOpen(false)}
                               className="w-full py-1.5 rounded-lg text-xs font-semibold"
                               style={{
-                                backgroundColor: "#1a3a8f",
-                                color: "#fff",
+                                backgroundColor: '#1a3a8f',
+                                color: '#fff',
                               }}
                             >
                               Done
@@ -6319,26 +5739,24 @@ export default function PlaywrightDashboard() {
                     <Search
                       size={11}
                       className="absolute left-2.5 pointer-events-none"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     />
                     <input
                       type="text"
                       value={config.grep}
-                      onChange={(e) =>
-                        setConfig((c) => ({ ...c, grep: e.target.value }))
-                      }
+                      onChange={(e) => setConfig((c) => ({ ...c, grep: e.target.value }))}
                       placeholder="grep filter…"
                       className="pl-7 pr-3 py-1.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
                       style={{
-                        borderColor: config.grep ? "#1a3a8f" : "var(--border)",
-                        backgroundColor: "var(--bg-card)",
-                        color: "var(--text-main)",
+                        borderColor: config.grep ? '#1a3a8f' : 'var(--border)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
                       }}
                       title="Filter tests by title (--grep)"
                     />
                     {config.grep && (
                       <button
-                        onClick={() => setConfig((c) => ({ ...c, grep: "" }))}
+                        onClick={() => setConfig((c) => ({ ...c, grep: '' }))}
                         className="absolute right-2 opacity-50 hover:opacity-100"
                       >
                         <X size={10} />
@@ -6349,16 +5767,16 @@ export default function PlaywrightDashboard() {
                     onClick={exportReport}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                     style={{
-                      color: "var(--text-muted)",
-                      background: "transparent",
+                      color: 'var(--text-muted)',
+                      background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--text-main)";
-                      e.currentTarget.style.background = "var(--bg-card)";
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--text-muted)";
-                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
                     <Download size={13} /> Export
@@ -6368,40 +5786,36 @@ export default function PlaywrightDashboard() {
                     disabled={running || isLoading}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
                     style={{
-                      color: "var(--text-muted)",
-                      background: "transparent",
+                      color: 'var(--text-muted)',
+                      background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--text-main)";
-                      e.currentTarget.style.background = "var(--bg-card)";
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--text-muted)";
-                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                      e.currentTarget.style.background = 'transparent';
                     }}
                     title="Reload results from server"
                   >
-                    <RotateCcw
-                      size={13}
-                      className={isLoading ? "animate-spin" : ""}
-                    />{" "}
-                    Refresh
+                    <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} /> Refresh
                   </button>
                   <button
                     onClick={reset}
                     disabled={running}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
                     style={{
-                      color: "var(--text-muted)",
-                      background: "transparent",
+                      color: 'var(--text-muted)',
+                      background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "var(--text-main)";
-                      e.currentTarget.style.background = "var(--bg-card)";
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.background = 'var(--bg-card)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = "var(--text-muted)";
-                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                      e.currentTarget.style.background = 'transparent';
                     }}
                     title="Reset to demo data"
                   >
@@ -6413,24 +5827,24 @@ export default function PlaywrightDashboard() {
                     style={
                       settingsOpen
                         ? {
-                            background: "rgba(26,58,143,0.08)",
-                            color: "#1a3a8f",
+                            background: 'rgba(26,58,143,0.08)',
+                            color: '#1a3a8f',
                           }
                         : {
-                            background: "transparent",
-                            color: "var(--text-muted)",
+                            background: 'transparent',
+                            color: 'var(--text-muted)',
                           }
                     }
                     onMouseEnter={(e) => {
                       if (!settingsOpen) {
-                        e.currentTarget.style.color = "var(--text-main)";
-                        e.currentTarget.style.background = "var(--bg-card)";
+                        e.currentTarget.style.color = 'var(--text-main)';
+                        e.currentTarget.style.background = 'var(--bg-card)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!settingsOpen) {
-                        e.currentTarget.style.color = "var(--text-muted)";
-                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = 'var(--text-muted)';
+                        e.currentTarget.style.background = 'transparent';
                       }
                     }}
                     title="Toggle config panel"
@@ -6442,28 +5856,22 @@ export default function PlaywrightDashboard() {
                         {changedCount}
                       </span>
                     )}
-                    {settingsOpen ? (
-                      <ChevronUp size={11} />
-                    ) : (
-                      <ChevronDown size={11} />
-                    )}
+                    {settingsOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                   </button>
                   <button
                     onClick={running ? () => setRunning(false) : runTests}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? "text-white" : "text-white"}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? 'text-white' : 'text-white'}`}
                     style={
                       running
                         ? {
-                            background:
-                              "linear-gradient(135deg,#ef4444,#dc2626)",
+                            background: 'linear-gradient(135deg,#ef4444,#dc2626)',
                             boxShadow:
-                              "0 0 0 3px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.3)",
+                              '0 0 0 3px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.3)',
                           }
                         : {
-                            background:
-                              "linear-gradient(135deg,#3b82f6,#6366f1)",
+                            background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
                             boxShadow:
-                              "0 0 0 3px rgba(59,130,246,0.2), 0 2px 8px rgba(99,102,241,0.3)",
+                              '0 0 0 3px rgba(59,130,246,0.2), 0 2px 8px rgba(99,102,241,0.3)',
                           }
                     }
                   >
@@ -6483,31 +5891,31 @@ export default function PlaywrightDashboard() {
           </div>
 
           {/* ── Dashboard view ───────────────────────────────────────────────────── */}
-          {activeView === "dashboard" && (
+          {activeView === 'dashboard' && (
             <>
               {/* Demo-mode banner */}
               {demoMode && (
                 <div
                   className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
                   style={{
-                    background: "#fffbeb",
-                    borderColor: "#fde68a",
-                    color: "#92400e",
+                    background: '#fffbeb',
+                    borderColor: '#fde68a',
+                    color: '#92400e',
                   }}
                 >
                   <AlertTriangle size={12} className="shrink-0" />
                   <span>
                     <strong>Demo mode</strong> — showing sample data.
                     {serverOnline === false
-                      ? " Start the Express server (npm run dev) then click Refresh."
+                      ? ' Start the Express server (npm run dev) then click Refresh.'
                       : serverOnline === true
-                        ? " No results file found yet — click Run Tests to generate real data."
-                        : " Connecting to server…"}
+                        ? ' No results file found yet — click Run Tests to generate real data.'
+                        : ' Connecting to server…'}
                   </span>
                   <button
                     onClick={() => fetchResults()}
                     className="ml-auto shrink-0 font-semibold underline hover:no-underline"
-                    style={{ color: "#92400e" }}
+                    style={{ color: '#92400e' }}
                   >
                     Retry
                   </button>
@@ -6519,28 +5927,26 @@ export default function PlaywrightDashboard() {
                 <div
                   className="flex items-start gap-3 px-4 py-3 mb-4 rounded-xl border text-xs"
                   style={{
-                    backgroundColor: "#451a03",
-                    borderColor: "#92400e",
-                    color: "#fde68a",
+                    backgroundColor: '#451a03',
+                    borderColor: '#92400e',
+                    color: '#fde68a',
                   }}
                 >
                   <AlertTriangle
                     size={15}
                     className="mt-0.5 shrink-0"
-                    style={{ color: "#E8A728" }}
+                    style={{ color: '#E8A728' }}
                   />
                   <div className="flex-1">
-                    <p className="font-semibold mb-1">
-                      Playwright browsers not installed
-                    </p>
-                    <p className="mb-1.5" style={{ color: "#fcd34d" }}>
+                    <p className="font-semibold mb-1">Playwright browsers not installed</p>
+                    <p className="mb-1.5" style={{ color: '#fcd34d' }}>
                       Run this once in your terminal, then refresh the page:
                     </p>
                     <code
                       className="block rounded px-2 py-1 font-mono select-all text-[11px]"
                       style={{
-                        backgroundColor: "rgba(0,0,0,0.35)",
-                        color: "#a5f3fc",
+                        backgroundColor: 'rgba(0,0,0,0.35)',
+                        color: '#a5f3fc',
                       }}
                     >
                       npx playwright install chromium
@@ -6548,11 +5954,11 @@ export default function PlaywrightDashboard() {
                   </div>
                   <button
                     onClick={() => {
-                      localStorage.setItem("pw_setup_banner_dismissed", "1");
+                      localStorage.setItem('pw_setup_banner_dismissed', '1');
                       setBannerDismissed(true);
                     }}
                     className="shrink-0 hover:opacity-70 transition-opacity"
-                    style={{ color: "#fde68a" }}
+                    style={{ color: '#fde68a' }}
                     title="Dismiss"
                   >
                     <X size={14} />
@@ -6565,22 +5971,22 @@ export default function PlaywrightDashboard() {
                 <div
                   className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
                   style={{
-                    background: "rgba(59,130,246,0.05)",
-                    borderColor: "#93c5fd",
-                    color: "#1a3a8f",
+                    background: 'rgba(59,130,246,0.05)',
+                    borderColor: '#93c5fd',
+                    color: '#1a3a8f',
                   }}
                 >
                   <Clock size={12} className="shrink-0" />
                   <span>
-                    <strong>Historical run</strong> — viewing results from{" "}
+                    <strong>Historical run</strong> — viewing results from{' '}
                     {lastRunAt
                       ? new Date(lastRunAt).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
                         })
-                      : "a past run"}
+                      : 'a past run'}
                     .
                   </span>
                   <button
@@ -6588,7 +5994,7 @@ export default function PlaywrightDashboard() {
                       fetchResults();
                     }}
                     className="ml-auto shrink-0 font-semibold underline hover:no-underline"
-                    style={{ color: "#1a3a8f" }}
+                    style={{ color: '#1a3a8f' }}
                   >
                     Return to latest →
                   </button>
@@ -6598,10 +6004,10 @@ export default function PlaywrightDashboard() {
               {/* ── Presets bar (always visible) ────────────────────────── */}
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-3">
-                  <Zap size={11} style={{ color: "#8b5cf6" }} />
+                  <Zap size={11} style={{ color: '#8b5cf6' }} />
                   <span
                     className="text-[11px] font-bold uppercase tracking-wider"
-                    style={{ color: "var(--text-muted)" }}
+                    style={{ color: 'var(--text-muted)' }}
                   >
                     Quick Presets
                   </span>
@@ -6617,18 +6023,15 @@ export default function PlaywrightDashboard() {
                         key={preset.label}
                         onClick={() => {
                           setConfig((c) => ({ ...c, ...preset.config }));
-                          if (preset.specs)
-                            setSelectedSpecs(new Set(preset.specs));
+                          if (preset.specs) setSelectedSpecs(new Set(preset.specs));
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
                         style={{
-                          backgroundColor: isActive
-                            ? `${preset.color}18`
-                            : "var(--bg-card)",
-                          color: isActive ? preset.color : "var(--text-muted)",
+                          backgroundColor: isActive ? `${preset.color}18` : 'var(--bg-card)',
+                          color: isActive ? preset.color : 'var(--text-muted)',
                           boxShadow: isActive
                             ? `0 0 0 1.5px ${preset.color}60`
-                            : "0 1px 3px rgba(0,0,0,0.06)",
+                            : '0 1px 3px rgba(0,0,0,0.06)',
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = `${preset.color}14`;
@@ -6638,13 +6041,13 @@ export default function PlaywrightDashboard() {
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = isActive
                             ? `${preset.color}18`
-                            : "var(--bg-card)";
+                            : 'var(--bg-card)';
                           e.currentTarget.style.color = isActive
                             ? preset.color
-                            : "var(--text-muted)";
+                            : 'var(--text-muted)';
                           e.currentTarget.style.boxShadow = isActive
                             ? `0 0 0 1.5px ${preset.color}60`
-                            : "0 1px 3px rgba(0,0,0,0.06)";
+                            : '0 1px 3px rgba(0,0,0,0.06)';
                         }}
                       >
                         <span>{preset.icon}</span>
@@ -6661,28 +6064,28 @@ export default function PlaywrightDashboard() {
                   className="rounded-2xl overflow-hidden mb-8"
                   style={{
                     boxShadow:
-                      "0 2px 12px -4px rgba(37,99,235,0.18), 0 0 0 1px rgba(37,99,235,0.1)",
+                      '0 2px 12px -4px rgba(37,99,235,0.18), 0 0 0 1px rgba(37,99,235,0.1)',
                   }}
                 >
                   {/* Panel header with Config | Editor tabs */}
                   <div
                     className="flex items-center justify-between px-4 py-2.5 border-b"
                     style={{
-                      borderColor: "#bfdbfe",
-                      backgroundColor: "rgba(37,99,235,0.04)",
+                      borderColor: '#bfdbfe',
+                      backgroundColor: 'rgba(37,99,235,0.04)',
                     }}
                   >
                     <div className="flex items-center gap-1">
                       {[
                         {
-                          id: "config" as const,
+                          id: 'config' as const,
                           icon: <Settings size={12} />,
-                          label: "Config",
+                          label: 'Config',
                         },
                         {
-                          id: "editor" as const,
+                          id: 'editor' as const,
                           icon: <PenLine size={12} />,
-                          label: "Editor",
+                          label: 'Editor',
                         },
                       ].map((tab) => (
                         <button
@@ -6692,32 +6095,32 @@ export default function PlaywrightDashboard() {
                           style={
                             configTab === tab.id
                               ? {
-                                  backgroundColor: "var(--bg-card)",
-                                  color: "#1a3a8f",
-                                  boxShadow: "0 1px 3px rgba(0,0,0,.08)",
+                                  backgroundColor: 'var(--bg-card)',
+                                  color: '#1a3a8f',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                                 }
-                              : { color: "var(--text-muted)" }
+                              : { color: 'var(--text-muted)' }
                           }
                         >
                           {tab.icon} {tab.label}
                         </button>
                       ))}
-                      {configTab === "config" && changedCount > 0 && (
+                      {configTab === 'config' && changedCount > 0 && (
                         <span className="text-[10px] font-bold px-1.5 py-px rounded-full bg-blue-600 text-white leading-none ml-1">
                           {changedCount} changed
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {configTab === "config" && (
+                      {configTab === 'config' && (
                         <>
                           <button
                             onClick={() => setConfig(DEFAULT_CONFIG)}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
                             style={{
-                              borderColor: "var(--border)",
-                              backgroundColor: "var(--bg-card)",
-                              color: "var(--text-muted)",
+                              borderColor: 'var(--border)',
+                              backgroundColor: 'var(--bg-card)',
+                              color: 'var(--text-muted)',
                             }}
                           >
                             <RotateCcw size={11} /> Reset
@@ -6729,20 +6132,20 @@ export default function PlaywrightDashboard() {
                             style={
                               justSaved
                                 ? {
-                                    backgroundColor: "#34C759",
-                                    borderColor: "#34C759",
-                                    color: "#fff",
+                                    backgroundColor: '#34C759',
+                                    borderColor: '#34C759',
+                                    color: '#fff',
                                   }
                                 : isSaved
                                   ? {
-                                      backgroundColor: "var(--bg-card)",
-                                      borderColor: "var(--border)",
-                                      color: "var(--text-muted)",
+                                      backgroundColor: 'var(--bg-card)',
+                                      borderColor: 'var(--border)',
+                                      color: 'var(--text-muted)',
                                     }
                                   : {
-                                      backgroundColor: "#1a3a8f",
-                                      borderColor: "#1a3a8f",
-                                      color: "#fff",
+                                      backgroundColor: '#1a3a8f',
+                                      borderColor: '#1a3a8f',
+                                      color: '#fff',
                                     }
                             }
                           >
@@ -6753,7 +6156,7 @@ export default function PlaywrightDashboard() {
                             ) : isSaved ? (
                               <>
                                 <Check size={11} /> Saved
-                                {lastSavedAt ? ` · ${lastSavedAt}` : ""}
+                                {lastSavedAt ? ` · ${lastSavedAt}` : ''}
                               </>
                             ) : (
                               <>
@@ -6767,9 +6170,9 @@ export default function PlaywrightDashboard() {
                         onClick={() => setSettingsOpen(false)}
                         className="p-1.5 rounded-lg border transition-colors"
                         style={{
-                          borderColor: "var(--border)",
-                          backgroundColor: "var(--bg-card)",
-                          color: "var(--text-muted)",
+                          borderColor: 'var(--border)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-muted)',
                         }}
                       >
                         <X size={12} />
@@ -6777,48 +6180,34 @@ export default function PlaywrightDashboard() {
                     </div>
                   </div>
                   {/* Panel body */}
-                  {configTab === "config" ? (
-                    <div
-                      className="p-4"
-                      style={{ backgroundColor: "var(--bg-card)" }}
-                    >
-                      <SettingsView
-                        config={config}
-                        onChange={setConfig}
-                        noPresets
-                      />
+                  {configTab === 'config' ? (
+                    <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                      <SettingsView config={config} onChange={setConfig} noPresets />
                     </div>
                   ) : serverOnline === false ? (
                     /* Server offline — don't attempt fetch, show clear instructions */
                     <div
                       className="flex flex-col items-center justify-center gap-3 py-16 px-6"
-                      style={{ backgroundColor: "var(--bg-card)" }}
+                      style={{ backgroundColor: 'var(--bg-card)' }}
                     >
                       <Terminal
                         size={28}
                         className="opacity-30"
-                        style={{ color: "var(--text-muted)" }}
+                        style={{ color: 'var(--text-muted)' }}
                       />
-                      <p
-                        className="text-sm font-medium"
-                        style={{ color: "var(--text-main)" }}
-                      >
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
                         Server is offline
                       </p>
-                      <p
-                        className="text-xs text-center"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        The test editor reads and saves files through your local
-                        Express server.
+                      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                        The test editor reads and saves files through your local Express server.
                         <br />
-                        Start it with{" "}
+                        Start it with{' '}
                         <code
                           className="font-mono px-1 py-0.5 rounded text-[11px]"
-                          style={{ backgroundColor: "var(--bg-body)" }}
+                          style={{ backgroundColor: 'var(--bg-body)' }}
                         >
                           npm run dev
-                        </code>{" "}
+                        </code>{' '}
                         then click Retry.
                       </p>
                       <button
@@ -6828,9 +6217,9 @@ export default function PlaywrightDashboard() {
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors"
                         style={{
-                          borderColor: "var(--border)",
-                          backgroundColor: "var(--bg-body)",
-                          color: "var(--text-main)",
+                          borderColor: 'var(--border)',
+                          backgroundColor: 'var(--bg-body)',
+                          color: 'var(--text-main)',
                         }}
                       >
                         <RefreshCw size={12} /> Retry connection
@@ -6840,17 +6229,14 @@ export default function PlaywrightDashboard() {
                     /* Still connecting */
                     <div
                       className="flex items-center justify-center gap-2 py-16"
-                      style={{ backgroundColor: "var(--bg-card)" }}
+                      style={{ backgroundColor: 'var(--bg-card)' }}
                     >
                       <RefreshCw
                         size={14}
                         className="animate-spin"
-                        style={{ color: "var(--text-muted)" }}
+                        style={{ color: 'var(--text-muted)' }}
                       />
-                      <span
-                        className="text-xs"
-                        style={{ color: "var(--text-muted)" }}
-                      >
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         Connecting to local server…
                       </span>
                     </div>
@@ -6870,10 +6256,9 @@ export default function PlaywrightDashboard() {
                 <div
                   className="md:col-span-2 relative overflow-hidden rounded-2xl p-5 flex items-center gap-5"
                   style={{
-                    backgroundColor: "var(--bg-card)",
-                    boxShadow:
-                      "0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)",
-                    border: `1px solid ${passRate >= 80 ? "rgba(16,185,129,0.18)" : passRate >= 50 ? "rgba(251,191,36,0.20)" : "rgba(239,68,68,0.18)"}`,
+                    backgroundColor: 'var(--bg-card)',
+                    boxShadow: '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+                    border: `1px solid ${passRate >= 80 ? 'rgba(16,185,129,0.18)' : passRate >= 50 ? 'rgba(251,191,36,0.20)' : 'rgba(239,68,68,0.18)'}`,
                   }}
                 >
                   {/* Soft background glow */}
@@ -6882,20 +6267,11 @@ export default function PlaywrightDashboard() {
                     className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none"
                     style={{
                       backgroundColor:
-                        passRate >= 80
-                          ? "#34C759"
-                          : passRate >= 50
-                            ? "#E8A728"
-                            : "#ef4444",
+                        passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444',
                     }}
                   />
                   {/* Progress ring */}
-                  <svg
-                    width="92"
-                    height="92"
-                    viewBox="0 0 92 92"
-                    className="shrink-0"
-                  >
+                  <svg width="92" height="92" viewBox="0 0 92 92" className="shrink-0">
                     <circle
                       cx="46"
                       cy="46"
@@ -6911,17 +6287,11 @@ export default function PlaywrightDashboard() {
                       fill="none"
                       strokeWidth="8"
                       strokeLinecap="round"
-                      stroke={
-                        passRate >= 80
-                          ? "#34C759"
-                          : passRate >= 50
-                            ? "#E8A728"
-                            : "#ef4444"
-                      }
+                      stroke={passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444'}
                       strokeDasharray={`${(passRate / 100) * 238.76} 238.76`}
                       transform="rotate(-90 46 46)"
                       style={{
-                        transition: "stroke-dasharray 700ms ease, stroke 300ms",
+                        transition: 'stroke-dasharray 700ms ease, stroke 300ms',
                       }}
                     />
                     <text
@@ -6930,15 +6300,9 @@ export default function PlaywrightDashboard() {
                       textAnchor="middle"
                       fontSize="20"
                       fontWeight="800"
-                      fill={
-                        passRate >= 80
-                          ? "#059669"
-                          : passRate >= 50
-                            ? "#d97706"
-                            : "#dc2626"
-                      }
+                      fill={passRate >= 80 ? '#059669' : passRate >= 50 ? '#d97706' : '#dc2626'}
                     >
-                      {counts.total === 0 ? "—" : `${passRate}%`}
+                      {counts.total === 0 ? '—' : `${passRate}%`}
                     </text>
                     <text
                       x="46"
@@ -6947,7 +6311,7 @@ export default function PlaywrightDashboard() {
                       fontSize="8"
                       fontWeight="600"
                       fill="var(--text-muted)"
-                      style={{ letterSpacing: "0.05em" }}
+                      style={{ letterSpacing: '0.05em' }}
                     >
                       PASS
                     </text>
@@ -6955,35 +6319,35 @@ export default function PlaywrightDashboard() {
                   <div className="flex-1 min-w-0 relative">
                     <p
                       className="text-[10px] font-bold uppercase tracking-wider mb-1"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       Run Health
                     </p>
                     <p
                       className="text-lg font-black leading-tight mb-2.5"
-                      style={{ color: "var(--text-main)" }}
+                      style={{ color: 'var(--text-main)' }}
                     >
                       {counts.total === 0
-                        ? "No data yet"
+                        ? 'No data yet'
                         : passRate >= 95
-                          ? "All-green"
+                          ? 'All-green'
                           : passRate >= 80
-                            ? "Mostly passing"
+                            ? 'Mostly passing'
                             : passRate >= 50
-                              ? "Needs attention"
-                              : "Critical failures"}
+                              ? 'Needs attention'
+                              : 'Critical failures'}
                     </p>
                     {/* Inline stack bar */}
                     <div
                       className="h-2 rounded-full overflow-hidden flex"
-                      style={{ backgroundColor: "var(--bg-muted)" }}
+                      style={{ backgroundColor: 'var(--bg-muted)' }}
                     >
                       {counts.passed > 0 && (
                         <div
                           className="h-full transition-all duration-700"
                           style={{
                             width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: "#34C759",
+                            backgroundColor: '#34C759',
                           }}
                         />
                       )}
@@ -6992,7 +6356,7 @@ export default function PlaywrightDashboard() {
                           className="h-full transition-all duration-700"
                           style={{
                             width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: "#EF4444",
+                            backgroundColor: '#EF4444',
                           }}
                         />
                       )}
@@ -7001,7 +6365,7 @@ export default function PlaywrightDashboard() {
                           className="h-full transition-all duration-700"
                           style={{
                             width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: "#E8A728",
+                            backgroundColor: '#E8A728',
                           }}
                         />
                       )}
@@ -7016,33 +6380,27 @@ export default function PlaywrightDashboard() {
                     </div>
                     <div
                       className="flex items-center gap-3 mt-2 text-[10px]"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       <span className="flex items-center gap-1">
                         <span
                           className="w-1.5 h-1.5 rounded-sm inline-block"
-                          style={{ backgroundColor: "#34C759" }}
+                          style={{ backgroundColor: '#34C759' }}
                         />
-                        <span
-                          className="font-semibold"
-                          style={{ color: "#16A34A" }}
-                        >
+                        <span className="font-semibold" style={{ color: '#16A34A' }}>
                           {counts.passed}
-                        </span>{" "}
+                        </span>{' '}
                         passed
                       </span>
                       {counts.failed > 0 && (
                         <span className="flex items-center gap-1">
                           <span
                             className="w-1.5 h-1.5 rounded-sm inline-block"
-                            style={{ backgroundColor: "#EF4444" }}
+                            style={{ backgroundColor: '#EF4444' }}
                           />
-                          <span
-                            className="font-semibold"
-                            style={{ color: "#EF4444" }}
-                          >
+                          <span className="font-semibold" style={{ color: '#EF4444' }}>
                             {counts.failed}
-                          </span>{" "}
+                          </span>{' '}
                           failed
                         </span>
                       )}
@@ -7050,14 +6408,11 @@ export default function PlaywrightDashboard() {
                         <span className="flex items-center gap-1">
                           <span
                             className="w-1.5 h-1.5 rounded-sm inline-block"
-                            style={{ backgroundColor: "#E8A728" }}
+                            style={{ backgroundColor: '#E8A728' }}
                           />
-                          <span
-                            className="font-semibold"
-                            style={{ color: "#D97706" }}
-                          >
+                          <span className="font-semibold" style={{ color: '#D97706' }}>
                             {counts.skipped}
-                          </span>{" "}
+                          </span>{' '}
                           skipped
                         </span>
                       )}
@@ -7068,35 +6423,30 @@ export default function PlaywrightDashboard() {
                 {/* Secondary tiles (4 across, 1 column on mobile, 3 columns md+) */}
                 {[
                   {
-                    label: "Total",
+                    label: 'Total',
                     value: counts.total,
                     sub: `${suites.length} suites`,
-                    color: "#6366f1",
-                    accent: "#6366f1",
+                    color: '#6366f1',
+                    accent: '#6366f1',
                     icon: <Hash size={13} />,
                   },
                   {
-                    label: "Failed",
+                    label: 'Failed',
                     value: counts.failed,
-                    sub: counts.failed > 0 ? "needs triage" : "all clear",
-                    color: counts.failed > 0 ? "#dc2626" : "var(--text-muted)",
-                    accent: counts.failed > 0 ? "#ef4444" : "#94a3b8",
-                    icon:
-                      counts.failed > 0 ? (
-                        <XCircle size={13} />
-                      ) : (
-                        <CheckCircle2 size={13} />
-                      ),
+                    sub: counts.failed > 0 ? 'needs triage' : 'all clear',
+                    color: counts.failed > 0 ? '#dc2626' : 'var(--text-muted)',
+                    accent: counts.failed > 0 ? '#ef4444' : '#94a3b8',
+                    icon: counts.failed > 0 ? <XCircle size={13} /> : <CheckCircle2 size={13} />,
                   },
                   {
-                    label: "Duration",
+                    label: 'Duration',
                     value: formatMs(totalDuration),
                     sub:
                       counts.total > 0
                         ? `${Math.round(totalDuration / Math.max(counts.total, 1))}ms avg`
-                        : "—",
-                    color: "#8b5cf6",
-                    accent: "#8b5cf6",
+                        : '—',
+                    color: '#8b5cf6',
+                    accent: '#8b5cf6',
                     icon: <Clock size={13} />,
                   },
                 ].map(({ label, value, sub, color, accent, icon }) => (
@@ -7104,8 +6454,8 @@ export default function PlaywrightDashboard() {
                     key={label}
                     className="relative overflow-hidden rounded-2xl px-4 py-4"
                     style={{
-                      backgroundColor: "var(--bg-card)",
-                      boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+                      backgroundColor: 'var(--bg-card)',
+                      boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
                     }}
                   >
                     <div
@@ -7116,20 +6466,17 @@ export default function PlaywrightDashboard() {
                       <span style={{ color: accent }}>{icon}</span>
                       <p
                         className="text-[10px] font-bold uppercase tracking-wider"
-                        style={{ color: "var(--text-muted)" }}
+                        style={{ color: 'var(--text-muted)' }}
                       >
                         {label}
                       </p>
                     </div>
-                    <p
-                      className="text-2xl font-black leading-none mt-2"
-                      style={{ color }}
-                    >
+                    <p className="text-2xl font-black leading-none mt-2" style={{ color }}>
                       {value}
                     </p>
                     <p
                       className="text-[10px] mt-1.5 font-medium"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {sub}
                     </p>
@@ -7160,7 +6507,7 @@ export default function PlaywrightDashboard() {
                   <Search
                     size={13}
                     className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                    style={{ color: "var(--text-muted)" }}
+                    style={{ color: 'var(--text-muted)' }}
                   />
                   <input
                     type="text"
@@ -7169,51 +6516,51 @@ export default function PlaywrightDashboard() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                     style={{
-                      backgroundColor: "var(--bg-card)",
-                      color: "var(--text-main)",
-                      boxShadow: "0 1px 4px -1px rgba(0,0,0,0.06)",
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      boxShadow: '0 1px 4px -1px rgba(0,0,0,0.06)',
                     }}
                   />
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery("")}
+                      onClick={() => setSearchQuery('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
                     >
-                      <X size={12} style={{ color: "var(--text-muted)" }} />
+                      <X size={12} style={{ color: 'var(--text-muted)' }} />
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[
                     {
-                      key: "active" as const,
+                      key: 'active' as const,
                       label: `Active (${counts.passed + counts.failed})`,
-                      activeColor: "#1a3a8f",
-                      activeBg: "#1a3a8f",
+                      activeColor: '#1a3a8f',
+                      activeBg: '#1a3a8f',
                     },
                     {
-                      key: "all" as const,
+                      key: 'all' as const,
                       label: `All (${counts.total})`,
-                      activeColor: "#6366f1",
-                      activeBg: "#6366f1",
+                      activeColor: '#6366f1',
+                      activeBg: '#6366f1',
                     },
                     {
-                      key: "passed" as const,
+                      key: 'passed' as const,
                       label: `Passed (${counts.passed})`,
-                      activeColor: "#059669",
-                      activeBg: "#34C759",
+                      activeColor: '#059669',
+                      activeBg: '#34C759',
                     },
                     {
-                      key: "failed" as const,
+                      key: 'failed' as const,
                       label: `Failed (${counts.failed})`,
-                      activeColor: "#dc2626",
-                      activeBg: "#ef4444",
+                      activeColor: '#dc2626',
+                      activeBg: '#ef4444',
                     },
                     {
-                      key: "skipped" as const,
+                      key: 'skipped' as const,
                       label: `Skipped (${counts.skipped})`,
-                      activeColor: "#d97706",
-                      activeBg: "#E8A728",
+                      activeColor: '#d97706',
+                      activeBg: '#E8A728',
                     },
                   ].map(({ key, label, activeBg }) => (
                     <button
@@ -7222,8 +6569,8 @@ export default function PlaywrightDashboard() {
                       className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
                       style={
                         activeTab === key
-                          ? { background: activeBg, color: "#fff" }
-                          : { color: "var(--text-muted)" }
+                          ? { background: activeBg, color: '#fff' }
+                          : { color: 'var(--text-muted)' }
                       }
                     >
                       {label}
@@ -7235,20 +6582,20 @@ export default function PlaywrightDashboard() {
                 <div
                   className="flex items-center gap-0.5 p-0.5 rounded-lg border ml-auto"
                   style={{
-                    borderColor: "var(--border)",
-                    backgroundColor: "var(--bg-card)",
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--bg-card)',
                   }}
                 >
                   {[
                     {
-                      mode: "list" as const,
+                      mode: 'list' as const,
                       icon: <List size={12} />,
-                      label: "List",
+                      label: 'List',
                     },
                     {
-                      mode: "matrix" as const,
+                      mode: 'matrix' as const,
                       icon: <Grid3x3 size={12} />,
-                      label: "Matrix",
+                      label: 'Matrix',
                     },
                   ].map(({ mode, icon, label }) => (
                     <button
@@ -7258,11 +6605,11 @@ export default function PlaywrightDashboard() {
                       style={
                         dashboardMode === mode
                           ? {
-                              backgroundColor: "var(--bg-body)",
-                              color: "#1a3a8f",
-                              boxShadow: "0 1px 3px rgba(0,0,0,.08)",
+                              backgroundColor: 'var(--bg-body)',
+                              color: '#1a3a8f',
+                              boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                             }
-                          : { color: "var(--text-muted)" }
+                          : { color: 'var(--text-muted)' }
                       }
                     >
                       {icon} {label}
@@ -7272,46 +6619,36 @@ export default function PlaywrightDashboard() {
               </div>
 
               {/* Matrix view */}
-              {dashboardMode === "matrix" && (
-                <BrowserMatrixView suites={filteredSuites} />
-              )}
+              {dashboardMode === 'matrix' && <BrowserMatrixView suites={filteredSuites} />}
 
               {/* List view — Test suite accordion */}
-              {dashboardMode === "list" && (
+              {dashboardMode === 'list' && (
                 <div className="flex flex-col gap-3">
                   {filteredSuites.map((suite) => {
-                    const passed = suite.tests.filter(
-                      (t) => t.status === "passed",
-                    ).length;
+                    const passed = suite.tests.filter((t) => t.status === 'passed').length;
                     const status = suiteStatus(suite);
                     const isOpen = expandedSuites[suite.id];
-                    const suiteDuration = suite.tests.reduce(
-                      (a, t) => a + t.duration,
-                      0,
-                    );
-                    const maxDuration = Math.max(
-                      ...suite.tests.map((t) => t.duration),
-                      1,
-                    );
+                    const suiteDuration = suite.tests.reduce((a, t) => a + t.duration, 0);
+                    const maxDuration = Math.max(...suite.tests.map((t) => t.duration), 1);
                     const statusAccent =
-                      status === "passed"
-                        ? "#34C759"
-                        : status === "failed"
-                          ? "#ef4444"
-                          : status === "running"
-                            ? "#3b82f6"
-                            : status === "skipped"
-                              ? "#E8A728"
-                              : "var(--border)";
+                      status === 'passed'
+                        ? '#34C759'
+                        : status === 'failed'
+                          ? '#ef4444'
+                          : status === 'running'
+                            ? '#3b82f6'
+                            : status === 'skipped'
+                              ? '#E8A728'
+                              : 'var(--border)';
 
                     return (
                       <div
                         key={suite.id}
                         className="rounded-2xl overflow-hidden"
                         style={{
-                          backgroundColor: "var(--bg-card)",
+                          backgroundColor: 'var(--bg-card)',
                           borderLeft: `3px solid ${statusAccent}`,
-                          boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+                          boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
                         }}
                       >
                         {/*
@@ -7323,40 +6660,32 @@ export default function PlaywrightDashboard() {
                     */}
                         <button
                           onClick={() => toggleSuite(suite.id)}
-                          className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isOpen ? "sticky z-[5]" : ""}`}
+                          className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isOpen ? 'sticky z-[5]' : ''}`}
                           style={{
-                            backgroundColor: "var(--bg-card)",
-                            top: isOpen ? "3.5rem" : undefined,
-                            backdropFilter: isOpen
-                              ? "saturate(180%) blur(8px)"
-                              : undefined,
-                            WebkitBackdropFilter: isOpen
-                              ? "saturate(180%) blur(8px)"
-                              : undefined,
-                            boxShadow: isOpen
-                              ? "0 4px 12px -8px rgba(0,0,0,0.18)"
-                              : undefined,
+                            backgroundColor: 'var(--bg-card)',
+                            top: isOpen ? '3.5rem' : undefined,
+                            backdropFilter: isOpen ? 'saturate(180%) blur(8px)' : undefined,
+                            WebkitBackdropFilter: isOpen ? 'saturate(180%) blur(8px)' : undefined,
+                            boxShadow: isOpen ? '0 4px 12px -8px rgba(0,0,0,0.18)' : undefined,
                           }}
                           onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              "var(--bg-body)")
+                            (e.currentTarget.style.backgroundColor = 'var(--bg-body)')
                           }
                           onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              "var(--bg-card)")
+                            (e.currentTarget.style.backgroundColor = 'var(--bg-card)')
                           }
                         >
                           <StatusIcon status={status} size={16} />
                           <span className="flex-1 min-w-0">
                             <span
                               className="font-semibold text-sm"
-                              style={{ color: "var(--text-main)" }}
+                              style={{ color: 'var(--text-main)' }}
                             >
                               {suite.title}
                             </span>
                             <span
                               className="ml-2 text-xs font-mono"
-                              style={{ color: "var(--text-muted)" }}
+                              style={{ color: 'var(--text-muted)' }}
                             >
                               {suite.file}
                             </span>
@@ -7364,7 +6693,7 @@ export default function PlaywrightDashboard() {
                           {suiteDuration > 0 && (
                             <span
                               className="text-xs font-mono shrink-0 hidden sm:inline"
-                              style={{ color: "var(--text-muted)" }}
+                              style={{ color: 'var(--text-muted)' }}
                             >
                               {formatMs(suiteDuration)}
                             </span>
@@ -7375,16 +6704,16 @@ export default function PlaywrightDashboard() {
                             style={{
                               background:
                                 passed === suite.tests.length
-                                  ? "rgba(16,185,129,0.1)"
+                                  ? 'rgba(16,185,129,0.1)'
                                   : passed === 0
-                                    ? "rgba(239,68,68,0.1)"
-                                    : "rgba(251,191,36,0.1)",
+                                    ? 'rgba(239,68,68,0.1)'
+                                    : 'rgba(251,191,36,0.1)',
                               color:
                                 passed === suite.tests.length
-                                  ? "#059669"
+                                  ? '#059669'
                                   : passed === 0
-                                    ? "#dc2626"
-                                    : "#d97706",
+                                    ? '#dc2626'
+                                    : '#d97706',
                             }}
                           >
                             {passed}/{suite.tests.length}
@@ -7394,64 +6723,47 @@ export default function PlaywrightDashboard() {
                             size={15}
                             className="shrink-0"
                             style={{
-                              color: "var(--text-muted)",
-                              transform: isOpen
-                                ? "rotate(180deg)"
-                                : "rotate(0deg)",
-                              transition: "transform 200ms ease",
+                              color: 'var(--text-muted)',
+                              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 200ms ease',
                             }}
                           />
                         </button>
 
                         {isOpen && (
-                          <div
-                            className="border-t"
-                            style={{ borderColor: "var(--border)" }}
-                          >
+                          <div className="border-t" style={{ borderColor: 'var(--border)' }}>
                             {suite.tests.map((test, i) => {
-                              const isFailed = test.status === "failed";
-                              const isFlaky =
-                                (test.retries ?? 0) > 0 &&
-                                test.status === "passed";
+                              const isFailed = test.status === 'failed';
+                              const isFlaky = (test.retries ?? 0) > 0 && test.status === 'passed';
                               const showActions =
-                                isFailed &&
-                                (hoveredTest === test.id ||
-                                  expandedErrors[test.id]);
+                                isFailed && (hoveredTest === test.id || expandedErrors[test.id]);
                               const errorOpen = expandedErrors[test.id];
                               const errType =
-                                isFailed && test.error
-                                  ? parseErrorType(test.error)
-                                  : null;
-                              const errStyle = errType
-                                ? ERROR_TYPE_STYLES[errType]
-                                : null;
+                                isFailed && test.error ? parseErrorType(test.error) : null;
+                              const errStyle = errType ? ERROR_TYPE_STYLES[errType] : null;
                               return (
                                 <div
                                   key={test.id}
-                                  className={i > 0 ? "border-t" : ""}
-                                  style={{ borderColor: "var(--border)" }}
+                                  className={i > 0 ? 'border-t' : ''}
+                                  style={{ borderColor: 'var(--border)' }}
                                 >
                                   <div
-                                    className={`flex items-center gap-3 px-6 py-3 transition-colors ${isFailed ? "cursor-pointer" : ""}`}
+                                    className={`flex items-center gap-3 px-6 py-3 transition-colors ${isFailed ? 'cursor-pointer' : ''}`}
                                     style={{
                                       backgroundColor:
                                         isFailed && hoveredTest === test.id
-                                          ? "rgba(239,68,68,0.05)"
+                                          ? 'rgba(239,68,68,0.05)'
                                           : undefined,
                                     }}
-                                    onMouseEnter={() =>
-                                      isFailed && setHoveredTest(test.id)
-                                    }
+                                    onMouseEnter={() => isFailed && setHoveredTest(test.id)}
                                     onMouseLeave={() => setHoveredTest(null)}
-                                    onClick={() =>
-                                      isFailed && toggleError(test.id)
-                                    }
+                                    onClick={() => isFailed && toggleError(test.id)}
                                   >
                                     <StatusIcon status={test.status} />
                                     <span className="flex-1 min-w-0">
                                       <span
                                         className="text-xs block truncate"
-                                        style={{ color: "var(--text-main)" }}
+                                        style={{ color: 'var(--text-main)' }}
                                       >
                                         {test.title}
                                       </span>
@@ -7463,8 +6775,8 @@ export default function PlaywrightDashboard() {
                                               key={tag}
                                               className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-px rounded border"
                                               style={{
-                                                color: "var(--text-muted)",
-                                                borderColor: "var(--border)",
+                                                color: 'var(--text-muted)',
+                                                borderColor: 'var(--border)',
                                               }}
                                             >
                                               <Tag size={8} />
@@ -7496,15 +6808,14 @@ export default function PlaywrightDashboard() {
                                     {/* Retry badge (for still-failed tests) */}
                                     {!isFlaky && (test.retries ?? 0) > 0 && (
                                       <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
-                                        <AlertTriangle size={10} />{" "}
-                                        {test.retries} retry
+                                        <AlertTriangle size={10} /> {test.retries} retry
                                       </span>
                                     )}
                                     {test.duration > 0 && (
                                       <div
                                         className="w-14 h-1 rounded-full overflow-hidden shrink-0 hidden sm:block"
                                         style={{
-                                          backgroundColor: "var(--border)",
+                                          backgroundColor: 'var(--border)',
                                         }}
                                       >
                                         <div
@@ -7512,67 +6823,58 @@ export default function PlaywrightDashboard() {
                                           style={{
                                             width: `${(test.duration / maxDuration) * 100}%`,
                                             backgroundColor:
-                                              test.status === "failed"
-                                                ? "#ef4444"
-                                                : test.status === "passed"
-                                                  ? "#34C759"
-                                                  : "#E8A728",
+                                              test.status === 'failed'
+                                                ? '#ef4444'
+                                                : test.status === 'passed'
+                                                  ? '#34C759'
+                                                  : '#E8A728',
                                           }}
                                         />
                                       </div>
                                     )}
                                     <span
                                       className="text-xs font-mono shrink-0"
-                                      style={{ color: "var(--text-muted)" }}
+                                      style={{ color: 'var(--text-muted)' }}
                                     >
                                       {formatMs(test.duration)}
                                     </span>
                                     {/* Browser status dots — only visible when multiple browsers ran */}
-                                    {test.browserResults &&
-                                      test.browserResults.length > 1 && (
-                                        <span
-                                          className="flex items-center gap-0.5 shrink-0"
-                                          title={test.browserResults
-                                            .map(
-                                              (r) =>
-                                                `${r.browser}: ${r.status}`,
-                                            )
-                                            .join(" · ")}
-                                        >
-                                          {test.browserResults.map((r) => (
-                                            <span
-                                              key={r.browser}
-                                              style={{
-                                                width: 7,
-                                                height: 7,
-                                                borderRadius: "50%",
-                                                display: "inline-block",
-                                                backgroundColor:
-                                                  r.status === "passed"
-                                                    ? "#34C759"
-                                                    : r.status === "failed"
-                                                      ? "#ef4444"
-                                                      : "#E8A728",
-                                                opacity:
-                                                  r.status === "skipped"
-                                                    ? 0.6
-                                                    : 1,
-                                              }}
-                                            />
-                                          ))}
-                                        </span>
-                                      )}
+                                    {test.browserResults && test.browserResults.length > 1 && (
+                                      <span
+                                        className="flex items-center gap-0.5 shrink-0"
+                                        title={test.browserResults
+                                          .map((r) => `${r.browser}: ${r.status}`)
+                                          .join(' · ')}
+                                      >
+                                        {test.browserResults.map((r) => (
+                                          <span
+                                            key={r.browser}
+                                            style={{
+                                              width: 7,
+                                              height: 7,
+                                              borderRadius: '50%',
+                                              display: 'inline-block',
+                                              backgroundColor:
+                                                r.status === 'passed'
+                                                  ? '#34C759'
+                                                  : r.status === 'failed'
+                                                    ? '#ef4444'
+                                                    : '#E8A728',
+                                              opacity: r.status === 'skipped' ? 0.6 : 1,
+                                            }}
+                                          />
+                                        ))}
+                                      </span>
+                                    )}
                                     <StatusBadge status={test.status} />
                                     {isFailed && (
                                       <ChevronDown
                                         size={13}
                                         className="shrink-0"
                                         style={{
-                                          color: "var(--text-muted)",
-                                          transform: errorOpen
-                                            ? "rotate(180deg)"
-                                            : "rotate(0deg)",
-                                          transition: "transform 200ms ease",
+                                          color: 'var(--text-muted)',
+                                          transform: errorOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                          transition: 'transform 200ms ease',
                                         }}
                                       />
                                     )}
@@ -7584,63 +6886,48 @@ export default function PlaywrightDashboard() {
                                       onViewArtifacts={setArtifactModal}
                                     />
                                   )}
-                                  {isFailed &&
-                                    errorOpen &&
-                                    test.steps &&
-                                    test.steps.length > 0 && (
-                                      <StepTimeline steps={test.steps} />
-                                    )}
+                                  {isFailed && errorOpen && test.steps && test.steps.length > 0 && (
+                                    <StepTimeline steps={test.steps} />
+                                  )}
                                   {isFailed && errorOpen && (
                                     <div
                                       className="mx-4 mb-3 rounded-xl border-l-2 border-red-400 overflow-hidden"
                                       style={{
-                                        backgroundColor: "rgba(239,68,68,0.06)",
+                                        backgroundColor: 'rgba(239,68,68,0.06)',
                                       }}
                                     >
                                       {/* Error block header — type chip + copy button */}
                                       <div
                                         className="flex items-center gap-2 px-3 py-2 border-b"
                                         style={{
-                                          borderColor: "rgba(239,68,68,0.15)",
+                                          borderColor: 'rgba(239,68,68,0.15)',
                                         }}
                                       >
-                                        <XCircle
-                                          size={11}
-                                          className="text-red-500 shrink-0"
-                                        />
+                                        <XCircle size={11} className="text-red-500 shrink-0" />
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-red-600">
-                                          {errType ?? "Error"}
+                                          {errType ?? 'Error'}
                                         </span>
-                                        <span
-                                          className="text-[10px]"
-                                          style={{ color: "#b91c1c" }}
-                                        >
-                                          ·{" "}
-                                          {(test.error ?? "")
-                                            .split("\n")[0]
-                                            .slice(0, 80)}
-                                          {(test.error ?? "").length > 80
-                                            ? "…"
-                                            : ""}
+                                        <span className="text-[10px]" style={{ color: '#b91c1c' }}>
+                                          · {(test.error ?? '').split('\n')[0].slice(0, 80)}
+                                          {(test.error ?? '').length > 80 ? '…' : ''}
                                         </span>
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             navigator.clipboard
-                                              ?.writeText(test.error ?? "")
+                                              ?.writeText(test.error ?? '')
                                               .catch(() => {
                                                 /* clipboard blocked */
                                               });
                                           }}
                                           className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors shrink-0"
-                                          style={{ color: "#b91c1c" }}
+                                          style={{ color: '#b91c1c' }}
                                           onMouseEnter={(e) =>
                                             (e.currentTarget.style.backgroundColor =
-                                              "rgba(239,68,68,0.10)")
+                                              'rgba(239,68,68,0.10)')
                                           }
                                           onMouseLeave={(e) =>
-                                            (e.currentTarget.style.backgroundColor =
-                                              "transparent")
+                                            (e.currentTarget.style.backgroundColor = 'transparent')
                                           }
                                           title="Copy full error message"
                                         >
@@ -7650,9 +6937,9 @@ export default function PlaywrightDashboard() {
                                       <pre
                                         className="px-3 py-2.5 text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-words"
                                         style={{
-                                          color: "#dc2626",
+                                          color: '#dc2626',
                                           maxHeight: 260,
-                                          overflow: "auto",
+                                          overflow: 'auto',
                                         }}
                                       >
                                         {test.error}
@@ -7672,10 +6959,10 @@ export default function PlaywrightDashboard() {
                     <div
                       className="text-center py-16 rounded-2xl"
                       style={{
-                        backgroundColor: "var(--bg-card)",
+                        backgroundColor: 'var(--bg-card)',
                         background:
-                          "radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 70%)",
-                        boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+                          'radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 70%)',
+                        boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
                       }}
                     >
                       {suites.length === 0 ? (
@@ -7683,28 +6970,25 @@ export default function PlaywrightDashboard() {
                           <div
                             className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
                             style={{
-                              background: "rgba(59,130,246,0.08)",
-                              border: "1px solid rgba(59,130,246,0.15)",
+                              background: 'rgba(59,130,246,0.08)',
+                              border: '1px solid rgba(59,130,246,0.15)',
                             }}
                           >
-                            <Play
-                              size={24}
-                              style={{ color: "#3b82f6", opacity: 0.6 }}
-                            />
+                            <Play size={24} style={{ color: '#3b82f6', opacity: 0.6 }} />
                           </div>
                           <p
                             className="text-sm font-semibold mb-1.5"
-                            style={{ color: "var(--text-main)" }}
+                            style={{ color: 'var(--text-main)' }}
                           >
                             No test results yet
                           </p>
                           <p
                             className="text-xs max-w-xs mx-auto"
-                            style={{ color: "var(--text-muted)" }}
+                            style={{ color: 'var(--text-muted)' }}
                           >
                             {serverOnline === false
-                              ? "Server is offline — start it with: npm run dev"
-                              : "Click Run Tests to execute your Playwright specs."}
+                              ? 'Server is offline — start it with: npm run dev'
+                              : 'Click Run Tests to execute your Playwright specs.'}
                           </p>
                         </>
                       ) : (
@@ -7712,33 +6996,33 @@ export default function PlaywrightDashboard() {
                           <div
                             className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
                             style={{
-                              background: "rgba(148,163,184,0.08)",
-                              border: "1px solid rgba(148,163,184,0.15)",
+                              background: 'rgba(148,163,184,0.08)',
+                              border: '1px solid rgba(148,163,184,0.15)',
                             }}
                           >
                             <Search
                               size={22}
                               style={{
-                                color: "var(--text-muted)",
+                                color: 'var(--text-muted)',
                                 opacity: 0.5,
                               }}
                             />
                           </div>
                           <p
                             className="text-sm font-semibold mb-1.5"
-                            style={{ color: "var(--text-main)" }}
+                            style={{ color: 'var(--text-main)' }}
                           >
                             {searchQuery
                               ? `No tests match "${searchQuery}"`
-                              : "No tests match this filter"}
+                              : 'No tests match this filter'}
                           </p>
                           {searchQuery && (
                             <button
-                              onClick={() => setSearchQuery("")}
+                              onClick={() => setSearchQuery('')}
                               className="mt-1 text-xs font-semibold px-3 py-1.5 rounded-full"
                               style={{
-                                background: "rgba(59,130,246,0.1)",
-                                color: "#3b82f6",
+                                background: 'rgba(59,130,246,0.1)',
+                                color: '#3b82f6',
                               }}
                             >
                               Clear search
@@ -7756,30 +7040,27 @@ export default function PlaywrightDashboard() {
                 <div
                   className="mt-4 rounded-2xl overflow-hidden"
                   style={{
-                    backgroundColor: "var(--bg-card)",
-                    boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+                    backgroundColor: 'var(--bg-card)',
+                    boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
                   }}
                 >
                   <div
                     className="flex items-center gap-2 px-4 py-3 border-b"
                     style={{
-                      borderColor: "var(--border)",
-                      backgroundColor: "var(--bg-body)",
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--bg-body)',
                     }}
                   >
-                    <Clock size={13} style={{ color: "#f59e0b" }} />
-                    <span
-                      className="text-xs font-bold"
-                      style={{ color: "var(--text-main)" }}
-                    >
+                    <Clock size={13} style={{ color: '#f59e0b' }} />
+                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                       Slowest Tests
                     </span>
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
                       style={{
-                        background: "#fef3c7",
-                        color: "#92400e",
-                        border: "1px solid #fde68a",
+                        background: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fde68a',
                       }}
                     >
                       top 3
@@ -7789,38 +7070,37 @@ export default function PlaywrightDashboard() {
                     {slowestTests.map((test, i) => (
                       <div
                         key={test.id}
-                        className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? "border-t" : ""}`}
-                        style={{ borderColor: "var(--border)" }}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t' : ''}`}
+                        style={{ borderColor: 'var(--border)' }}
                       >
                         <span
                           className="text-xs font-bold w-5 shrink-0 text-center"
-                          style={{ color: "var(--text-muted)" }}
+                          style={{ color: 'var(--text-muted)' }}
                         >
                           #{i + 1}
                         </span>
                         <StatusIcon status={test.status} size={13} />
                         <span
                           className="flex-1 text-xs truncate"
-                          style={{ color: "var(--text-main)" }}
+                          style={{ color: 'var(--text-main)' }}
                         >
                           {test.title}
                         </span>
                         <div
                           className="flex-1 h-2 rounded-full overflow-hidden shrink-0 hidden sm:block max-w-[160px]"
-                          style={{ backgroundColor: "var(--border)" }}
+                          style={{ backgroundColor: 'var(--border)' }}
                         >
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
                               width: `${(test.duration / slowestTests[0].duration) * 100}%`,
-                              background:
-                                "linear-gradient(90deg, #E8A728, #D97706)",
+                              background: 'linear-gradient(90deg, #E8A728, #D97706)',
                             }}
                           />
                         </div>
                         <span
                           className="text-xs font-mono font-bold shrink-0"
-                          style={{ color: "#d97706" }}
+                          style={{ color: '#d97706' }}
                         >
                           {formatMs(test.duration)}
                         </span>
@@ -7834,30 +7114,24 @@ export default function PlaywrightDashboard() {
               {showLog && runLog.length > 0 && (
                 <div
                   className="mt-4 rounded-2xl overflow-hidden"
-                  style={{ boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)" }}
+                  style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
                 >
                   <div
                     className="flex items-center justify-between px-4 py-2.5 border-b"
                     style={{
-                      borderColor: "var(--border)",
-                      backgroundColor: "var(--bg-body)",
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--bg-body)',
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <Terminal size={13} style={{ color: "#34C759" }} />
-                      <span
-                        className="text-xs font-bold"
-                        style={{ color: "var(--text-main)" }}
-                      >
+                      <Terminal size={13} style={{ color: '#34C759' }} />
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                         Run Output
                       </span>
                       {running && (
                         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                       )}
-                      <span
-                        className="text-[10px]"
-                        style={{ color: "#6c7086" }}
-                      >
+                      <span className="text-[10px]" style={{ color: '#6c7086' }}>
                         {runLog.length} lines
                       </span>
                     </div>
@@ -7865,32 +7139,32 @@ export default function PlaywrightDashboard() {
                       onClick={() => setShowLog(false)}
                       className="hover:opacity-70 transition-opacity"
                     >
-                      <X size={13} style={{ color: "var(--text-muted)" }} />
+                      <X size={13} style={{ color: 'var(--text-muted)' }} />
                     </button>
                   </div>
                   <div
                     className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
-                    style={{ backgroundColor: "#1e1e2e", maxHeight: "280px" }}
+                    style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}
                   >
                     {runLog.map((line, i) => {
                       const color = /✓|passed|\[PASS\]/i.test(line)
-                        ? "#a6e3a1"
+                        ? '#a6e3a1'
                         : /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line)
-                          ? "#f38ba8"
+                          ? '#f38ba8'
                           : /\[FILTER\]|\[INFO\]/i.test(line)
-                            ? "#89b4fa"
+                            ? '#89b4fa'
                             : /\[TIMEOUT\]|\[OFFLINE\]/i.test(line)
-                              ? "#fab387"
+                              ? '#fab387'
                               : /skipped|pending/i.test(line)
-                                ? "#f9e2af"
-                                : "#cdd6f4";
+                                ? '#f9e2af'
+                                : '#cdd6f4';
                       return (
                         <div
                           key={i}
                           style={{
                             color,
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-all",
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-all',
                           }}
                         >
                           {line}
@@ -7907,14 +7181,11 @@ export default function PlaywrightDashboard() {
           )}
 
           {/* ── Docs view ────────────────────────────────────────────────────────── */}
-          {activeView === "docs" && <DocsView />}
+          {activeView === 'docs' && <DocsView />}
         </div>
 
         {artifactModal && (
-          <ArtifactModal
-            state={artifactModal}
-            onClose={() => setArtifactModal(null)}
-          />
+          <ArtifactModal state={artifactModal} onClose={() => setArtifactModal(null)} />
         )}
       </div>
     </div>
