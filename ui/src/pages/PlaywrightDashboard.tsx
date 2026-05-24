@@ -393,15 +393,24 @@ function HistoryChart({
             </div>
             <div className="flex items-center gap-3 mb-0.5">
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#34C759' }} />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#34C759' }}
+                />
                 {hoveredRun.passed}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#EF4444' }} />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#EF4444' }}
+                />
                 {hoveredRun.failed}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} />
+                <span
+                  className="w-1.5 h-1.5 rounded-sm inline-block"
+                  style={{ backgroundColor: '#E8A728' }}
+                />
                 {hoveredRun.skipped}
               </span>
               <span className="opacity-60 ml-auto">{formatMs(hoveredRun.duration)}</span>
@@ -606,7 +615,11 @@ function RunsPanel({
         {selectedId && !isDemo && (
           <span
             className="text-[10px] font-bold px-2 py-px rounded-full"
-            style={{ background: 'rgba(26,58,143,0.08)', color: '#1a3a8f', border: '1px solid rgba(26,58,143,0.2)' }}
+            style={{
+              background: 'rgba(26,58,143,0.08)',
+              color: '#1a3a8f',
+              border: '1px solid rgba(26,58,143,0.2)',
+            }}
           >
             viewing #{total - runs.findIndex((r) => r.id === selectedId)}
           </span>
@@ -702,9 +715,15 @@ function RunsPanel({
                 >
                   Total
                 </th>
-                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#16A34A' }}>✓</th>
-                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#EF4444' }}>✗</th>
-                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#D97706' }}>–</th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#16A34A' }}>
+                  ✓
+                </th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#EF4444' }}>
+                  ✗
+                </th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: '#D97706' }}>
+                  –
+                </th>
                 <th
                   className="text-right px-3 py-2 font-semibold"
                   style={{ color: 'var(--text-muted)' }}
@@ -753,7 +772,9 @@ function RunsPanel({
                       style={{ color: 'var(--text-muted)' }}
                     >
                       {isSelected ? (
-                        <span className="font-bold" style={{ color: '#1a3a8f' }}>#{runNum}</span>
+                        <span className="font-bold" style={{ color: '#1a3a8f' }}>
+                          #{runNum}
+                        </span>
                       ) : (
                         `#${runNum}`
                       )}
@@ -772,7 +793,11 @@ function RunsPanel({
                         {i === 0 && (
                           <span
                             className="text-[10px] font-bold px-1.5 py-px rounded-full shrink-0"
-                            style={{ background: 'rgba(26,58,143,0.08)', color: '#1a3a8f', border: '1px solid rgba(26,58,143,0.2)' }}
+                            style={{
+                              background: 'rgba(26,58,143,0.08)',
+                              color: '#1a3a8f',
+                              border: '1px solid rgba(26,58,143,0.2)',
+                            }}
                           >
                             latest
                           </span>
@@ -780,9 +805,18 @@ function RunsPanel({
                         {hasDelta && (
                           <span
                             className="text-[10px] font-bold px-1.5 py-px rounded-full shrink-0"
-                            style={dFail > 0
-                              ? { background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }
-                              : { background: 'rgba(52,199,89,0.08)', color: '#16A34A', border: '1px solid rgba(52,199,89,0.2)' }
+                            style={
+                              dFail > 0
+                                ? {
+                                    background: 'rgba(239,68,68,0.08)',
+                                    color: '#EF4444',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                  }
+                                : {
+                                    background: 'rgba(52,199,89,0.08)',
+                                    color: '#16A34A',
+                                    border: '1px solid rgba(52,199,89,0.2)',
+                                  }
                             }
                           >
                             {dFail > 0 ? `+${dFail}✗` : `${dFail}✗`}
@@ -905,9 +939,12 @@ function formatMs(ms: number) {
 
 function StatusIcon({ status, size = 15 }: { status: Status; size?: number }) {
   const s = size;
-  if (status === 'passed') return <CheckCircle2 size={s} className="shrink-0" style={{ color: '#34C759' }} />;
-  if (status === 'failed') return <XCircle size={s} className="shrink-0" style={{ color: '#EF4444' }} />;
-  if (status === 'skipped') return <MinusCircle size={s} className="shrink-0" style={{ color: '#E8A728' }} />;
+  if (status === 'passed')
+    return <CheckCircle2 size={s} className="shrink-0" style={{ color: '#34C759' }} />;
+  if (status === 'failed')
+    return <XCircle size={s} className="shrink-0" style={{ color: '#EF4444' }} />;
+  if (status === 'skipped')
+    return <MinusCircle size={s} className="shrink-0" style={{ color: '#E8A728' }} />;
   if (status === 'running')
     return (
       <span className="inline-block shrink-0" style={{ width: s, height: s }}>
@@ -1615,7 +1652,11 @@ function SettingsView({
                 </span>
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: 'rgba(52,199,89,0.10)', color: '#16A34A', border: '1px solid rgba(52,199,89,0.25)' }}
+                  style={{
+                    background: 'rgba(52,199,89,0.10)',
+                    color: '#16A34A',
+                    border: '1px solid rgba(52,199,89,0.25)',
+                  }}
                 >
                   Live
                 </span>
@@ -5169,18 +5210,32 @@ export default function PlaywrightDashboard() {
                 {serverOnline === true && !demoMode && (
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(52,199,89,0.10)', color: '#16A34A', border: '1px solid rgba(52,199,89,0.25)' }}
+                    style={{
+                      background: 'rgba(52,199,89,0.10)',
+                      color: '#16A34A',
+                      border: '1px solid rgba(52,199,89,0.25)',
+                    }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ backgroundColor: '#34C759' }} />
+                    <span
+                      className="w-1.5 h-1.5 rounded-full animate-pulse inline-block"
+                      style={{ backgroundColor: '#34C759' }}
+                    />
                     Live
                   </span>
                 )}
                 {demoMode && (
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(232,167,40,0.10)', color: '#92400e', border: '1px solid rgba(232,167,40,0.30)' }}
+                    style={{
+                      background: 'rgba(232,167,40,0.10)',
+                      color: '#92400e',
+                      border: '1px solid rgba(232,167,40,0.30)',
+                    }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: '#E8A728' }} />
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{ backgroundColor: '#E8A728' }}
+                    />
                     Demo
                   </span>
                 )}
@@ -5970,13 +6025,19 @@ export default function PlaywrightDashboard() {
                       {counts.passed > 0 && (
                         <div
                           className="h-full transition-all duration-700"
-                          style={{ width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%`, backgroundColor: '#34C759' }}
+                          style={{
+                            width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%`,
+                            backgroundColor: '#34C759',
+                          }}
                         />
                       )}
                       {counts.failed > 0 && (
                         <div
                           className="h-full transition-all duration-700"
-                          style={{ width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%`, backgroundColor: '#EF4444' }}
+                          style={{
+                            width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%`,
+                            backgroundColor: '#EF4444',
+                          }}
                         />
                       )}
                       {counts.skipped > 0 && (
@@ -6002,19 +6063,33 @@ export default function PlaywrightDashboard() {
                       style={{ color: 'var(--text-muted)' }}
                     >
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#34C759' }} />
-                        <span className="font-semibold" style={{ color: '#16A34A' }}>{counts.passed}</span>{' '}
+                        <span
+                          className="w-1.5 h-1.5 rounded-sm inline-block"
+                          style={{ backgroundColor: '#34C759' }}
+                        />
+                        <span className="font-semibold" style={{ color: '#16A34A' }}>
+                          {counts.passed}
+                        </span>{' '}
                         passed
                       </span>
                       {counts.failed > 0 && (
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#EF4444' }} />
-                          <span className="font-semibold" style={{ color: '#EF4444' }}>{counts.failed}</span> failed
+                          <span
+                            className="w-1.5 h-1.5 rounded-sm inline-block"
+                            style={{ backgroundColor: '#EF4444' }}
+                          />
+                          <span className="font-semibold" style={{ color: '#EF4444' }}>
+                            {counts.failed}
+                          </span>{' '}
+                          failed
                         </span>
                       )}
                       {counts.skipped > 0 && (
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} />
+                          <span
+                            className="w-1.5 h-1.5 rounded-sm inline-block"
+                            style={{ backgroundColor: '#E8A728' }}
+                          />
                           <span className="font-semibold" style={{ color: '#D97706' }}>
                             {counts.skipped}
                           </span>{' '}

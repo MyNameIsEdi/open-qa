@@ -265,7 +265,7 @@ npm run run:datagen           # Edge-case test data generator`,
       {
         type: 'list',
         items: [
-          "Error \"browserType.launch: Executable doesn't exist\" → Run: npx playwright install --with-deps chromium",
+          'Error "browserType.launch: Executable doesn\'t exist" → Run: npx playwright install --with-deps chromium',
           '404 on /api/run/:id → Start the server: npm run dev (starts both UI on port 5173 and API on port 3001)',
           'Chat returns no response → Check that GEMINI_API_KEY is set in .env, or that Ollama is running at the configured base URL.',
           'UI shows blank page after npm run dev → Check that port 5173 is free. Check the browser console for errors.',
