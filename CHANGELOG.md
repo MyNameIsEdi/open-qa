@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **Design system compliance pass on PlaywrightDashboard** — aligns
+  `PlaywrightDashboard.tsx` with `DESIGN.md` across all token categories:
+  primary brand blue changed from Tailwind `#2563eb` to DESIGN `#1a3a8f`
+  throughout all interactive elements (buttons, toggles, active states, focus
+  outlines, badges, "latest"/"viewing" chips); success semantic color updated
+  from `#10b981` (emerald-500) to DESIGN `#34C759`/`#16A34A`; warning color
+  updated from `#fbbf24` to DESIGN `#E8A728`/`#D97706`; hover tooltip
+  background corrected to DESIGN tooltip spec `#2D2823`; `StatusBadge`
+  `uppercase` transform removed per DESIGN "no uppercase on buttons/chips"
+  rule; `StatusIcon` converted to inline `style` so semantic colors use exact
+  DESIGN tokens; KPI stack bar, run-history chart bars and legend dots,
+  duration bar, and inline stat counts all updated to use DESIGN semantic
+  palette (`ui/src/pages/PlaywrightDashboard.tsx`).
+
 - **DocsPage updated for Gemini/Ollama stack** — all nine documentation
   sections rewritten to reflect the current project state: Anthropic/Claude
   references replaced with Gemini/Ollama, directory tree updated, env-var
@@ -13,6 +27,14 @@ All notable changes to this project will be documented in this file.
   with Gemini key and provider-switching questions, roadmap marks completed
   features (multi-agent collab, Playwright Dashboard, run history, AI
   summaries, Gemini/Ollama switching) as done (`ui/src/pages/DocsPage.tsx`).
+
+### Fixed
+
+- **Prettier formatting** — `DocsPage.tsx` and `PlaywrightDashboard.tsx`
+  normalized to `singleQuote: true` (project `.prettierrc`) after
+  Windows CRLF line-ending conversion masked the issue locally; both files
+  now pass `format:check` on Linux CI (`ui/src/pages/DocsPage.tsx`,
+  `ui/src/pages/PlaywrightDashboard.tsx`).
 
 ### Added
 
