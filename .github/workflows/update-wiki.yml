@@ -21,11 +21,16 @@ jobs:
       - name: Clone wiki repo
         run: |
           git clone \
-            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/MyNameIsEdi/intelligent-testing-toolkit.wiki.git \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/MyNameIsEdi/open-qa.wiki.git \
             wiki-repo
 
       - name: Copy wiki pages
-        run: cp .github/wiki/*.md wiki-repo/
+        run: |
+          if compgen -G ".github/wiki/*.md" > /dev/null; then
+            cp .github/wiki/*.md wiki-repo/
+          else
+            echo "No wiki pages found in .github/wiki/ — skipping copy."
+          fi
 
       - name: Commit and push
         working-directory: wiki-repo
