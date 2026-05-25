@@ -4,7 +4,46 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **5-card KPI row with sparklines** — replaced the hero-ring + 3-tile KPI
+  layout with five uniform stat cards (Total Executions, Passed, Failed, Flaky,
+  Success Rate). Each card shows a mini SVG sparkline from the last 8 runs and
+  a trend delta badge vs the previous run (`PlaywrightDashboard.tsx`).
+- **Failure Reasons donut chart** — new SVG donut + legend that classifies
+  current-run failures into UI Text Change, Element Not Found, Timeout, Network
+  Error, and Other using the existing `parseErrorType()` function
+  (`PlaywrightDashboard.tsx`).
+- **Top Failed Tests panel** — ranked list of the 5 most-retried failing tests
+  in the current run with error-type badges and a "View all failures →" CTA
+  that filters the test list (`PlaywrightDashboard.tsx`).
+- **Insights row** — three-column grid below the KPI cards: Executions Over
+  Time (HistoryChart), Top Failed Tests, Failure Reasons (`PlaywrightDashboard.tsx`).
+- **Real-time live counts during test runs** — stat cards and the Run Health
+  hero update live while Phase 1 SSE stdout streams, parsing Playwright's
+  ✓/✗ symbols to derive pass/fail counts without server changes. Cards pulse
+  and display a "RUNNING" badge during an active run (`PlaywrightDashboard.tsx`).
+- **"Last updated: N min ago" indicator** — relative timestamp in the header
+  pill row with an inline refresh button; auto-ticks every 60 s
+  (`PlaywrightDashboard.tsx`).
+
+### Changed
+
+- **Demo mode removed** — replaced fake `DEMO_SUITES` data with a clean empty
+  state ("No test results yet — click Run Tests…") and a server-offline banner.
+  The "Demo" toolbar button is gone; all data now comes from real runs
+  (`PlaywrightDashboard.tsx`).
+- **Run Health hero card** — kept below the 5-card row and upgraded to show
+  live counts (passed · failed · remaining) and a spinning arc overlay during
+  an active run; progress bar shows running tests in indigo (`PlaywrightDashboard.tsx`).
+
 ### Fixed
+
+- **Run history now refreshes immediately on `[DONE]`** — `fetchHistory()` is
+  called as soon as the Phase 1 `[DONE]` marker arrives (archive is written
+  server-side before `[DONE]`), then again in the `finally` block so history
+  always updates even when `fetchResults()` fails or the AI summary is skipped
+  (`PlaywrightDashboard.tsx`).
 
 - **Archived run log restored in full** — `setRunLog` no longer truncates
   historical run logs to the last 999 lines when restoring an archived run.
