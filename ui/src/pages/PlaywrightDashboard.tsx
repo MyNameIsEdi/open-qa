@@ -249,7 +249,8 @@ function fmtRunLabel(runAt: string): string {
 
 function MiniSparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length < 2) return <div style={{ width: 52, height: 22 }} />;
-  const W = 52, H = 22;
+  const W = 52,
+    H = 22;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(max - min, 1);
@@ -276,11 +277,11 @@ function MiniSparkline({ values, color }: { values: number[]; color: string }) {
 // ─── Failure Reasons Donut Chart ──────────────────────────────────────────────
 
 const FAILURE_REASON_META: Record<ErrorType, { label: string; color: string }> = {
-  Assertion: { label: 'UI Text Change',    color: '#4F72D4' },
-  Locator:   { label: 'Element Not Found', color: '#34C759' },
-  Timeout:   { label: 'Timeout',           color: '#E8A728' },
-  Network:   { label: 'Network Error',     color: '#ef4444' },
-  Error:     { label: 'Other',             color: '#6b7280' },
+  Assertion: { label: 'UI Text Change', color: '#4F72D4' },
+  Locator: { label: 'Element Not Found', color: '#34C759' },
+  Timeout: { label: 'Timeout', color: '#E8A728' },
+  Network: { label: 'Network Error', color: '#ef4444' },
+  Error: { label: 'Other', color: '#6b7280' },
 };
 
 function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
@@ -306,7 +307,10 @@ function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
     );
   }
 
-  const R = 40, cx = 48, cy = 48, strokeW = 16;
+  const R = 40,
+    cx = 48,
+    cy = 48,
+    strokeW = 16;
   const circumference = 2 * Math.PI * R;
   let dashOffset = 0;
   const arcs = entries.map(([type, count]) => {
@@ -323,7 +327,9 @@ function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
         {arcs.map(({ type, dash, off }) => (
           <circle
             key={type}
-            cx={cx} cy={cy} r={R}
+            cx={cx}
+            cy={cy}
+            r={R}
             fill="none"
             stroke={FAILURE_REASON_META[type].color}
             strokeWidth={strokeW}
@@ -332,8 +338,27 @@ function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
             transform={`rotate(-90 ${cx} ${cy})`}
           />
         ))}
-        <text x={cx} y={cy - 3} textAnchor="middle" fontSize="15" fontWeight="800" fill="var(--text-main)">{total}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="7" fontWeight="600" fill="var(--text-muted)" letterSpacing="0.08em">FAILS</text>
+        <text
+          x={cx}
+          y={cy - 3}
+          textAnchor="middle"
+          fontSize="15"
+          fontWeight="800"
+          fill="var(--text-main)"
+        >
+          {total}
+        </text>
+        <text
+          x={cx}
+          y={cy + 12}
+          textAnchor="middle"
+          fontSize="7"
+          fontWeight="600"
+          fill="var(--text-muted)"
+          letterSpacing="0.08em"
+        >
+          FAILS
+        </text>
       </svg>
       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
         {entries.map(([type, count]) => {
@@ -345,7 +370,10 @@ function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
               <span className="text-[11px] flex-1 truncate" style={{ color: 'var(--text-main)' }}>
                 {label}
               </span>
-              <span className="text-[11px] font-bold shrink-0" style={{ color: 'var(--text-muted)' }}>
+              <span
+                className="text-[11px] font-bold shrink-0"
+                style={{ color: 'var(--text-muted)' }}
+              >
                 {pct}%
               </span>
             </div>
@@ -358,18 +386,10 @@ function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
 
 // ─── Top Failed Tests Panel ───────────────────────────────────────────────────
 
-function TopFailedPanel({
-  suites,
-  onViewAll,
-}: {
-  suites: TestSuite[];
-  onViewAll: () => void;
-}) {
+function TopFailedPanel({ suites, onViewAll }: { suites: TestSuite[]; onViewAll: () => void }) {
   const failed = suites
     .flatMap((s) =>
-      s.tests
-        .filter((t) => t.status === 'failed')
-        .map((t) => ({ ...t, suiteTitle: s.title })),
+      s.tests.filter((t) => t.status === 'failed').map((t) => ({ ...t, suiteTitle: s.title })),
     )
     .sort((a, b) => (b.retries ?? 0) - (a.retries ?? 0))
     .slice(0, 5);
@@ -399,7 +419,10 @@ function TopFailedPanel({
               style={{ borderColor: 'var(--border)' }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--text-main)' }}>
+                <p
+                  className="text-[11px] font-semibold truncate"
+                  style={{ color: 'var(--text-main)' }}
+                >
                   {test.title}
                 </p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
@@ -416,7 +439,10 @@ function TopFailedPanel({
               >
                 {label}
               </span>
-              <span className="text-xs font-black shrink-0 w-4 text-right" style={{ color: '#EF4444' }}>
+              <span
+                className="text-xs font-black shrink-0 w-4 text-right"
+                style={{ color: '#EF4444' }}
+              >
                 {count}
               </span>
             </div>
@@ -5024,7 +5050,8 @@ export default function PlaywrightDashboard() {
   // during Phase 1 without needing per-test SSE events from the server.
   const liveRunCounts = useMemo(() => {
     if (!running || runLog.length === 0) return null;
-    let passed = 0, failed = 0;
+    let passed = 0,
+      failed = 0;
     for (const line of runLog) {
       if (/^\s+[✓✔]\s/.test(line)) passed++;
       else if (/^\s+[✗✘×]\s/.test(line)) failed++;
@@ -5751,7 +5778,10 @@ export default function PlaywrightDashboard() {
                       border: '1px solid var(--border)',
                     }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: '#34C759' }} />
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{ backgroundColor: '#34C759' }}
+                    />
                     Last updated:{' '}
                     {(() => {
                       const diffMin = Math.round((now - new Date(lastRunAt).getTime()) / 60_000);
@@ -6111,7 +6141,8 @@ export default function PlaywrightDashboard() {
                 >
                   <Clock size={12} className="shrink-0" />
                   <span>
-                    No test results yet — click <strong>Run Tests</strong> to execute your Playwright suite.
+                    No test results yet — click <strong>Run Tests</strong> to execute your
+                    Playwright suite.
                   </span>
                 </div>
               )}
@@ -6446,10 +6477,23 @@ export default function PlaywrightDashboard() {
 
               {/* ── 5 KPI stat cards ─────────────────────────────────────────── */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-                {((): { label: string; valueStr: string; sub: string; histValues: number[]; prevVal: number | null; accent: string; valueColor: string; lowerIsBetter: boolean; isLive?: boolean }[] => {
+                {((): {
+                  label: string;
+                  valueStr: string;
+                  sub: string;
+                  histValues: number[];
+                  prevVal: number | null;
+                  accent: string;
+                  valueColor: string;
+                  lowerIsBetter: boolean;
+                  isLive?: boolean;
+                }[] => {
                   const prevRun = runHistory[1] ?? null;
                   const prevPassRate = prevRun
-                    ? (() => { const d = prevRun.total - prevRun.skipped; return d > 0 ? Math.round((prevRun.passed / d) * 100) : 0; })()
+                    ? (() => {
+                        const d = prevRun.total - prevRun.skipped;
+                        return d > 0 ? Math.round((prevRun.passed / d) * 100) : 0;
+                      })()
                     : null;
                   // Use live counts during an active run so numbers update as tests complete
                   const liveTotal = liveRunCounts?.total ?? 0;
@@ -6459,9 +6503,20 @@ export default function PlaywrightDashboard() {
                   return [
                     {
                       label: 'Total Executions',
-                      valueStr: running ? (liveTotal > 0 ? String(liveTotal) : '…') : counts.total > 0 ? String(counts.total) : '—',
-                      sub: running ? `${liveRunCounts?.running ?? 0} remaining` : `${suites.length} suite${suites.length === 1 ? '' : 's'}`,
-                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.total),
+                      valueStr: running
+                        ? liveTotal > 0
+                          ? String(liveTotal)
+                          : '…'
+                        : counts.total > 0
+                          ? String(counts.total)
+                          : '—',
+                      sub: running
+                        ? `${liveRunCounts?.running ?? 0} remaining`
+                        : `${suites.length} suite${suites.length === 1 ? '' : 's'}`,
+                      histValues: runHistory
+                        .slice(0, 8)
+                        .reverse()
+                        .map((r) => r.total),
                       prevVal: prevRun?.total ?? null,
                       accent: '#6366f1',
                       valueColor: '#6366f1',
@@ -6470,11 +6525,22 @@ export default function PlaywrightDashboard() {
                     },
                     {
                       label: 'Passed',
-                      valueStr: running ? String(livePassed) : counts.total > 0 ? String(counts.passed) : '—',
+                      valueStr: running
+                        ? String(livePassed)
+                        : counts.total > 0
+                          ? String(counts.passed)
+                          : '—',
                       sub: running
-                        ? liveTotal > 0 ? `${Math.round((livePassed / liveTotal) * 100)}%` : '0%'
-                        : counts.total > 0 ? `${Math.round((counts.passed / counts.total) * 100)}%` : '—',
-                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.passed),
+                        ? liveTotal > 0
+                          ? `${Math.round((livePassed / liveTotal) * 100)}%`
+                          : '0%'
+                        : counts.total > 0
+                          ? `${Math.round((counts.passed / counts.total) * 100)}%`
+                          : '—',
+                      histValues: runHistory
+                        .slice(0, 8)
+                        .reverse()
+                        .map((r) => r.passed),
                       prevVal: prevRun?.passed ?? null,
                       accent: '#34C759',
                       valueColor: '#16A34A',
@@ -6483,22 +6549,51 @@ export default function PlaywrightDashboard() {
                     },
                     {
                       label: 'Failed',
-                      valueStr: running ? String(liveFailed) : counts.total > 0 ? String(counts.failed) : '—',
+                      valueStr: running
+                        ? String(liveFailed)
+                        : counts.total > 0
+                          ? String(counts.failed)
+                          : '—',
                       sub: running
-                        ? liveTotal > 0 ? `${Math.round((liveFailed / liveTotal) * 100)}%` : '0%'
-                        : counts.total > 0 ? `${Math.round((counts.failed / counts.total) * 100)}%` : '—',
-                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.failed),
+                        ? liveTotal > 0
+                          ? `${Math.round((liveFailed / liveTotal) * 100)}%`
+                          : '0%'
+                        : counts.total > 0
+                          ? `${Math.round((counts.failed / counts.total) * 100)}%`
+                          : '—',
+                      histValues: runHistory
+                        .slice(0, 8)
+                        .reverse()
+                        .map((r) => r.failed),
                       prevVal: prevRun?.failed ?? null,
-                      accent: running ? (liveFailed > 0 ? '#EF4444' : '#94a3b8') : counts.failed > 0 ? '#EF4444' : '#94a3b8',
-                      valueColor: running ? (liveFailed > 0 ? '#DC2626' : 'var(--text-muted)') : counts.failed > 0 ? '#DC2626' : 'var(--text-muted)',
+                      accent: running
+                        ? liveFailed > 0
+                          ? '#EF4444'
+                          : '#94a3b8'
+                        : counts.failed > 0
+                          ? '#EF4444'
+                          : '#94a3b8',
+                      valueColor: running
+                        ? liveFailed > 0
+                          ? '#DC2626'
+                          : 'var(--text-muted)'
+                        : counts.failed > 0
+                          ? '#DC2626'
+                          : 'var(--text-muted)',
                       lowerIsBetter: true,
                       isLive: running,
                     },
                     {
                       label: 'Flaky',
                       valueStr: counts.total > 0 ? String(counts.flaky) : '—',
-                      sub: counts.total > 0 ? `${Math.round((counts.flaky / counts.total) * 100)}%` : '—',
-                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.flaky),
+                      sub:
+                        counts.total > 0
+                          ? `${Math.round((counts.flaky / counts.total) * 100)}%`
+                          : '—',
+                      histValues: runHistory
+                        .slice(0, 8)
+                        .reverse()
+                        .map((r) => r.flaky),
                       prevVal: prevRun?.flaky ?? null,
                       accent: counts.flaky > 0 ? '#E8A728' : '#94a3b8',
                       valueColor: counts.flaky > 0 ? '#D97706' : 'var(--text-muted)',
@@ -6506,130 +6601,395 @@ export default function PlaywrightDashboard() {
                     },
                     {
                       label: 'Success Rate',
-                      valueStr: running ? (liveTotal > 0 ? `${liveRate}%` : '…') : counts.total > 0 ? `${passRate}%` : '—',
+                      valueStr: running
+                        ? liveTotal > 0
+                          ? `${liveRate}%`
+                          : '…'
+                        : counts.total > 0
+                          ? `${passRate}%`
+                          : '—',
                       sub: running
-                        ? liveRate >= 80 ? 'Looking good' : liveRate > 0 ? 'Needs attention' : 'Running…'
-                        : passRate >= 95 ? 'All-green' : passRate >= 80 ? 'Mostly passing' : passRate >= 50 ? 'Needs attention' : counts.total > 0 ? 'Critical' : '—',
-                      histValues: runHistory.slice(0, 8).reverse().map((r) => { const d = r.total - r.skipped; return d > 0 ? Math.round((r.passed / d) * 100) : 0; }),
+                        ? liveRate >= 80
+                          ? 'Looking good'
+                          : liveRate > 0
+                            ? 'Needs attention'
+                            : 'Running…'
+                        : passRate >= 95
+                          ? 'All-green'
+                          : passRate >= 80
+                            ? 'Mostly passing'
+                            : passRate >= 50
+                              ? 'Needs attention'
+                              : counts.total > 0
+                                ? 'Critical'
+                                : '—',
+                      histValues: runHistory
+                        .slice(0, 8)
+                        .reverse()
+                        .map((r) => {
+                          const d = r.total - r.skipped;
+                          return d > 0 ? Math.round((r.passed / d) * 100) : 0;
+                        }),
                       prevVal: prevPassRate,
-                      accent: running ? (liveRate >= 80 ? '#34C759' : liveRate > 0 ? '#E8A728' : '#94a3b8') : passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : counts.total > 0 ? '#EF4444' : '#94a3b8',
-                      valueColor: running ? (liveRate >= 80 ? '#16A34A' : liveRate > 0 ? '#D97706' : 'var(--text-muted)') : passRate >= 80 ? '#16A34A' : passRate >= 50 ? '#D97706' : counts.total > 0 ? '#DC2626' : 'var(--text-muted)',
+                      accent: running
+                        ? liveRate >= 80
+                          ? '#34C759'
+                          : liveRate > 0
+                            ? '#E8A728'
+                            : '#94a3b8'
+                        : passRate >= 80
+                          ? '#34C759'
+                          : passRate >= 50
+                            ? '#E8A728'
+                            : counts.total > 0
+                              ? '#EF4444'
+                              : '#94a3b8',
+                      valueColor: running
+                        ? liveRate >= 80
+                          ? '#16A34A'
+                          : liveRate > 0
+                            ? '#D97706'
+                            : 'var(--text-muted)'
+                        : passRate >= 80
+                          ? '#16A34A'
+                          : passRate >= 50
+                            ? '#D97706'
+                            : counts.total > 0
+                              ? '#DC2626'
+                              : 'var(--text-muted)',
                       lowerIsBetter: false,
                       isLive: running,
                     },
                   ];
-                })().map(({ label, valueStr, sub, histValues, prevVal, accent, valueColor, lowerIsBetter, isLive }) => {
-                  const currentVal = histValues[histValues.length - 1] ?? null;
-                  let trendEl: React.ReactNode = null;
-                  if (!isLive && prevVal !== null && currentVal !== null && runHistory.length >= 2) {
-                    const delta = currentVal - prevVal;
-                    if (delta !== 0) {
-                      const isGood = lowerIsBetter ? delta < 0 : delta > 0;
-                      trendEl = (
-                        <span className="text-[9px] font-bold" style={{ color: isGood ? '#16A34A' : '#DC2626' }}>
-                          {delta > 0 ? '+' : ''}{delta} vs prev
-                        </span>
-                      );
+                })().map(
+                  ({
+                    label,
+                    valueStr,
+                    sub,
+                    histValues,
+                    prevVal,
+                    accent,
+                    valueColor,
+                    lowerIsBetter,
+                    isLive,
+                  }) => {
+                    const currentVal = histValues[histValues.length - 1] ?? null;
+                    let trendEl: React.ReactNode = null;
+                    if (
+                      !isLive &&
+                      prevVal !== null &&
+                      currentVal !== null &&
+                      runHistory.length >= 2
+                    ) {
+                      const delta = currentVal - prevVal;
+                      if (delta !== 0) {
+                        const isGood = lowerIsBetter ? delta < 0 : delta > 0;
+                        trendEl = (
+                          <span
+                            className="text-[9px] font-bold"
+                            style={{ color: isGood ? '#16A34A' : '#DC2626' }}
+                          >
+                            {delta > 0 ? '+' : ''}
+                            {delta} vs prev
+                          </span>
+                        );
+                      }
                     }
-                  }
-                  return (
-                    <div
-                      key={label}
-                      className="relative overflow-hidden rounded-2xl px-4 py-4 flex flex-col gap-2"
-                      style={{
-                        backgroundColor: 'var(--bg-card)',
-                        border: `1px solid ${isLive ? `${accent}50` : 'var(--border)'}`,
-                        boxShadow: isLive ? `0 0 0 1px ${accent}30, 0 1px 4px rgba(0,0,0,0.05)` : '0 1px 4px rgba(0,0,0,0.05)',
-                        transition: 'border-color 0.3s, box-shadow 0.3s',
-                      }}
-                    >
-                      {/* Top accent bar — pulses when live */}
+                    return (
                       <div
-                        className={`absolute top-0 inset-x-0 h-0.5 rounded-t-2xl${isLive ? ' animate-pulse' : ''}`}
-                        style={{ backgroundColor: accent }}
-                      />
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                          {label}
-                        </p>
-                        {isLive && (
-                          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
-                        )}
-                      </div>
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <p className="text-2xl font-black leading-none" style={{ color: valueColor }}>{valueStr}</p>
-                          <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+                        key={label}
+                        className="relative overflow-hidden rounded-2xl px-4 py-4 flex flex-col gap-2"
+                        style={{
+                          backgroundColor: 'var(--bg-card)',
+                          border: `1px solid ${isLive ? `${accent}50` : 'var(--border)'}`,
+                          boxShadow: isLive
+                            ? `0 0 0 1px ${accent}30, 0 1px 4px rgba(0,0,0,0.05)`
+                            : '0 1px 4px rgba(0,0,0,0.05)',
+                          transition: 'border-color 0.3s, box-shadow 0.3s',
+                        }}
+                      >
+                        {/* Top accent bar — pulses when live */}
+                        <div
+                          className={`absolute top-0 inset-x-0 h-0.5 rounded-t-2xl${isLive ? ' animate-pulse' : ''}`}
+                          style={{ backgroundColor: accent }}
+                        />
+                        <div className="flex items-center justify-between">
+                          <p
+                            className="text-[10px] font-bold uppercase tracking-wider"
+                            style={{ color: 'var(--text-muted)' }}
+                          >
+                            {label}
+                          </p>
+                          {isLive && (
+                            <span
+                              className="w-1.5 h-1.5 rounded-full animate-pulse"
+                              style={{ backgroundColor: accent }}
+                            />
+                          )}
                         </div>
-                        <MiniSparkline values={histValues} color={accent} />
+                        <div className="flex items-end justify-between gap-2">
+                          <div>
+                            <p
+                              className="text-2xl font-black leading-none"
+                              style={{ color: valueColor }}
+                            >
+                              {valueStr}
+                            </p>
+                            <p
+                              className="text-[10px] mt-1 font-medium"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
+                              {sub}
+                            </p>
+                          </div>
+                          <MiniSparkline values={histValues} color={accent} />
+                        </div>
+                        {trendEl && <div>{trendEl}</div>}
                       </div>
-                      {trendEl && <div>{trendEl}</div>}
-                    </div>
-                  );
-                })}
+                    );
+                  },
+                )}
               </div>
 
               {/* ── Run Health hero ───────────────────────────────────────────── */}
               {(() => {
-                const heroTotal  = running && liveRunCounts ? liveRunCounts.total  : counts.total;
-                const heroPassed = running && liveRunCounts ? liveRunCounts.passed  : counts.passed;
-                const heroFailed = running && liveRunCounts ? liveRunCounts.failed  : counts.failed;
-                const heroRate   = running && liveRunCounts && liveRunCounts.total > 0
-                  ? Math.round((liveRunCounts.passed / liveRunCounts.total) * 100)
-                  : passRate;
-                const heroColor  = heroRate >= 80 ? '#34C759' : heroRate >= 50 ? '#E8A728' : heroTotal > 0 ? '#ef4444' : '#6366f1';
+                const heroTotal = running && liveRunCounts ? liveRunCounts.total : counts.total;
+                const heroPassed = running && liveRunCounts ? liveRunCounts.passed : counts.passed;
+                const heroFailed = running && liveRunCounts ? liveRunCounts.failed : counts.failed;
+                const heroRate =
+                  running && liveRunCounts && liveRunCounts.total > 0
+                    ? Math.round((liveRunCounts.passed / liveRunCounts.total) * 100)
+                    : passRate;
+                const heroColor =
+                  heroRate >= 80
+                    ? '#34C759'
+                    : heroRate >= 50
+                      ? '#E8A728'
+                      : heroTotal > 0
+                        ? '#ef4444'
+                        : '#6366f1';
                 return (
                   <div
                     className="relative overflow-hidden rounded-2xl p-5 flex items-center gap-5 mb-6"
                     style={{
                       backgroundColor: 'var(--bg-card)',
-                      boxShadow: running ? `0 0 0 1px ${heroColor}40, 0 4px 16px -6px rgba(0,0,0,0.10)` : '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+                      boxShadow: running
+                        ? `0 0 0 1px ${heroColor}40, 0 4px 16px -6px rgba(0,0,0,0.10)`
+                        : '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
                       border: `1px solid ${heroRate >= 80 ? 'rgba(16,185,129,0.18)' : heroRate >= 50 ? 'rgba(251,191,36,0.20)' : heroTotal > 0 ? 'rgba(239,68,68,0.18)' : 'var(--border)'}`,
                       transition: 'box-shadow 0.3s, border-color 0.3s',
                     }}
                   >
-                    <div aria-hidden className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none" style={{ backgroundColor: heroColor }} />
+                    <div
+                      aria-hidden
+                      className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none"
+                      style={{ backgroundColor: heroColor }}
+                    />
                     <svg width="80" height="80" viewBox="0 0 80 80" className="shrink-0">
-                      <circle cx="40" cy="40" r="32" stroke="var(--border)" strokeWidth="7" fill="none" />
                       <circle
-                        cx="40" cy="40" r="32" fill="none" strokeWidth="7" strokeLinecap="round"
+                        cx="40"
+                        cy="40"
+                        r="32"
+                        stroke="var(--border)"
+                        strokeWidth="7"
+                        fill="none"
+                      />
+                      <circle
+                        cx="40"
+                        cy="40"
+                        r="32"
+                        fill="none"
+                        strokeWidth="7"
+                        strokeLinecap="round"
                         stroke={heroColor}
                         strokeDasharray={`${(heroRate / 100) * 201.06} 201.06`}
                         transform="rotate(-90 40 40)"
                         style={{ transition: 'stroke-dasharray 500ms ease, stroke 300ms' }}
                       />
                       {running && (
-                        <circle cx="40" cy="40" r="32" fill="none" strokeWidth="7" stroke={heroColor} strokeDasharray="10 191" strokeDashoffset={`${-(heroRate / 100) * 201.06}`} transform="rotate(-90 40 40)" opacity="0.3" className="animate-spin" style={{ animationDuration: '3s' }} />
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="32"
+                          fill="none"
+                          strokeWidth="7"
+                          stroke={heroColor}
+                          strokeDasharray="10 191"
+                          strokeDashoffset={`${-(heroRate / 100) * 201.06}`}
+                          transform="rotate(-90 40 40)"
+                          opacity="0.3"
+                          className="animate-spin"
+                          style={{ animationDuration: '3s' }}
+                        />
                       )}
-                      <text x="40" y="44" textAnchor="middle" fontSize="17" fontWeight="800" fill={heroRate >= 80 ? '#059669' : heroRate >= 50 ? '#d97706' : heroTotal > 0 ? '#dc2626' : '#6366f1'}>
+                      <text
+                        x="40"
+                        y="44"
+                        textAnchor="middle"
+                        fontSize="17"
+                        fontWeight="800"
+                        fill={
+                          heroRate >= 80
+                            ? '#059669'
+                            : heroRate >= 50
+                              ? '#d97706'
+                              : heroTotal > 0
+                                ? '#dc2626'
+                                : '#6366f1'
+                        }
+                      >
                         {heroTotal === 0 && !running ? '—' : `${heroRate}%`}
                       </text>
-                      <text x="40" y="56" textAnchor="middle" fontSize="7" fontWeight="600" fill="var(--text-muted)" letterSpacing="0.05em">{running ? 'LIVE' : 'PASS'}</text>
+                      <text
+                        x="40"
+                        y="56"
+                        textAnchor="middle"
+                        fontSize="7"
+                        fontWeight="600"
+                        fill="var(--text-muted)"
+                        letterSpacing="0.05em"
+                      >
+                        {running ? 'LIVE' : 'PASS'}
+                      </text>
                     </svg>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Run Health</p>
-                        {running && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse" style={{ backgroundColor: '#3b82f620', color: '#3b82f6' }}>● RUNNING</span>}
+                        <p
+                          className="text-[10px] font-bold uppercase tracking-wider"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          Run Health
+                        </p>
+                        {running && (
+                          <span
+                            className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                            style={{ backgroundColor: '#3b82f620', color: '#3b82f6' }}
+                          >
+                            ● RUNNING
+                          </span>
+                        )}
                       </div>
-                      <p className="text-base font-black leading-tight mb-2" style={{ color: 'var(--text-main)' }}>
+                      <p
+                        className="text-base font-black leading-tight mb-2"
+                        style={{ color: 'var(--text-main)' }}
+                      >
                         {running
                           ? liveRunCounts && liveRunCounts.total > 0
                             ? `${heroPassed} passed · ${heroFailed} failed · ${liveRunCounts.running} remaining`
                             : 'Executing tests…'
-                          : heroTotal === 0 ? 'No data yet' : heroRate >= 95 ? 'All-green' : heroRate >= 80 ? 'Mostly passing' : heroRate >= 50 ? 'Needs attention' : 'Critical failures'}
+                          : heroTotal === 0
+                            ? 'No data yet'
+                            : heroRate >= 95
+                              ? 'All-green'
+                              : heroRate >= 80
+                                ? 'Mostly passing'
+                                : heroRate >= 50
+                                  ? 'Needs attention'
+                                  : 'Critical failures'}
                       </p>
-                      <div className="h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--bg-muted)' }}>
-                        {heroPassed > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(heroPassed / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#34C759' }} />}
-                        {heroFailed > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(heroFailed / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#EF4444' }} />}
-                        {!running && counts.skipped > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`, backgroundColor: '#E8A728' }} />}
-                        {running && liveRunCounts && liveRunCounts.running > 0 && <div className="h-full animate-pulse" style={{ width: `${(liveRunCounts.running / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#6366f1' }} />}
+                      <div
+                        className="h-1.5 rounded-full overflow-hidden flex"
+                        style={{ backgroundColor: 'var(--bg-muted)' }}
+                      >
+                        {heroPassed > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{
+                              width: `${(heroPassed / Math.max(heroTotal, 1)) * 100}%`,
+                              backgroundColor: '#34C759',
+                            }}
+                          />
+                        )}
+                        {heroFailed > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{
+                              width: `${(heroFailed / Math.max(heroTotal, 1)) * 100}%`,
+                              backgroundColor: '#EF4444',
+                            }}
+                          />
+                        )}
+                        {!running && counts.skipped > 0 && (
+                          <div
+                            className="h-full transition-all duration-500"
+                            style={{
+                              width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`,
+                              backgroundColor: '#E8A728',
+                            }}
+                          />
+                        )}
+                        {running && liveRunCounts && liveRunCounts.running > 0 && (
+                          <div
+                            className="h-full animate-pulse"
+                            style={{
+                              width: `${(liveRunCounts.running / Math.max(heroTotal, 1)) * 100}%`,
+                              backgroundColor: '#6366f1',
+                            }}
+                          />
+                        )}
                       </div>
-                      <div className="flex items-center gap-4 mt-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#34C759' }} /><span className="font-semibold" style={{ color: '#16A34A' }}>{heroPassed}</span> passed</span>
-                        {heroFailed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#EF4444' }} /><span className="font-semibold" style={{ color: '#EF4444' }}>{heroFailed}</span> failed</span>}
-                        {!running && counts.skipped > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} /><span className="font-semibold" style={{ color: '#D97706' }}>{counts.skipped}</span> skipped</span>}
-                        {!running && counts.flaky > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} /><span className="font-semibold" style={{ color: '#D97706' }}>{counts.flaky}</span> flaky</span>}
-                        {running && liveRunCounts && liveRunCounts.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block animate-pulse" style={{ backgroundColor: '#6366f1' }} /><span className="font-semibold" style={{ color: '#6366f1' }}>{liveRunCounts.running}</span> running</span>}
+                      <div
+                        className="flex items-center gap-4 mt-1.5 text-[10px]"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        <span className="flex items-center gap-1">
+                          <span
+                            className="w-1.5 h-1.5 rounded-sm inline-block"
+                            style={{ backgroundColor: '#34C759' }}
+                          />
+                          <span className="font-semibold" style={{ color: '#16A34A' }}>
+                            {heroPassed}
+                          </span>{' '}
+                          passed
+                        </span>
+                        {heroFailed > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className="w-1.5 h-1.5 rounded-sm inline-block"
+                              style={{ backgroundColor: '#EF4444' }}
+                            />
+                            <span className="font-semibold" style={{ color: '#EF4444' }}>
+                              {heroFailed}
+                            </span>{' '}
+                            failed
+                          </span>
+                        )}
+                        {!running && counts.skipped > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className="w-1.5 h-1.5 rounded-sm inline-block"
+                              style={{ backgroundColor: '#E8A728' }}
+                            />
+                            <span className="font-semibold" style={{ color: '#D97706' }}>
+                              {counts.skipped}
+                            </span>{' '}
+                            skipped
+                          </span>
+                        )}
+                        {!running && counts.flaky > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className="w-1.5 h-1.5 rounded-sm inline-block"
+                              style={{ backgroundColor: '#E8A728' }}
+                            />
+                            <span className="font-semibold" style={{ color: '#D97706' }}>
+                              {counts.flaky}
+                            </span>{' '}
+                            flaky
+                          </span>
+                        )}
+                        {running && liveRunCounts && liveRunCounts.running > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className="w-1.5 h-1.5 rounded-sm inline-block animate-pulse"
+                              style={{ backgroundColor: '#6366f1' }}
+                            />
+                            <span className="font-semibold" style={{ color: '#6366f1' }}>
+                              {liveRunCounts.running}
+                            </span>{' '}
+                            running
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -6640,7 +7000,10 @@ export default function PlaywrightDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 items-start">
                 {/* Executions Over Time — HistoryChart owns its card wrapper */}
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-wider mb-2"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     Executions Over Time
                   </p>
                   <HistoryChart
@@ -6655,13 +7018,13 @@ export default function PlaywrightDashboard() {
                   className="rounded-2xl p-4 flex flex-col"
                   style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-wider mb-3"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     Top Failed Tests
                   </p>
-                  <TopFailedPanel
-                    suites={suites}
-                    onViewAll={() => setActiveTab('failed')}
-                  />
+                  <TopFailedPanel suites={suites} onViewAll={() => setActiveTab('failed')} />
                 </div>
 
                 {/* Failure Reasons */}
@@ -6670,7 +7033,10 @@ export default function PlaywrightDashboard() {
                   style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
                       Failure Reasons
                     </p>
                     <button
