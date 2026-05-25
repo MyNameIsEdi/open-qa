@@ -1137,6 +1137,7 @@ app.get('/api/playwright/artifacts', (_req, res) => {
   }
 });
 
+
 app.post('/api/playwright/run', async (req, res) => {
   const {
     spec,
@@ -1250,13 +1251,10 @@ app.post('/api/playwright/run', async (req, res) => {
     })();
   }
 
-  // Use the local playwright CLI directly — avoids npx resolution overhead
-  // (saves 30-90s on Windows where npx+shell startup is expensive).
-  const pwCli = path.join(root, 'node_modules', '@playwright', 'test', 'cli.js');
-  const child = spawn(process.execPath, [pwCli, ...args], {
+  const child = spawn('npx', ['playwright', ...args], {
     cwd: root,
     env,
-    shell: false,
+    shell: process.platform === 'win32',
   });
 
   // Capture log lines so they're (a) persisted with the archived run and
@@ -1590,11 +1588,10 @@ app.post('/api/run-dynamic-test', async (req, res) => {
     PW_RUNTIME_CONFIG: JSON.stringify({ testMatch: ['**/_dynamic_agent_test.spec.ts'] }),
   };
 
-  const pwCli = path.join(root, 'node_modules', '@playwright', 'test', 'cli.js');
-  const child = spawn(process.execPath, [pwCli, 'test'], {
+  const child = spawn('npx', ['playwright', 'test'], {
     cwd: root,
     env,
-    shell: false,
+    shell: process.platform === 'win32',
   });
 
   // Capture every log line so we can persist them with the archived run.
