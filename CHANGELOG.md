@@ -32,6 +32,16 @@ All notable changes to this project will be documented in this file.
   (`RUN_HISTORY_KEY`, seed-on-mount effect, write-on-change effect) to prevent stale
   pre-migration data surfacing on page load (`ui/src/pages/PlaywrightDashboard.tsx`).
 
+### Performance
+
+- **Fast Playwright startup** — replaced `npx playwright` with a direct
+  `node node_modules/@playwright/test/cli.js` spawn in both `/api/playwright/run`
+  and `/api/run-dynamic-test`. Eliminates `npx` + shell resolution overhead that
+  caused ~2-minute delays before tests began on Windows (`server/index.ts`).
+- **Non-blocking remote warmup** — warmup HTTP ping to Render/remote baseUrl now
+  fires concurrently with Playwright startup instead of blocking it; timeout
+  reduced from 55 s to 30 s (`server/index.ts`).
+
 ### Fixed
 
 - **Stop button race condition** — added `runAbortRef = useRef<AbortController | null>(null)`

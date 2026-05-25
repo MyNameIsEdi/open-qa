@@ -70,7 +70,7 @@ Type a request in the chat. **Edi M**, the Team Manager, analyses your intent an
 │                             streams token chunks back via SSE        │
 │                                                                      │
 │  /api/run-dynamic-test                                               │
-│    Phase 1 → spawn  npx playwright test  →  stream stdout           │
+│    Phase 1 → spawn  node @playwright/test/cli.js  →  stream stdout  │
 │    Phase 2 → read   pw-results.json      →  Edi M AI summary        │
 │              classify failures  →  stream summary_chunk events       │
 └──────────────────────────────────────────────────────────────────────┘
