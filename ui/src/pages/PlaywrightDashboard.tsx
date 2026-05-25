@@ -27,7 +27,6 @@ import {
   Search,
   Clock,
   TrendingUp,
-  Zap,
   FolderOpen,
   Save,
   BookOpen,
@@ -1420,123 +1419,6 @@ function SettingCard({
   );
 }
 
-// ─── Presets ──────────────────────────────────────────────────────────────────
-
-interface Preset {
-  label: string;
-  icon: React.ReactNode;
-  description: string;
-  color: string;
-  config: Partial<PlaywrightConfig>;
-  /** If set, auto-selects these spec files when the preset is applied */
-  specs?: string[];
-}
-
-/** Shared Playwright config for all SV Students suites (Render free-tier) */
-const SV_CONFIG: Partial<PlaywrightConfig> = {
-  baseUrl: 'https://sv-students-recommend.onrender.com',
-  testDir: './tests',
-  timeout: 60000,
-  retries: 1,
-  workers: 1,
-  headed: false,
-  fullyParallel: false,
-  browsers: { chromium: true, firefox: false, webkit: false },
-  screenshot: 'only-on-failure',
-  video: 'retain-on-failure',
-  trace: 'on-first-retry',
-  reporter: 'html',
-};
-
-// Bare filenames — no path prefix — matching what /api/playwright/specs returns.
-// The server prepends 'tests/' when building the Playwright CLI args.
-const SV_ALL_SPECS = [
-  'sv-login.spec.ts',
-  'sv-register.spec.ts',
-  'sv-home.spec.ts',
-  'sv-api.spec.ts',
-  'sv-docs.spec.ts',
-  'sv-a11y.spec.ts',
-  'sv-navigation.spec.ts',
-];
-
-const PRESETS: Preset[] = [
-  {
-    label: 'Local Dev',
-    icon: <Monitor size={13} />,
-    description: 'Headed, all artifacts on, fast feedback loop',
-    color: '#059669',
-    config: {
-      headed: true,
-      retries: 0,
-      workers: 2,
-      timeout: 30000,
-      trace: 'on',
-      screenshot: 'on',
-      video: 'on',
-      reporter: 'html',
-    },
-  },
-  {
-    label: 'CI / CD',
-    icon: <Zap size={13} />,
-    description: 'Headless, JUnit reporter, 2 retries, 1 worker',
-    color: '#1a3a8f',
-    config: {
-      headed: false,
-      timeout: 60000,
-      retries: 2,
-      workers: 1,
-      forbidOnly: true,
-      fullyParallel: true,
-      trace: 'on-first-retry',
-      screenshot: 'only-on-failure',
-      video: 'retain-on-failure',
-      reporter: 'junit',
-    },
-  },
-  {
-    label: 'SV: All',
-    icon: <FlaskConical size={13} />,
-    description: 'Full SV Students suite — all 7 spec files',
-    color: '#0891b2',
-    specs: SV_ALL_SPECS,
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Login',
-    icon: <Hash size={13} />,
-    description: 'Login structure, validation, forgot-password & register',
-    color: '#7c3aed',
-    specs: ['sv-login.spec.ts', 'sv-register.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Home',
-    icon: <Layers size={13} />,
-    description: 'Home feed — auth redirect, structure, filters, modals',
-    color: '#d97706',
-    specs: ['sv-home.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: API',
-    icon: <Globe size={13} />,
-    description: 'Public & authenticated REST API endpoints',
-    color: '#059669',
-    specs: ['sv-api.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Docs & A11y',
-    icon: <BookOpen size={13} />,
-    description: 'Swagger UI rendering + Hebrew accessibility page',
-    color: '#e11d48',
-    specs: ['sv-docs.spec.ts', 'sv-a11y.spec.ts'],
-    config: SV_CONFIG,
-  },
-];
-
 // ─── Settings View ────────────────────────────────────────────────────────────
 
 const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
@@ -1550,11 +1432,9 @@ const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
 function SettingsView({
   config,
   onChange,
-  noPresets = false,
 }: {
   config: PlaywrightConfig;
   onChange: (c: PlaywrightConfig) => void;
-  noPresets?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -1582,71 +1462,8 @@ function SettingsView({
     setTimeout(() => setDownloaded(false), 2000);
   };
 
-  const applyPreset = (preset: Preset) => onChange({ ...config, ...preset.config });
-
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Quick Presets ── */}
-      {!noPresets && (
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
-        >
-          <div
-            className="flex items-center gap-2 px-4 py-2.5 border-b"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg-body)',
-            }}
-          >
-            <Zap size={13} style={{ color: '#8b5cf6' }} />
-            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-              Quick Presets
-            </span>
-            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              — one click to apply a battle-tested configuration
-            </span>
-          </div>
-          <div
-            className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4"
-            style={{ backgroundColor: 'var(--bg-card)' }}
-          >
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => applyPreset(preset)}
-                className="flex flex-col items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = preset.color;
-                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.backgroundColor = 'var(--bg-body)';
-                }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span style={{ color: preset.color }}>{preset.icon}</span>
-                  <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                    {preset.label}
-                  </span>
-                </div>
-                <span
-                  className="text-[11px] leading-relaxed"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  {preset.description}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ── Main grid: left settings + right preview ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Left: Setting groups */}
@@ -6226,63 +6043,6 @@ export default function PlaywrightDashboard() {
                 </div>
               )}
 
-              {/* ── Presets bar (always visible) ────────────────────────── */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap size={11} style={{ color: '#8b5cf6' }} />
-                  <span
-                    className="text-[11px] font-bold uppercase tracking-wider"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    Quick Presets
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {PRESETS.map((preset) => {
-                    const isActive = preset.specs
-                      ? preset.specs.every((s) => selectedSpecs.has(s)) &&
-                        selectedSpecs.size === preset.specs.length
-                      : false;
-                    return (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          setConfig((c) => ({ ...c, ...preset.config }));
-                          if (preset.specs) setSelectedSpecs(new Set(preset.specs));
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
-                        style={{
-                          backgroundColor: isActive ? `${preset.color}18` : 'var(--bg-card)',
-                          color: isActive ? preset.color : 'var(--text-muted)',
-                          boxShadow: isActive
-                            ? `0 0 0 1.5px ${preset.color}60`
-                            : '0 1px 3px rgba(0,0,0,0.06)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = `${preset.color}14`;
-                          e.currentTarget.style.color = preset.color;
-                          e.currentTarget.style.boxShadow = `0 0 0 1.5px ${preset.color}50`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isActive
-                            ? `${preset.color}18`
-                            : 'var(--bg-card)';
-                          e.currentTarget.style.color = isActive
-                            ? preset.color
-                            : 'var(--text-muted)';
-                          e.currentTarget.style.boxShadow = isActive
-                            ? `0 0 0 1.5px ${preset.color}60`
-                            : '0 1px 3px rgba(0,0,0,0.06)';
-                        }}
-                      >
-                        <span>{preset.icon}</span>
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* ── Collapsible config + editor panel ───────────────────── */}
               {settingsOpen && (
                 <div
@@ -6407,7 +6167,7 @@ export default function PlaywrightDashboard() {
                   {/* Panel body */}
                   {configTab === 'config' ? (
                     <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-                      <SettingsView config={config} onChange={setConfig} noPresets />
+                      <SettingsView config={config} onChange={setConfig} />
                     </div>
                   ) : serverOnline === false ? (
                     /* Server offline — don't attempt fetch, show clear instructions */
@@ -7051,6 +6811,71 @@ export default function PlaywrightDashboard() {
                 </div>
               </div>
 
+              {/* Run log terminal */}
+              {showLog && runLog.length > 0 && (
+                <div
+                  className="mt-4 rounded-2xl overflow-hidden"
+                  style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
+                >
+                  <div
+                    className="flex items-center justify-between px-4 py-2.5 border-b"
+                    style={{
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--bg-body)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Terminal size={13} style={{ color: '#34C759' }} />
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                        Run Output
+                      </span>
+                      {running && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      )}
+                      <span className="text-[10px]" style={{ color: '#6c7086' }}>
+                        {runLog.length} lines
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowLog(false)}
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <X size={13} style={{ color: 'var(--text-muted)' }} />
+                    </button>
+                  </div>
+                  <div
+                    className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
+                    style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}
+                  >
+                    {runLog.map((line, i) => {
+                      const color = /✓|passed|\[PASS\]/i.test(line)
+                        ? '#a6e3a1'
+                        : /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line)
+                          ? '#f38ba8'
+                          : /\[FILTER\]|\[INFO\]/i.test(line)
+                            ? '#89b4fa'
+                            : /\[TIMEOUT\]|\[OFFLINE\]/i.test(line)
+                              ? '#fab387'
+                              : /skipped|pending/i.test(line)
+                                ? '#f9e2af'
+                                : '#cdd6f4';
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            color,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {line}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Runs panel */}
               <RunsPanel
                 runs={runHistory}
@@ -7666,71 +7491,6 @@ export default function PlaywrightDashboard() {
                         </span>
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Run log terminal */}
-              {showLog && runLog.length > 0 && (
-                <div
-                  className="mt-4 rounded-2xl overflow-hidden"
-                  style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
-                >
-                  <div
-                    className="flex items-center justify-between px-4 py-2.5 border-b"
-                    style={{
-                      borderColor: 'var(--border)',
-                      backgroundColor: 'var(--bg-body)',
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Terminal size={13} style={{ color: '#34C759' }} />
-                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                        Run Output
-                      </span>
-                      {running && (
-                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      )}
-                      <span className="text-[10px]" style={{ color: '#6c7086' }}>
-                        {runLog.length} lines
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setShowLog(false)}
-                      className="hover:opacity-70 transition-opacity"
-                    >
-                      <X size={13} style={{ color: 'var(--text-muted)' }} />
-                    </button>
-                  </div>
-                  <div
-                    className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
-                    style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}
-                  >
-                    {runLog.map((line, i) => {
-                      const color = /✓|passed|\[PASS\]/i.test(line)
-                        ? '#a6e3a1'
-                        : /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line)
-                          ? '#f38ba8'
-                          : /\[FILTER\]|\[INFO\]/i.test(line)
-                            ? '#89b4fa'
-                            : /\[TIMEOUT\]|\[OFFLINE\]/i.test(line)
-                              ? '#fab387'
-                              : /skipped|pending/i.test(line)
-                                ? '#f9e2af'
-                                : '#cdd6f4';
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            color,
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          {line}
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               )}
