@@ -27,7 +27,6 @@ import {
   Search,
   Clock,
   TrendingUp,
-  Zap,
   FolderOpen,
   Save,
   BookOpen,
@@ -47,6 +46,7 @@ import {
   CheckSquare,
   Send,
   Paperclip,
+  GitBranch,
 } from 'lucide-react';
 import { OfficeCanvas } from '../office/components/OfficeCanvas';
 import { OfficeState } from '../office/engine/officeState';
@@ -185,8 +185,14 @@ type SummaryEvent =
     };
 
 const STORAGE_KEY = 'pw_dashboard_config_v1';
-const RUN_HISTORY_KEY = 'pw_run_history_v1';
 const API_BASE = 'http://localhost:3001';
+
+// Clear any stale localStorage run-history cache left over from pre-SQLite builds
+try {
+  localStorage.removeItem('pw_run_history_v1');
+} catch {
+  /* ignore */
+}
 
 const PW_TEXT_EXTENSIONS = new Set([
   'ts',
@@ -1420,123 +1426,6 @@ function SettingCard({
   );
 }
 
-// ─── Presets ──────────────────────────────────────────────────────────────────
-
-interface Preset {
-  label: string;
-  icon: React.ReactNode;
-  description: string;
-  color: string;
-  config: Partial<PlaywrightConfig>;
-  /** If set, auto-selects these spec files when the preset is applied */
-  specs?: string[];
-}
-
-/** Shared Playwright config for all SV Students suites (Render free-tier) */
-const SV_CONFIG: Partial<PlaywrightConfig> = {
-  baseUrl: 'https://sv-students-recommend.onrender.com',
-  testDir: './tests',
-  timeout: 60000,
-  retries: 1,
-  workers: 1,
-  headed: false,
-  fullyParallel: false,
-  browsers: { chromium: true, firefox: false, webkit: false },
-  screenshot: 'only-on-failure',
-  video: 'retain-on-failure',
-  trace: 'on-first-retry',
-  reporter: 'html',
-};
-
-// Bare filenames — no path prefix — matching what /api/playwright/specs returns.
-// The server prepends 'tests/' when building the Playwright CLI args.
-const SV_ALL_SPECS = [
-  'sv-login.spec.ts',
-  'sv-register.spec.ts',
-  'sv-home.spec.ts',
-  'sv-api.spec.ts',
-  'sv-docs.spec.ts',
-  'sv-a11y.spec.ts',
-  'sv-navigation.spec.ts',
-];
-
-const PRESETS: Preset[] = [
-  {
-    label: 'Local Dev',
-    icon: <Monitor size={13} />,
-    description: 'Headed, all artifacts on, fast feedback loop',
-    color: '#059669',
-    config: {
-      headed: true,
-      retries: 0,
-      workers: 2,
-      timeout: 30000,
-      trace: 'on',
-      screenshot: 'on',
-      video: 'on',
-      reporter: 'html',
-    },
-  },
-  {
-    label: 'CI / CD',
-    icon: <Zap size={13} />,
-    description: 'Headless, JUnit reporter, 2 retries, 1 worker',
-    color: '#1a3a8f',
-    config: {
-      headed: false,
-      timeout: 60000,
-      retries: 2,
-      workers: 1,
-      forbidOnly: true,
-      fullyParallel: true,
-      trace: 'on-first-retry',
-      screenshot: 'only-on-failure',
-      video: 'retain-on-failure',
-      reporter: 'junit',
-    },
-  },
-  {
-    label: 'SV: All',
-    icon: <FlaskConical size={13} />,
-    description: 'Full SV Students suite — all 7 spec files',
-    color: '#0891b2',
-    specs: SV_ALL_SPECS,
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Login',
-    icon: <Hash size={13} />,
-    description: 'Login structure, validation, forgot-password & register',
-    color: '#7c3aed',
-    specs: ['sv-login.spec.ts', 'sv-register.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Home',
-    icon: <Layers size={13} />,
-    description: 'Home feed — auth redirect, structure, filters, modals',
-    color: '#d97706',
-    specs: ['sv-home.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: API',
-    icon: <Globe size={13} />,
-    description: 'Public & authenticated REST API endpoints',
-    color: '#059669',
-    specs: ['sv-api.spec.ts'],
-    config: SV_CONFIG,
-  },
-  {
-    label: 'SV: Docs & A11y',
-    icon: <BookOpen size={13} />,
-    description: 'Swagger UI rendering + Hebrew accessibility page',
-    color: '#e11d48',
-    specs: ['sv-docs.spec.ts', 'sv-a11y.spec.ts'],
-    config: SV_CONFIG,
-  },
-];
-
 // ─── Settings View ────────────────────────────────────────────────────────────
 
 const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
@@ -1550,11 +1439,9 @@ const REPORTER_DESCRIPTIONS: Record<PlaywrightConfig['reporter'], string> = {
 function SettingsView({
   config,
   onChange,
-  noPresets = false,
 }: {
   config: PlaywrightConfig;
   onChange: (c: PlaywrightConfig) => void;
-  noPresets?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -1582,71 +1469,8 @@ function SettingsView({
     setTimeout(() => setDownloaded(false), 2000);
   };
 
-  const applyPreset = (preset: Preset) => onChange({ ...config, ...preset.config });
-
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Quick Presets ── */}
-      {!noPresets && (
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
-        >
-          <div
-            className="flex items-center gap-2 px-4 py-2.5 border-b"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg-body)',
-            }}
-          >
-            <Zap size={13} style={{ color: '#8b5cf6' }} />
-            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-              Quick Presets
-            </span>
-            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              — one click to apply a battle-tested configuration
-            </span>
-          </div>
-          <div
-            className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 p-4"
-            style={{ backgroundColor: 'var(--bg-card)' }}
-          >
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => applyPreset(preset)}
-                className="flex flex-col items-start gap-2 p-3 rounded-xl border text-left transition-all duration-150"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = preset.color;
-                  e.currentTarget.style.backgroundColor = 'var(--bg-card)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.backgroundColor = 'var(--bg-body)';
-                }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span style={{ color: preset.color }}>{preset.icon}</span>
-                  <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                    {preset.label}
-                  </span>
-                </div>
-                <span
-                  className="text-[11px] leading-relaxed"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  {preset.description}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ── Main grid: left settings + right preview ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Left: Setting groups */}
@@ -2471,17 +2295,12 @@ function DocsLink({ href, label }: { href: string; label: string }) {
 function DocsView() {
   const tocItems = [
     { id: 'quickstart', label: 'Quick Start', icon: <Terminal size={12} /> },
-    {
-      id: 'locators',
-      label: 'Locator Strategies',
-      icon: <MousePointer2 size={12} />,
-    },
-    {
-      id: 'assertions',
-      label: 'Core Assertions',
-      icon: <FlaskConical size={12} />,
-    },
+    { id: 'locators', label: 'Locator Strategies', icon: <MousePointer2 size={12} /> },
+    { id: 'assertions', label: 'Core Assertions', icon: <FlaskConical size={12} /> },
     { id: 'patterns', label: 'Common Patterns', icon: <Layers size={12} /> },
+    { id: 'auth', label: 'Authentication', icon: <Globe size={12} /> },
+    { id: 'visual', label: 'Visual & A11y', icon: <Camera size={12} /> },
+    { id: 'cicd', label: 'CI / CD', icon: <GitBranch size={12} /> },
     { id: 'cli', label: 'CLI Reference', icon: <Terminal size={12} /> },
   ];
 
@@ -2518,10 +2337,13 @@ function DocsView() {
           >
             Official Docs
           </p>
-          <DocsLink href="https://playwright.dev/docs/intro" label="Playwright" />
+          <DocsLink href="https://playwright.dev/docs/intro" label="Playwright Docs" />
           <DocsLink href="https://playwright.dev/docs/locators" label="Locators" />
           <DocsLink href="https://playwright.dev/docs/test-assertions" label="Assertions" />
           <DocsLink href="https://playwright.dev/docs/api/class-page" label="Page API" />
+          <DocsLink href="https://playwright.dev/docs/auth" label="Authentication" />
+          <DocsLink href="https://playwright.dev/docs/accessibility-testing" label="A11y Testing" />
+          <DocsLink href="https://playwright.dev/docs/ci" label="CI Integration" />
         </div>
       </aside>
 
@@ -2530,109 +2352,116 @@ function DocsView() {
         {/* ── Quick Start ─────────────────────────────────── */}
         <DocSection id="quickstart" icon={<Terminal size={14} />} title="Quick Start">
           <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            Install Playwright, generate your config, and run your first test in under 2 minutes.
+            Install Playwright, scaffold your config, and have your first green test in under 3
+            minutes.
           </p>
 
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
-            >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                1 — Install
-              </span>
-            </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock lang="bash" code={`npm init playwright@latest`} />
-              <p className="text-[11px] mt-2" style={{ color: 'var(--text-muted)' }}>
-                The wizard creates <code className="font-mono">playwright.config.ts</code>, a{' '}
-                <code className="font-mono">tests/</code> directory, and installs browser binaries.
-              </p>
-            </div>
-          </div>
+          {[
+            {
+              step: '1 — Install & scaffold',
+              content: (
+                <>
+                  <CodeBlock lang="bash" code={`npm init playwright@latest`} />
+                  <p className="text-[11px] mt-2" style={{ color: 'var(--text-muted)' }}>
+                    The wizard creates <code className="font-mono">playwright.config.ts</code>, a{' '}
+                    <code className="font-mono">tests/</code> directory, and downloads browser
+                    binaries. Choose TypeScript when prompted.
+                  </p>
+                </>
+              ),
+            },
+            {
+              step: '2 — Write your first test',
+              content: (
+                <CodeBlock
+                  lang="typescript"
+                  code={`import { test, expect } from '@playwright/test'
 
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
-            >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                2 — Write your first test
-              </span>
-            </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="typescript"
-                code={`import { test, expect } from '@playwright/test'
-
-test('home page has correct title', async ({ page }) => {
+test('home page loads with correct title', async ({ page }) => {
   await page.goto('https://example.com')
-
   await expect(page).toHaveTitle(/Example Domain/)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 })`}
-              />
-            </div>
-          </div>
+                />
+              ),
+            },
+            {
+              step: '3 — Run',
+              content: (
+                <CodeBlock
+                  lang="bash"
+                  code={`npx playwright test                   # headless, all browsers
+npx playwright test --headed          # see the browser
+npx playwright test --ui              # interactive UI mode
+npx playwright test --last-failed     # retry only failed tests
+npx playwright show-report            # open HTML report`}
+                />
+              ),
+            },
+            {
+              step: '4 — playwright.config.ts essentials',
+              content: (
+                <CodeBlock
+                  lang="typescript"
+                  code={`import { defineConfig, devices } from '@playwright/test'
 
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
+export default defineConfig({
+  testDir: './tests',
+  timeout: 30_000,          // per-test timeout (ms)
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [['html'], ['json', { outputFile: 'pw-results.json' }]],
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox',  use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
+    { name: 'mobile',   use: { ...devices['iPhone 14'] } },
+  ],
+})`}
+                />
+              ),
+            },
+          ].map(({ step, content }) => (
             <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
+              key={step}
+              className="rounded-2xl border overflow-hidden shadow-sm"
+              style={{ borderColor: 'var(--border)' }}
             >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                3 — Run
-              </span>
+              <div
+                className="px-4 py-2.5 border-b flex items-center gap-2"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  {step}
+                </span>
+              </div>
+              <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                {content}
+              </div>
             </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="bash"
-                code={`npx playwright test              # headless, all browsers
-npx playwright test --headed    # see the browser
-npx playwright test --ui        # interactive UI mode
-npx playwright show-report      # open HTML report`}
-              />
-            </div>
-          </div>
+          ))}
         </DocSection>
 
         {/* ── Locator Strategies ──────────────────────────── */}
         <DocSection id="locators" icon={<MousePointer2 size={14} />} title="Locator Strategies">
           <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            Playwright recommends locators in this priority order — higher is more resilient to UI
-            changes.
+            Playwright recommends locators in this priority order — higher entries survive UI
+            redesigns and serve as living accessibility checks.
           </p>
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg-card)',
-            }}
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
             <div
               className="px-4 py-2 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
             >
               <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 Priority order
@@ -2642,75 +2471,90 @@ npx playwright show-report      # open HTML report`}
               </span>
             </div>
             <div className="p-3 flex flex-col gap-2">
-              <RefRow
-                label="getByRole()"
-                desc="Find by ARIA role + accessible name. Survives redesigns and works with screen readers."
-                badge="★ Best"
-                badgeColor="#059669"
-              />
-              <RefRow
-                label="getByLabel()"
-                desc="Find form input by its associated <label> text. Ideal for all form controls."
-                badge="★ Best"
-                badgeColor="#059669"
-              />
-              <RefRow
-                label="getByPlaceholder()"
-                desc="Find input by placeholder text. Use when no label is present."
-                badge="Good"
-                badgeColor="#1a3a8f"
-              />
-              <RefRow
-                label="getByText()"
-                desc="Find any element by its visible text content. Use .exact for precision."
-                badge="Good"
-                badgeColor="#1a3a8f"
-              />
-              <RefRow
-                label="getByAltText()"
-                desc="Find images by alt attribute. Essential for image-heavy UIs."
-                badge="Good"
-                badgeColor="#1a3a8f"
-              />
-              <RefRow
-                label="getByTestId()"
-                desc="Find by data-testid attribute. Requires adding attrs to source code — but very stable."
-                badge="OK"
-                badgeColor="#d97706"
-              />
-              <RefRow
-                label="locator('css')"
-                desc="CSS selector fallback. Use only when semantic locators don't work."
-                badge="Last resort"
-                badgeColor="#ef4444"
-              />
-              <RefRow
-                label="locator('xpath')"
-                desc="XPath selector. Brittle — avoid unless absolutely necessary."
-                badge="Avoid"
-                badgeColor="#ef4444"
-              />
+              {[
+                {
+                  label: 'getByRole()',
+                  desc: 'Find by ARIA role + accessible name. Survives redesigns and works with screen readers.',
+                  badge: '★ Best',
+                  badgeColor: '#059669',
+                },
+                {
+                  label: 'getByLabel()',
+                  desc: 'Find form input by its associated <label> text. Ideal for all form controls.',
+                  badge: '★ Best',
+                  badgeColor: '#059669',
+                },
+                {
+                  label: 'getByPlaceholder()',
+                  desc: 'Find input by placeholder attribute. Use when no visible label exists.',
+                  badge: 'Good',
+                  badgeColor: '#1a3a8f',
+                },
+                {
+                  label: 'getByText()',
+                  desc: 'Find any element by visible text. Use { exact: true } for precision.',
+                  badge: 'Good',
+                  badgeColor: '#1a3a8f',
+                },
+                {
+                  label: 'getByAltText()',
+                  desc: 'Find images by alt attribute. Essential for image-heavy UIs.',
+                  badge: 'Good',
+                  badgeColor: '#1a3a8f',
+                },
+                {
+                  label: 'getByTitle()',
+                  desc: 'Find element by its title attribute. Useful for icon buttons with tooltips.',
+                  badge: 'OK',
+                  badgeColor: '#d97706',
+                },
+                {
+                  label: 'getByTestId()',
+                  desc: 'Find by data-testid. Requires adding attributes to source — very stable once added.',
+                  badge: 'OK',
+                  badgeColor: '#d97706',
+                },
+                {
+                  label: "locator('css')",
+                  desc: 'CSS selector fallback. Use only when semantic locators are unavailable.',
+                  badge: 'Last resort',
+                  badgeColor: '#ef4444',
+                },
+                {
+                  label: "locator('xpath')",
+                  desc: 'XPath selector. Brittle and verbose — avoid unless absolutely required.',
+                  badge: 'Avoid',
+                  badgeColor: '#ef4444',
+                },
+              ].map((r) => (
+                <RefRow key={r.label} {...r} />
+              ))}
             </div>
           </div>
 
           <CodeBlock
             lang="typescript"
-            code={`// ✅ Preferred — role + name survives UI redesigns
+            code={`// ✅ Preferred — role + accessible name survives redesigns
 page.getByRole('button', { name: 'Submit' })
 page.getByRole('link', { name: /sign in/i })
 page.getByRole('heading', { level: 1 })
+page.getByRole('dialog').getByRole('button', { name: 'Close' })
 
-// ✅ Form controls by label
+// ✅ Form controls
 page.getByLabel('Email address')
 page.getByLabel(/password/i)
+page.getByPlaceholder('Search…')
 
-// ✅ Text content
+// ✅ Content & images
 page.getByText('Forgot password?')
 page.getByText('Confirm', { exact: true })
+page.getByAltText('Company logo')
+
+// ✅ Chaining — narrow scope first
+page.getByRole('list').getByRole('listitem').filter({ hasText: 'Alice' })
 
 // ⚠️ CSS — use as a fallback
 page.locator('[data-testid="submit-btn"]')
-page.locator('form.login-form input[type="email"]')
 
 // ❌ Avoid — breaks on any DOM restructure
 page.locator('div > div:nth-child(3) > span')`}
@@ -2720,274 +2564,454 @@ page.locator('div > div:nth-child(3) > span')`}
         {/* ── Core Assertions ─────────────────────────────── */}
         <DocSection id="assertions" icon={<FlaskConical size={14} />} title="Core Assertions">
           <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            All Playwright assertions are <strong>auto-retrying</strong> — they keep checking until
-            the condition is met or the timeout expires.
+            All <code className="font-mono text-[11px]">expect()</code> assertions are{' '}
+            <strong>auto-retrying</strong> — they poll until the condition is met or the timeout
+            expires (default 5 s). Use <code className="font-mono text-[11px]">expect.soft()</code>{' '}
+            to accumulate non-fatal failures.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Visibility */}
-            <div
-              className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            {[
+              {
+                title: 'Visibility',
+                rows: [
+                  { label: 'toBeVisible()', desc: 'Element is in DOM and not hidden.' },
+                  { label: 'toBeHidden()', desc: 'Element is absent or display:none.' },
+                  { label: 'toBeInViewport()', desc: 'Element is within the visible viewport.' },
+                  {
+                    label: 'toBeAttached()',
+                    desc: 'Element is attached to the DOM (even if hidden).',
+                  },
+                ],
+              },
+              {
+                title: 'Element State',
+                rows: [
+                  { label: 'toBeEnabled()', desc: 'Form control is not disabled.' },
+                  { label: 'toBeDisabled()', desc: 'Form control has the disabled attribute.' },
+                  { label: 'toBeChecked()', desc: 'Checkbox or radio is checked.' },
+                  { label: 'toBeFocused()', desc: 'Element has keyboard focus.' },
+                  { label: 'toBeEditable()', desc: 'Input is editable (not readonly).' },
+                ],
+              },
+              {
+                title: 'Content',
+                rows: [
+                  { label: 'toHaveText()', desc: "Matches element's full text (string or regex)." },
+                  { label: 'toContainText()', desc: "Element's text contains the substring." },
+                  { label: 'toHaveValue()', desc: 'Input / select has the expected value.' },
+                  { label: 'toHaveValues()', desc: 'Multi-select has all expected values.' },
+                  { label: 'toHaveAttribute()', desc: 'Element has a specific attribute value.' },
+                  { label: 'toHaveClass()', desc: 'Element has the expected CSS class.' },
+                  { label: 'toHaveCSS()', desc: 'Element has the expected computed CSS property.' },
+                  { label: 'toHaveCount()', desc: 'Locator matches N elements.' },
+                ],
+              },
+              {
+                title: 'Page-level',
+                rows: [
+                  { label: 'toHaveTitle()', desc: 'Page <title> matches string or regex.' },
+                  { label: 'toHaveURL()', desc: 'Current URL matches string or regex.' },
+                  { label: 'toHaveScreenshot()', desc: 'Visual snapshot matches baseline PNG.' },
+                  { label: 'toHaveAccessibilityTree()', desc: 'Full ARIA tree snapshot matches.' },
+                ],
+              },
+            ].map(({ title, rows }) => (
               <div
-                className="px-3 py-2 border-b"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
+                key={title}
+                className="rounded-2xl border overflow-hidden shadow-sm"
+                style={{ borderColor: 'var(--border)' }}
               >
-                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                  Visibility
-                </p>
+                <div
+                  className="px-3 py-2 border-b"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+                >
+                  <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                    {title}
+                  </p>
+                </div>
+                <div
+                  className="p-3 flex flex-col gap-1.5"
+                  style={{ backgroundColor: 'var(--bg-card)' }}
+                >
+                  {rows.map((r) => (
+                    <RefRow key={r.label} label={r.label} desc={r.desc} />
+                  ))}
+                </div>
               </div>
-              <div
-                className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: 'var(--bg-card)' }}
-              >
-                <RefRow label="toBeVisible()" desc="Element is in DOM and not hidden." />
-                <RefRow label="toBeHidden()" desc="Element is absent or display:none." />
-                <RefRow label="toBeInViewport()" desc="Element is within the visible viewport." />
-              </div>
-            </div>
-
-            {/* State */}
-            <div
-              className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: 'var(--border)' }}
-            >
-              <div
-                className="px-3 py-2 border-b"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
-              >
-                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                  Element State
-                </p>
-              </div>
-              <div
-                className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: 'var(--bg-card)' }}
-              >
-                <RefRow label="toBeEnabled()" desc="Form control is not disabled." />
-                <RefRow label="toBeChecked()" desc="Checkbox or radio is checked." />
-                <RefRow label="toBeFocused()" desc="Element has keyboard focus." />
-              </div>
-            </div>
-
-            {/* Content */}
-            <div
-              className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: 'var(--border)' }}
-            >
-              <div
-                className="px-3 py-2 border-b"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
-              >
-                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                  Content
-                </p>
-              </div>
-              <div
-                className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: 'var(--bg-card)' }}
-              >
-                <RefRow
-                  label="toHaveText()"
-                  desc="Element's text content matches (string or regex)."
-                />
-                <RefRow label="toContainText()" desc="Element's text contains the substring." />
-                <RefRow label="toHaveValue()" desc="Input / select has the expected value." />
-                <RefRow label="toHaveAttribute()" desc="Element has a specific attribute value." />
-              </div>
-            </div>
-
-            {/* Page */}
-            <div
-              className="rounded-2xl border overflow-hidden shadow-sm"
-              style={{ borderColor: 'var(--border)' }}
-            >
-              <div
-                className="px-3 py-2 border-b"
-                style={{
-                  borderColor: 'var(--border)',
-                  backgroundColor: 'var(--bg-body)',
-                }}
-              >
-                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                  Page-level
-                </p>
-              </div>
-              <div
-                className="p-3 flex flex-col gap-1.5"
-                style={{ backgroundColor: 'var(--bg-card)' }}
-              >
-                <RefRow label="toHaveTitle()" desc="Page <title> matches string or regex." />
-                <RefRow label="toHaveURL()" desc="Current URL matches string or regex." />
-                <RefRow label="toHaveScreenshot()" desc="Visual snapshot matches baseline PNG." />
-              </div>
-            </div>
+            ))}
           </div>
 
           <CodeBlock
             lang="typescript"
-            code={`// Visibility
+            code={`// Visibility & state
 await expect(page.getByRole('dialog')).toBeVisible()
 await expect(page.getByText('Loading…')).toBeHidden()
+await expect(page.getByRole('button', { name: 'Pay' })).toBeEnabled()
 
 // Content
 await expect(page.getByRole('heading')).toHaveText('Welcome back')
 await expect(page.getByLabel('Email')).toHaveValue('user@example.com')
+await expect(page.getByRole('listitem')).toHaveCount(5)
 
 // Page
 await expect(page).toHaveTitle(/Dashboard/)
 await expect(page).toHaveURL('/dashboard')
 
-// Custom timeout (default 5 s)
+// Custom timeout (overrides the 5 s default)
 await expect(locator).toBeVisible({ timeout: 15_000 })
 
-// Soft assertions — continue on failure, report at end
-await expect.soft(page.getByTestId('badge')).toHaveText('Pro')`}
+// Negate any assertion
+await expect(page.getByRole('alert')).not.toBeVisible()
+
+// Soft assertions — accumulate failures, report all at end
+await expect.soft(page.getByTestId('badge')).toHaveText('Pro')
+await expect.soft(page.getByTestId('plan')).toHaveText('Annual')`}
           />
         </DocSection>
 
         {/* ── Common Patterns ─────────────────────────────── */}
         <DocSection id="patterns" icon={<Layers size={14} />} title="Common Patterns">
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
-            >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                Page Object Model (POM)
-              </span>
-              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                — one class per page, reusable across tests
-              </span>
-            </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="typescript"
-                code={`// pages/LoginPage.ts
+          {[
+            {
+              title: 'Page Object Model (POM)',
+              subtitle: '— one class per page, shared across all specs',
+              code: `// pages/LoginPage.ts
+import { Page, Locator } from '@playwright/test'
+
 export class LoginPage {
-  constructor(private page: Page) {}
+  readonly emailInput: Locator
+  readonly passwordInput: Locator
+  readonly submitBtn: Locator
+  readonly errorAlert: Locator
 
-  async goto() {
-    await this.page.goto('/login')
+  constructor(private page: Page) {
+    this.emailInput   = page.getByLabel('Email')
+    this.passwordInput = page.getByLabel('Password')
+    this.submitBtn    = page.getByRole('button', { name: 'Sign In' })
+    this.errorAlert   = page.getByRole('alert')
   }
 
-  async login(email: string, password: string) {
-    await this.page.getByLabel('Email').fill(email)
-    await this.page.getByLabel('Password').fill(password)
-    await this.page.getByRole('button', { name: 'Sign In' }).click()
-  }
-
-  get errorMessage() {
-    return this.page.getByRole('alert')
+  async goto()                           { await this.page.goto('/login') }
+  async login(email: string, pw: string) {
+    await this.emailInput.fill(email)
+    await this.passwordInput.fill(pw)
+    await this.submitBtn.click()
   }
 }
 
 // tests/login.spec.ts
-test('successful login', async ({ page }) => {
-  const loginPage = new LoginPage(page)
-  await loginPage.goto()
-  await loginPage.login('user@example.com', 'secret')
+test('valid credentials redirect to dashboard', async ({ page }) => {
+  const login = new LoginPage(page)
+  await login.goto()
+  await login.login('user@example.com', 'secret')
   await expect(page).toHaveURL('/dashboard')
-})`}
-              />
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
-            >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                Fixtures — shared setup across tests
-              </span>
-            </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="typescript"
-                code={`// fixtures.ts
+})`,
+            },
+            {
+              title: 'Custom Fixtures',
+              subtitle: '— extend test with pre-authenticated state',
+              code: `// support/fixtures.ts
 import { test as base } from '@playwright/test'
-import { LoginPage } from './pages/LoginPage'
+import { LoginPage } from '../pages/LoginPage'
+import { DashboardPage } from '../pages/DashboardPage'
 
-type MyFixtures = { loginPage: LoginPage; loggedIn: void }
+type Fixtures = {
+  loginPage: LoginPage
+  dashboardPage: DashboardPage
+  loggedIn: void
+}
 
-export const test = base.extend<MyFixtures>({
-  loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page))
-  },
+export const test = base.extend<Fixtures>({
+  loginPage: async ({ page }, use) => use(new LoginPage(page)),
+  dashboardPage: async ({ page }, use) => use(new DashboardPage(page)),
+
   loggedIn: async ({ loginPage }, use) => {
     await loginPage.goto()
     await loginPage.login(process.env.TEST_EMAIL!, process.env.TEST_PASS!)
-    await use()
+    await use()   // hand control to the test
   },
 })
 
-// tests/dashboard.spec.ts
-test('dashboard loads', async ({ page, loggedIn }) => {
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-})`}
-              />
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div
-              className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
-            >
-              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                API request interception
-              </span>
-            </div>
-            <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="typescript"
-                code={`// Mock an API response to control test data
-await page.route('**/api/users', route =>
+// tests/dashboard.spec.ts — loggedIn fixture runs beforeEach automatically
+test('dashboard shows user name', async ({ page, loggedIn, dashboardPage }) => {
+  await expect(dashboardPage.welcomeBanner).toContainText('Welcome')
+})`,
+            },
+            {
+              title: 'Network Interception & Mocking',
+              subtitle: '— control API responses without a real backend',
+              code: `// Intercept and fulfil with fixture data
+await page.route('**/api/products', (route) =>
   route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify([{ id: 1, name: 'Alice' }]),
-  })
+    body: JSON.stringify([{ id: 1, name: 'Widget', price: 9.99 }]),
+  }),
 )
 
-// Assert the API call was made
+// Abort specific requests (simulate network errors)
+await page.route('**/api/analytics', (route) => route.abort())
+
+// Modify a real response on the fly
+await page.route('**/api/user', async (route) => {
+  const response = await route.fetch()
+  const json = await response.json()
+  await route.fulfill({ response, json: { ...json, role: 'admin' } })
+})
+
+// Assert a request was fired with the right payload
 const [request] = await Promise.all([
-  page.waitForRequest('**/api/checkout'),
+  page.waitForRequest((req) =>
+    req.url().includes('/api/checkout') && req.method() === 'POST',
+  ),
   page.getByRole('button', { name: 'Buy Now' }).click(),
 ])
-expect(request.method()).toBe('POST')`}
+expect(request.postDataJSON()).toMatchObject({ currency: 'USD' })`,
+            },
+            {
+              title: 'Lifecycle Hooks',
+              subtitle: '— before / after at describe and global scope',
+              code: `// global setup — runs once for the entire test suite
+// playwright.config.ts
+export default defineConfig({ globalSetup: './global-setup.ts' })
+
+// global-setup.ts
+export default async function globalSetup() {
+  // seed database, start mock server, etc.
+}
+
+// per-describe hooks
+test.describe('Cart', () => {
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext()
+    await ctx.storageState({ path: 'auth.json' })
+    await ctx.close()
+  })
+
+  test.beforeEach(async ({ page }) => { await page.goto('/cart') })
+
+  test.afterEach(async ({ page }, testInfo) => {
+    if (testInfo.status !== testInfo.expectedStatus) {
+      await page.screenshot({ path: \`screenshots/\${testInfo.title}.png\` })
+    }
+  })
+
+  test.afterAll(async () => { /* tear down */ })
+})`,
+            },
+            {
+              title: 'Parallel & Sharded runs',
+              subtitle: '— speed up CI by splitting across machines',
+              code: `// playwright.config.ts — run tests in parallel within each file
+export default defineConfig({
+  fullyParallel: true,  // parallel across files AND within files
+  workers: 4,
+})
+
+// Shard across CI machines (e.g. GitHub Actions matrix)
+// Machine 1: npx playwright test --shard=1/4
+// Machine 2: npx playwright test --shard=2/4
+// ...
+
+// Tag tests and run a subset
+test('checkout @smoke', async ({ page }) => { … })
+// npx playwright test --grep @smoke`,
+            },
+          ].map(({ title, subtitle, code }) => (
+            <div
+              key={title}
+              className="rounded-2xl border overflow-hidden shadow-sm"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div
+                className="px-4 py-2.5 border-b flex items-center gap-2"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  {title}
+                </span>
+                {subtitle && (
+                  <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                    {subtitle}
+                  </span>
+                )}
+              </div>
+              <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <CodeBlock lang="typescript" code={code} />
+              </div>
+            </div>
+          ))}
+        </DocSection>
+
+        {/* ── Authentication ──────────────────────────────── */}
+        <DocSection id="auth" icon={<Globe size={14} />} title="Authentication">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Log in once per project and reuse the browser storage state across every test — no
+            re-authenticating per spec.
+          </p>
+
+          {[
+            {
+              title: 'Save auth state once (global setup)',
+              code: `// global-setup.ts
+import { chromium, FullConfig } from '@playwright/test'
+
+export default async function globalSetup(config: FullConfig) {
+  const browser = await chromium.launch()
+  const page = await browser.newPage()
+
+  await page.goto(config.projects[0].use.baseURL + '/login')
+  await page.getByLabel('Email').fill(process.env.TEST_EMAIL!)
+  await page.getByLabel('Password').fill(process.env.TEST_PASS!)
+  await page.getByRole('button', { name: 'Sign In' }).click()
+  await page.waitForURL('**/dashboard')
+
+  // Persist cookies + localStorage → reused by every test worker
+  await page.context().storageState({ path: 'playwright/.auth/user.json' })
+  await browser.close()
+}`,
+            },
+            {
+              title: 'Reuse auth state in config',
+              code: `// playwright.config.ts
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  globalSetup: './global-setup.ts',
+  projects: [
+    // Authenticated project — shares the saved auth state
+    {
+      name: 'authenticated',
+      use: { storageState: 'playwright/.auth/user.json' },
+    },
+    // Unauthenticated project — for login / public pages
+    {
+      name: 'unauthenticated',
+      testMatch: '**/auth.spec.ts',
+    },
+  ],
+})`,
+            },
+            {
+              title: 'Multiple roles (admin vs user)',
+              code: `// global-setup.ts — save two auth states
+await loginAs('admin@example.com', 'admin-pass')
+await page.context().storageState({ path: 'playwright/.auth/admin.json' })
+
+await loginAs('user@example.com', 'user-pass')
+await page.context().storageState({ path: 'playwright/.auth/user.json' })
+
+// playwright.config.ts
+projects: [
+  { name: 'admin', use: { storageState: 'playwright/.auth/admin.json' } },
+  { name: 'user',  use: { storageState: 'playwright/.auth/user.json' } },
+]
+
+// In your test — the context is already authenticated
+test('admin can delete users', async ({ page }) => {
+  await page.goto('/admin/users')
+  await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible()
+})`,
+            },
+            {
+              title: 'API-based auth (faster than UI login)',
+              code: `// global-setup.ts — POST to your auth API directly
+const response = await request.post('/api/auth/login', {
+  data: { email: process.env.TEST_EMAIL, password: process.env.TEST_PASS },
+})
+const { token } = await response.json()
+
+// Inject the JWT into every browser context via extraHTTPHeaders
+// playwright.config.ts
+use: {
+  extraHTTPHeaders: { Authorization: \`Bearer \${process.env.AUTH_TOKEN}\` },
+}`,
+            },
+          ].map(({ title, code }) => (
+            <div
+              key={title}
+              className="rounded-2xl border overflow-hidden shadow-sm"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div
+                className="px-4 py-2.5 border-b"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  {title}
+                </span>
+              </div>
+              <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <CodeBlock lang="typescript" code={code} />
+              </div>
+            </div>
+          ))}
+        </DocSection>
+
+        {/* ── Visual & A11y Testing ───────────────────────── */}
+        <DocSection id="visual" icon={<Camera size={14} />} title="Visual & Accessibility Testing">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Catch pixel-level regressions and WCAG accessibility violations before they reach
+            production.
+          </p>
+
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+          >
+            <div
+              className="px-4 py-2 border-b flex items-center gap-2"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+            >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                Visual snapshot workflow
+              </span>
+            </div>
+            <div className="p-3 flex flex-col gap-2">
+              <RefRow
+                label="First run — update"
+                desc="npx playwright test --update-snapshots  →  creates the baseline PNGs."
+                badge="Setup"
+                badgeColor="#1a3a8f"
+              />
+              <RefRow
+                label="Subsequent runs"
+                desc="Playwright diffs the screenshot pixel-by-pixel against the stored baseline."
+                badge="Auto"
+                badgeColor="#059669"
+              />
+              <RefRow
+                label="Review failures"
+                desc="Open the HTML report — it shows expected vs actual with a diff overlay."
+                badge="Report"
+                badgeColor="#d97706"
+              />
+              <RefRow
+                label="Update baseline"
+                desc="npx playwright test --update-snapshots  →  accept the new appearance."
+                badge="Accept"
+                badgeColor="#6b7280"
               />
             </div>
           </div>
+
+          <CodeBlock
+            lang="typescript"
+            code={`// Visual regression — full page
+await expect(page).toHaveScreenshot('home.png')
+
+// Clip to a specific element
+await expect(page.getByRole('banner')).toHaveScreenshot('header.png')
+
+// Tolerance for minor anti-aliasing differences
+await expect(page).toHaveScreenshot('hero.png', { maxDiffPixelRatio: 0.01 })
+
+// Mask dynamic regions (timestamps, ads)
+await expect(page).toHaveScreenshot('dashboard.png', {
+  mask: [page.getByTestId('last-updated'), page.locator('.ad-banner')],
+})`}
+          />
 
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
@@ -2995,57 +3019,225 @@ expect(request.method()).toBe('POST')`}
           >
             <div
               className="px-4 py-2.5 border-b flex items-center gap-2"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
             >
               <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                Hooks — before / after
+                Accessibility — WCAG audits with axe-core
               </span>
             </div>
             <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-              <CodeBlock
-                lang="typescript"
-                code={`test.describe('Cart', () => {
-  // Runs once before all tests in this describe
-  test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext()
-    await ctx.storageState({ path: 'auth.json' })
-  })
+              <p className="text-[11px] mb-3" style={{ color: 'var(--text-muted)' }}>
+                Install <code className="font-mono">@axe-core/playwright</code> to run WCAG 2.1 AA
+                audits inside your Playwright tests.
+              </p>
+              <CodeBlock lang="bash" code={`npm install --save-dev @axe-core/playwright`} />
+              <div className="mt-3">
+                <CodeBlock
+                  lang="typescript"
+                  code={`import { checkA11y, injectAxe } from '@axe-core/playwright'
 
-  // Runs before each test
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/cart')
-  })
+test('home page passes WCAG 2.1 AA', async ({ page }) => {
+  await page.goto('/')
+  await injectAxe(page)
 
-  // Runs after each test — cleanup
-  test.afterEach(async ({ page }, testInfo) => {
-    if (testInfo.status !== 'passed') {
-      await page.screenshot({ path: \`screenshots/\${testInfo.title}.png\` })
-    }
+  // Scan the entire page
+  await checkA11y(page, undefined, {
+    axeOptions: { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } },
+    detailedReport: true,
   })
+})
+
+test('modal has no critical violations', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open dialog' }).click()
+  await injectAxe(page)
+
+  // Scope scan to just the modal
+  await checkA11y(page, '[role="dialog"]')
 })`}
-              />
+                />
+              </div>
             </div>
           </div>
+
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
+          >
+            <div
+              className="px-4 py-2 border-b"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+            >
+              <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                Accessibility checklist
+              </span>
+            </div>
+            <div className="p-3 flex flex-col gap-2">
+              {[
+                {
+                  label: 'Keyboard navigation',
+                  desc: 'Tab through all interactive elements — confirm focus order is logical.',
+                },
+                {
+                  label: 'Focus visible',
+                  desc: 'Every focused element must have a visible outline (WCAG 2.4.7).',
+                },
+                {
+                  label: 'Colour contrast',
+                  desc: 'Text must meet 4.5:1 ratio (normal) or 3:1 (large text) per WCAG 1.4.3.',
+                },
+                {
+                  label: 'Alt text on images',
+                  desc: 'Informational images need descriptive alt; decorative images use alt="".',
+                },
+                {
+                  label: 'Form labels',
+                  desc: 'Every input must have an associated <label> or aria-label.',
+                },
+                {
+                  label: 'ARIA landmarks',
+                  desc: 'Use <header>, <main>, <nav>, <footer> — or their ARIA equivalents.',
+                },
+                {
+                  label: 'RTL support',
+                  desc: 'Set dir="rtl" on the <html> element for Hebrew / Arabic layouts.',
+                },
+              ].map((r) => (
+                <RefRow key={r.label} label={r.label} desc={r.desc} />
+              ))}
+            </div>
+          </div>
+        </DocSection>
+
+        {/* ── CI / CD Integration ─────────────────────────── */}
+        <DocSection id="cicd" icon={<GitBranch size={14} />} title="CI / CD Integration">
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Run Playwright headlessly in your pipeline and upload the HTML report as a build
+            artifact.
+          </p>
+
+          {[
+            {
+              title: 'GitHub Actions',
+              code: `# .github/workflows/playwright.yml
+name: Playwright Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        run: npx playwright test
+        env:
+          BASE_URL: \${{ secrets.STAGING_URL }}
+          TEST_EMAIL: \${{ secrets.TEST_EMAIL }}
+          TEST_PASS: \${{ secrets.TEST_PASS }}
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()          # upload even on failure
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results (for open-qa)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pw-results
+          path: pw-results.json`,
+            },
+            {
+              title: 'Sharding across parallel jobs',
+              code: `# Run 4 shards in parallel — each picks up 1/4 of the test files
+jobs:
+  test:
+    strategy:
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+    steps:
+      - run: npx playwright test --shard=\${{ matrix.shardIndex }}/\${{ matrix.shardTotal }}
+
+  merge-reports:
+    needs: test
+    steps:
+      - run: npx playwright merge-reports --reporter html ./all-blobs
+      - uses: actions/upload-artifact@v4
+        with: { name: playwright-report, path: playwright-report/ }`,
+            },
+            {
+              title: 'Environment variables & secrets',
+              code: `// playwright.config.ts — read from CI environment
+export default defineConfig({
+  use: {
+    baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
+    extraHTTPHeaders: {
+      'x-api-key': process.env.API_KEY ?? '',
+    },
+  },
+})
+
+// .env.test — local overrides (git-ignored)
+BASE_URL=http://localhost:3000
+TEST_EMAIL=qa@example.com
+TEST_PASS=secret
+
+// Load in config
+import { config } from 'dotenv'
+config({ path: '.env.test' })`,
+            },
+            {
+              title: 'Recommended CI flags',
+              code: `# Optimal CI configuration
+npx playwright test \\
+  --reporter=list,json    \\  # list for logs, json for open-qa dashboard
+  --workers=1             \\  # single worker avoids resource contention
+  --retries=2             \\  # retry flaky tests before marking failed
+  --forbid-only              # fail if test.only is left in source`,
+            },
+          ].map(({ title, code }) => (
+            <div
+              key={title}
+              className="rounded-2xl border overflow-hidden shadow-sm"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div
+                className="px-4 py-2.5 border-b"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
+              >
+                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                  {title}
+                </span>
+              </div>
+              <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+                <CodeBlock lang="yaml" code={code} />
+              </div>
+            </div>
+          ))}
         </DocSection>
 
         {/* ── CLI Reference ───────────────────────────────── */}
         <DocSection id="cli" icon={<Terminal size={14} />} title="CLI Reference">
           <div
             className="rounded-2xl border overflow-hidden shadow-sm"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg-card)',
-            }}
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
             <div
               className="px-4 py-2 border-b"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--bg-body)',
-              }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-body)' }}
             >
               <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                 npx playwright test [options]
@@ -3054,45 +3246,29 @@ expect(request.method()).toBe('POST')`}
             <div className="p-3 flex flex-col gap-1.5">
               {[
                 { flag: '--headed', desc: 'Run with a visible browser window' },
-                {
-                  flag: '--ui',
-                  desc: 'Open the interactive Playwright UI mode',
-                },
-                {
-                  flag: '--debug',
-                  desc: 'Run in debug mode — pauses before each action',
-                },
-                {
-                  flag: '--project=chromium',
-                  desc: 'Run only in the specified project/browser',
-                },
-                {
-                  flag: '--grep "login"',
-                  desc: 'Run only tests whose title matches the pattern',
-                },
-                {
-                  flag: '--workers=4',
-                  desc: 'Override number of parallel workers',
-                },
+                { flag: '--ui', desc: 'Open the interactive Playwright UI mode' },
+                { flag: '--debug', desc: 'Pause before each action — step through with DevTools' },
+                { flag: '--project=chromium', desc: 'Run only in the specified project / browser' },
+                { flag: '--grep "login"', desc: 'Run only tests whose title matches the pattern' },
+                { flag: '--grep-invert "slow"', desc: 'Exclude tests matching the pattern' },
+                { flag: '--workers=4', desc: 'Override number of parallel workers' },
                 { flag: '--retries=2', desc: 'Override retry count' },
                 {
                   flag: '--reporter=json',
                   desc: 'Override reporter (html | json | junit | line | dot)',
                 },
-                {
-                  flag: '--timeout=60000',
-                  desc: 'Override per-test timeout in ms',
-                },
+                { flag: '--timeout=60000', desc: 'Override per-test timeout in ms' },
                 {
                   flag: '--last-failed',
-                  desc: 'Re-run only the tests that failed last time',
+                  desc: 'Re-run only the tests that failed in the last run',
                 },
-                {
-                  flag: '--config=pw.config.ts',
-                  desc: 'Use a custom config file',
-                },
+                { flag: '--forbid-only', desc: 'Fail if test.only is present (for CI)' },
+                { flag: '--shard=1/4', desc: 'Run a fraction of tests for parallel CI' },
+                { flag: '--update-snapshots', desc: 'Accept new visual snapshot baselines' },
+                { flag: '--config=pw.config.ts', desc: 'Use a non-default config file' },
+                { flag: '--pass-with-no-tests', desc: 'Exit 0 even if no tests match the filter' },
               ].map(({ flag, desc }) => (
-                <RefRow key={flag} label={`--${flag.replace(/^--/, '')}`} desc={desc} />
+                <RefRow key={flag} label={flag} desc={desc} />
               ))}
             </div>
           </div>
@@ -3111,12 +3287,18 @@ npx playwright test --project=firefox --project=webkit
 # Open the trace viewer for a recorded trace
 npx playwright show-trace test-results/trace.zip
 
-# Generate code by recording your actions in a browser
+# Record actions in a browser → generate test code
 npx playwright codegen https://example.com
 
 # Install / update browser binaries
 npx playwright install
-npx playwright install chromium`}
+npx playwright install chromium --with-deps   # + system libs (for CI)
+
+# Merge sharded blob reports into one HTML report
+npx playwright merge-reports --reporter html ./blob-reports
+
+# Print all available CLI options
+npx playwright test --help`}
           />
         </DocSection>
       </div>
@@ -4978,6 +5160,8 @@ export default function PlaywrightDashboard() {
 
   const [suites, setSuites] = useState<TestSuite[]>([]);
   const [running, setRunning] = useState(false);
+  // Ref to the active AbortController so the Stop button can cancel the SSE stream
+  const runAbortRef = useRef<AbortController | null>(null);
   const [activeTab, setActiveTab] = useState<FilterKey>('active');
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [config, setConfig] = useState<PlaywrightConfig>(DEFAULT_CONFIG);
@@ -5015,15 +5199,8 @@ export default function PlaywrightDashboard() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [specPickerOpen]);
-  // ── Multi-run history ────────────────────────────────────────────────────────
-  const [runHistory, setRunHistory] = useState<RunRecord[]>(() => {
-    try {
-      const raw = localStorage.getItem(RUN_HISTORY_KEY);
-      return raw ? (JSON.parse(raw) as RunRecord[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  // ── Multi-run history — always sourced from SQLite via /api/playwright/history ──
+  const [runHistory, setRunHistory] = useState<RunRecord[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [browsersOk, setBrowsersOk] = useState<boolean | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(
@@ -5107,15 +5284,6 @@ export default function PlaywrightDashboard() {
       // ignore corrupt storage
     }
   }, []);
-
-  // ── Persist runHistory to localStorage so it survives page refresh ──────────
-  useEffect(() => {
-    try {
-      localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(runHistory.slice(0, 30)));
-    } catch {
-      /* quota */
-    }
-  }, [runHistory]);
 
   // ── isSaved: true when current config matches what's persisted ──────────────
   const isSaved = useMemo(
@@ -5286,6 +5454,7 @@ export default function PlaywrightDashboard() {
   const runWithSSE = useCallback(
     async (body: RunRequest) => {
       const controller = new AbortController();
+      runAbortRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000); // 10-minute hard limit
       setRunning(true);
       setShowLog(true);
@@ -5426,6 +5595,7 @@ export default function PlaywrightDashboard() {
         }
       } finally {
         clearTimeout(timeoutId);
+        runAbortRef.current = null;
         setRunning(false);
         // Always refresh history — runs even when fetchResults() throws or the
         // AI summary is skipped.  A short delay lets Windows NTFS flush the file.
@@ -5455,6 +5625,7 @@ export default function PlaywrightDashboard() {
         return;
       }
       const controller = new AbortController();
+      runAbortRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
       setRunning(true);
       setShowLog(true);
@@ -5587,6 +5758,7 @@ export default function PlaywrightDashboard() {
         }
       } finally {
         clearTimeout(timeoutId);
+        runAbortRef.current = null;
         setRunning(false);
       }
     },
@@ -6070,7 +6242,14 @@ export default function PlaywrightDashboard() {
                     {settingsOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                   </button>
                   <button
-                    onClick={running ? () => setRunning(false) : runTests}
+                    onClick={
+                      running
+                        ? () => {
+                            runAbortRef.current?.abort();
+                            runAbortRef.current = null;
+                          }
+                        : runTests
+                    }
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? 'text-white' : 'text-white'}`}
                     style={
                       running
@@ -6226,63 +6405,6 @@ export default function PlaywrightDashboard() {
                 </div>
               )}
 
-              {/* ── Presets bar (always visible) ────────────────────────── */}
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap size={11} style={{ color: '#8b5cf6' }} />
-                  <span
-                    className="text-[11px] font-bold uppercase tracking-wider"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    Quick Presets
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {PRESETS.map((preset) => {
-                    const isActive = preset.specs
-                      ? preset.specs.every((s) => selectedSpecs.has(s)) &&
-                        selectedSpecs.size === preset.specs.length
-                      : false;
-                    return (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          setConfig((c) => ({ ...c, ...preset.config }));
-                          if (preset.specs) setSelectedSpecs(new Set(preset.specs));
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150"
-                        style={{
-                          backgroundColor: isActive ? `${preset.color}18` : 'var(--bg-card)',
-                          color: isActive ? preset.color : 'var(--text-muted)',
-                          boxShadow: isActive
-                            ? `0 0 0 1.5px ${preset.color}60`
-                            : '0 1px 3px rgba(0,0,0,0.06)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = `${preset.color}14`;
-                          e.currentTarget.style.color = preset.color;
-                          e.currentTarget.style.boxShadow = `0 0 0 1.5px ${preset.color}50`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isActive
-                            ? `${preset.color}18`
-                            : 'var(--bg-card)';
-                          e.currentTarget.style.color = isActive
-                            ? preset.color
-                            : 'var(--text-muted)';
-                          e.currentTarget.style.boxShadow = isActive
-                            ? `0 0 0 1.5px ${preset.color}60`
-                            : '0 1px 3px rgba(0,0,0,0.06)';
-                        }}
-                      >
-                        <span>{preset.icon}</span>
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* ── Collapsible config + editor panel ───────────────────── */}
               {settingsOpen && (
                 <div
@@ -6407,7 +6529,7 @@ export default function PlaywrightDashboard() {
                   {/* Panel body */}
                   {configTab === 'config' ? (
                     <div className="p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
-                      <SettingsView config={config} onChange={setConfig} noPresets />
+                      <SettingsView config={config} onChange={setConfig} />
                     </div>
                   ) : serverOnline === false ? (
                     /* Server offline — don't attempt fetch, show clear instructions */
@@ -7051,6 +7173,71 @@ export default function PlaywrightDashboard() {
                 </div>
               </div>
 
+              {/* Run log terminal */}
+              {showLog && runLog.length > 0 && (
+                <div
+                  className="mt-4 rounded-2xl overflow-hidden"
+                  style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
+                >
+                  <div
+                    className="flex items-center justify-between px-4 py-2.5 border-b"
+                    style={{
+                      borderColor: 'var(--border)',
+                      backgroundColor: 'var(--bg-body)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Terminal size={13} style={{ color: '#34C759' }} />
+                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                        Run Output
+                      </span>
+                      {running && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      )}
+                      <span className="text-[10px]" style={{ color: '#6c7086' }}>
+                        {runLog.length} lines
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowLog(false)}
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      <X size={13} style={{ color: 'var(--text-muted)' }} />
+                    </button>
+                  </div>
+                  <div
+                    className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
+                    style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}
+                  >
+                    {runLog.map((line, i) => {
+                      const color = /✓|passed|\[PASS\]/i.test(line)
+                        ? '#a6e3a1'
+                        : /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line)
+                          ? '#f38ba8'
+                          : /\[FILTER\]|\[INFO\]/i.test(line)
+                            ? '#89b4fa'
+                            : /\[TIMEOUT\]|\[OFFLINE\]/i.test(line)
+                              ? '#fab387'
+                              : /skipped|pending/i.test(line)
+                                ? '#f9e2af'
+                                : '#cdd6f4';
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            color,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {line}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Runs panel */}
               <RunsPanel
                 runs={runHistory}
@@ -7666,71 +7853,6 @@ export default function PlaywrightDashboard() {
                         </span>
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Run log terminal */}
-              {showLog && runLog.length > 0 && (
-                <div
-                  className="mt-4 rounded-2xl overflow-hidden"
-                  style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
-                >
-                  <div
-                    className="flex items-center justify-between px-4 py-2.5 border-b"
-                    style={{
-                      borderColor: 'var(--border)',
-                      backgroundColor: 'var(--bg-body)',
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Terminal size={13} style={{ color: '#34C759' }} />
-                      <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                        Run Output
-                      </span>
-                      {running && (
-                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      )}
-                      <span className="text-[10px]" style={{ color: '#6c7086' }}>
-                        {runLog.length} lines
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setShowLog(false)}
-                      className="hover:opacity-70 transition-opacity"
-                    >
-                      <X size={13} style={{ color: 'var(--text-muted)' }} />
-                    </button>
-                  </div>
-                  <div
-                    className="overflow-auto font-mono text-[10.5px] leading-relaxed px-4 py-3"
-                    style={{ backgroundColor: '#1e1e2e', maxHeight: '280px' }}
-                  >
-                    {runLog.map((line, i) => {
-                      const color = /✓|passed|\[PASS\]/i.test(line)
-                        ? '#a6e3a1'
-                        : /✗|failed|\[FAIL\]|\[ERROR\]/i.test(line)
-                          ? '#f38ba8'
-                          : /\[FILTER\]|\[INFO\]/i.test(line)
-                            ? '#89b4fa'
-                            : /\[TIMEOUT\]|\[OFFLINE\]/i.test(line)
-                              ? '#fab387'
-                              : /skipped|pending/i.test(line)
-                                ? '#f9e2af'
-                                : '#cdd6f4';
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            color,
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          {line}
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               )}

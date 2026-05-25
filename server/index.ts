@@ -5,7 +5,8 @@ import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs/promises';
-import { existsSync, readdirSync, statSync } from 'fs';
+import { existsSync, readdirSync, statSync, mkdirSync } from 'fs';
+import Database from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
 
@@ -718,7 +719,26 @@ app.get('/api/ollama/models', async (req, res) => {
 
 const RESULTS_PATH = path.join(root, 'test-results', 'pw-results.json');
 const TESTS_DIR = path.join(root, 'tests');
-const RUNS_DIR = path.join(root, 'test-results', 'runs');
+
+// ─── SQLite run-history database ─────────────────────────────────────────────
+const DB_DIR = path.join(root, 'test-results');
+mkdirSync(DB_DIR, { recursive: true });
+const db = new Database(path.join(DB_DIR, 'runs.db'));
+db.exec(`
+  CREATE TABLE IF NOT EXISTS runs (
+    id       TEXT PRIMARY KEY,
+    run_at   TEXT NOT NULL,
+    spec     TEXT,
+    total    INTEGER NOT NULL DEFAULT 0,
+    passed   INTEGER NOT NULL DEFAULT 0,
+    failed   INTEGER NOT NULL DEFAULT 0,
+    skipped  INTEGER NOT NULL DEFAULT 0,
+    flaky    INTEGER NOT NULL DEFAULT 0,
+    duration INTEGER NOT NULL DEFAULT 0,
+    run_log  TEXT,
+    raw_json TEXT NOT NULL
+  )
+`);
 
 /** Recursively collect all spec objects from a Playwright JSON suite tree */
 function collectSpecs(suite: Record<string, unknown>): Record<string, unknown>[] {
@@ -858,13 +878,12 @@ function normalizePwResults(raw: Record<string, unknown>) {
 }
 
 /**
- * Read pw-results.json, embed _meta (spec, archivedAt, runLog), and write to RUNS_DIR.
- * Called BEFORE sending [DONE] to avoid the client fetching history too early.
+ * Read pw-results.json and persist the run to SQLite.
+ * Called BEFORE sending [DONE] so the client can immediately fetch fresh history.
  *
  * @param spec    optional spec identifier shown in the Run History table
  * @param runLog  optional array of streamed log lines captured during the run.
- *                Persisted so the dashboard can re-display logs when a user
- *                clicks an old run in the history table.
+ *                Stored in the DB so the dashboard can replay logs for old runs.
  */
 async function archiveRun(spec?: string, runLog?: string[]): Promise<string | null> {
   try {
@@ -872,18 +891,33 @@ async function archiveRun(spec?: string, runLog?: string[]): Promise<string | nu
       console.warn('[archiveRun] skipped — pw-results.json not found at', RESULTS_PATH);
       return null;
     }
-    await fs.mkdir(RUNS_DIR, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const id = `run-${ts}`;
     const raw = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>;
-    // embed lightweight metadata directly in the archive (normalizePwResults ignores unknown keys)
-    raw._spec = spec ?? null;
-    raw._archivedAt = new Date().toISOString();
-    // Cap log size to ~5000 lines to avoid bloating archive files
-    if (runLog && runLog.length > 0) raw._runLog = runLog.slice(-5000);
-    await fs.writeFile(path.join(RUNS_DIR, `${id}.json`), JSON.stringify(raw));
+    const n = normalizePwResults(raw);
+    type NormTest = { status: string };
+    type NormSuite = { tests: NormTest[] };
+    const allTests = (n.suites as NormSuite[]).flatMap((s) => s.tests);
+
+    db.prepare(
+      `INSERT OR REPLACE INTO runs
+         (id, run_at, spec, total, passed, failed, skipped, flaky, duration, run_log, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      n.runAt,
+      spec ?? null,
+      allTests.length,
+      allTests.filter((t) => t.status === 'passed').length,
+      allTests.filter((t) => t.status === 'failed').length,
+      allTests.filter((t) => t.status === 'skipped').length,
+      n.stats.flaky,
+      n.stats.duration,
+      runLog && runLog.length > 0 ? JSON.stringify(runLog.slice(-5000)) : null,
+      JSON.stringify(raw),
+    );
     console.log(
-      `[archiveRun] ok → runs/${id}.json (${runLog?.length ?? 0} log lines, spec=${spec ?? 'all'})`,
+      `[archiveRun] ok → runs.db id=${id} (${runLog?.length ?? 0} log lines, spec=${spec ?? 'all'})`,
     );
     return id;
   } catch (err) {
@@ -991,83 +1025,69 @@ app.get('/api/playwright/results', async (_req, res) => {
   }
 });
 
-// GET /api/playwright/history — list all archived runs (newest first, max 30)
-app.get('/api/playwright/history', async (_req, res) => {
-  // Prevent browser caching so a fresh fetch always returns the latest run list
+// GET /api/playwright/history — list all archived runs from SQLite (newest first)
+// Optional query param: ?limit=N  (default: all rows)
+app.get('/api/playwright/history', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   try {
-    // NOTE: no auto-seed — if the user cleared history it should stay empty.
-    if (!existsSync(RUNS_DIR)) return res.json({ runs: [] });
-    const files = (await fs.readdir(RUNS_DIR))
-      .filter((f) => /^run-.+\.json$/.test(f))
-      .sort()
-      .reverse()
-      .slice(0, 30);
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : null;
+    const sql = `SELECT id, run_at, spec, total, passed, failed, skipped, flaky, duration
+                 FROM runs
+                 ORDER BY run_at DESC${limit && limit > 0 ? ` LIMIT ${limit}` : ''}`;
+    const rows = db.prepare(sql).all() as Array<{
+      id: string;
+      run_at: string;
+      spec: string | null;
+      total: number;
+      passed: number;
+      failed: number;
+      skipped: number;
+      flaky: number;
+      duration: number;
+    }>;
 
-    const runs = (
-      await Promise.all(
-        files.map(async (f) => {
-          try {
-            const raw = JSON.parse(await fs.readFile(path.join(RUNS_DIR, f), 'utf-8')) as Record<
-              string,
-              unknown
-            >;
-            const n = normalizePwResults(raw);
-            // Use normalized test counts (same logic as the dashboard) so history
-            // totals match the suite list — important for multi-browser runs where
-            // Playwright's raw stats.expected counts per-project instead of per-test.
-            type NormTest = { status: string };
-            type NormSuite = { tests: NormTest[] };
-            const allTests = (n.suites as NormSuite[]).flatMap((s) => s.tests);
-            return {
-              id: f.replace('.json', ''),
-              runAt: n.runAt,
-              spec: (raw._spec as string | null | undefined) ?? null,
-              total: allTests.length,
-              passed: allTests.filter((t) => t.status === 'passed').length,
-              failed: allTests.filter((t) => t.status === 'failed').length,
-              skipped: allTests.filter((t) => t.status === 'skipped').length,
-              flaky: n.stats.flaky,
-              duration: n.stats.duration,
-            };
-          } catch {
-            return null;
-          }
-        }),
-      )
-    ).filter(Boolean);
+    const runs = rows.map((r) => ({
+      id: r.id,
+      runAt: r.run_at,
+      spec: r.spec,
+      total: r.total,
+      passed: r.passed,
+      failed: r.failed,
+      skipped: r.skipped,
+      flaky: r.flaky,
+      duration: r.duration,
+    }));
     res.json({ runs });
   } catch (err: unknown) {
     res.status(500).json({ error: String(err) });
   }
 });
 
-// GET /api/playwright/results/:runId — fetch a specific archived run
+// GET /api/playwright/results/:runId — fetch a specific archived run from SQLite
 // Returns the normalised result PLUS the optional runLog captured at run time
 // so the client can re-display the original stdout in the log panel.
-app.get('/api/playwright/results/:runId', async (req, res) => {
+app.get('/api/playwright/results/:runId', (req, res) => {
   const { runId } = req.params;
-  // sanitise to prevent path traversal
   const safe = runId.replace(/[^a-zA-Z0-9_-]/g, '');
-  const filePath = path.join(RUNS_DIR, `${safe}.json`);
   try {
-    if (!existsSync(filePath)) return res.status(404).json({ error: `Run "${safe}" not found` });
-    const raw = JSON.parse(await fs.readFile(filePath, 'utf-8')) as Record<string, unknown>;
+    const row = db.prepare('SELECT raw_json, run_log FROM runs WHERE id = ?').get(safe) as
+      | { raw_json: string; run_log: string | null }
+      | undefined;
+    if (!row) return res.status(404).json({ error: `Run "${safe}" not found` });
+    const raw = JSON.parse(row.raw_json) as Record<string, unknown>;
+    const runLog: string[] = row.run_log ? (JSON.parse(row.run_log) as string[]) : [];
     const result = normalizePwResults(raw);
-    const runLog = Array.isArray(raw._runLog) ? (raw._runLog as string[]) : [];
     res.json({ ...result, runLog });
   } catch (err: unknown) {
     res.status(500).json({ error: String(err) });
   }
 });
 
-// DELETE /api/playwright/history — delete all archived run files
-app.delete('/api/playwright/history', async (_req, res) => {
+// DELETE /api/playwright/history — wipe all runs from SQLite
+app.delete('/api/playwright/history', (_req, res) => {
   try {
-    if (!existsSync(RUNS_DIR)) return res.json({ ok: true, deleted: 0 });
-    const files = (await fs.readdir(RUNS_DIR)).filter((f) => /^run-.+\.json$/.test(f));
-    await Promise.all(files.map((f) => fs.unlink(path.join(RUNS_DIR, f))));
-    res.json({ ok: true, deleted: files.length });
+    const info = db.prepare('DELETE FROM runs').run();
+    res.json({ ok: true, deleted: info.changes });
   } catch (err: unknown) {
     res.status(500).json({ error: String(err) });
   }
@@ -1345,15 +1365,6 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   const sendEvt = (payload: Record<string, unknown>) =>
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
 
-  // Prefer the immutable per-run archive over the shared RESULTS_PATH so that
-  // concurrent runs don't cause this summary to read the wrong results file.
-  const resultsFile = creds.runId ? path.join(RUNS_DIR, `${creds.runId}.json`) : RESULTS_PATH;
-
-  if (!existsSync(resultsFile)) {
-    sendEvt({ evt: 'summary_done', failures: [] });
-    return;
-  }
-
   // Build the failure list and the prompt up front so we can always emit
   // summary_done with structured failure data even if the AI call fails.
   let failures: Array<{ testTitle: string; suiteName: string; error: string; errorType: string }> =
@@ -1362,10 +1373,25 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   let totals = { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 };
 
   try {
-    const rawResults = JSON.parse(await fs.readFile(resultsFile, 'utf-8')) as Record<
-      string,
-      unknown
-    >;
+    // Prefer the immutable per-run archive from SQLite so concurrent runs
+    // don't cause this summary to read the wrong results.
+    let rawResults: Record<string, unknown>;
+    if (creds.runId) {
+      const row = db.prepare('SELECT raw_json FROM runs WHERE id = ?').get(creds.runId) as
+        | { raw_json: string }
+        | undefined;
+      if (!row) {
+        sendEvt({ evt: 'summary_done', failures: [] });
+        return;
+      }
+      rawResults = JSON.parse(row.raw_json) as Record<string, unknown>;
+    } else {
+      if (!existsSync(RESULTS_PATH)) {
+        sendEvt({ evt: 'summary_done', failures: [] });
+        return;
+      }
+      rawResults = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>;
+    }
     const normalized = normalizePwResults(rawResults);
     summaryPrompt = buildSummaryPrompt(normalized, creds.agentName);
     totals = {

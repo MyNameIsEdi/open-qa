@@ -6,6 +6,39 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **SQLite run history** — replaces per-run JSON files in `test-results/runs/` with a
+  single `better-sqlite3` database (`test-results/runs.db`). `archiveRun()` INSERTs into
+  the DB; `/api/playwright/history`, `/api/playwright/results/:runId`, and
+  `DELETE /api/playwright/history` all query SQLite directly. No migration of old JSON
+  files — DB starts fresh (`server/index.ts`, `package.json`).
+- **Expanded DocsView** — grew from 5 to 8 sections: added Authentication (storageState,
+  global setup), Visual & A11y (axe-core / `checkA11y`), and CI/CD (GitHub Actions matrix,
+  sharding) chapters with runnable code examples (`ui/src/pages/PlaywrightDashboard.tsx`).
+
+### Changed
+
+- **Remove Quick Presets** — deleted `PRESETS` constant, `applyPreset()`, `noPresets` prop,
+  and the Zap-icon preset card from the Settings panel to reduce visual clutter
+  (`ui/src/pages/PlaywrightDashboard.tsx`).
+- **Run Output above Run History** — terminal log panel now renders immediately after the
+  Insights row, before the RunsPanel history table, so live output is visible without
+  scrolling (`ui/src/pages/PlaywrightDashboard.tsx`).
+- **History from SQLite only** — removed all `localStorage` caching of run history
+  (`RUN_HISTORY_KEY`, seed-on-mount effect, write-on-change effect) to prevent stale
+  pre-migration data surfacing on page load (`ui/src/pages/PlaywrightDashboard.tsx`).
+
+### Fixed
+
+- **Stop button race condition** — added `runAbortRef = useRef<AbortController | null>(null)`
+  so the Stop button aborts the active SSE fetch via `runAbortRef.current?.abort()` rather
+  than calling `setRunning(false)` directly, which previously left the stream alive and
+  killed subsequent runs (`ui/src/pages/PlaywrightDashboard.tsx`).
+- **`streamSummary` crash** (`ReferenceError: RUNS_DIR is not defined`) — removed the stale
+  `path.join(RUNS_DIR, ...)` reference left over from the JSON-file era; the helper now
+  reads `raw_json` directly from SQLite when `creds.runId` is present (`server/index.ts`).
+
+### Added
+
 - **5-card KPI row with sparklines** — replaced the hero-ring + 3-tile KPI
   layout with five uniform stat cards (Total Executions, Passed, Failed, Flaky,
   Success Rate). Each card shows a mini SVG sparkline from the last 8 runs and
