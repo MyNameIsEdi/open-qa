@@ -1365,15 +1365,6 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   const sendEvt = (payload: Record<string, unknown>) =>
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
 
-  // Prefer the immutable per-run archive over the shared RESULTS_PATH so that
-  // concurrent runs don't cause this summary to read the wrong results file.
-  const resultsFile = creds.runId ? path.join(RUNS_DIR, `${creds.runId}.json`) : RESULTS_PATH;
-
-  if (!existsSync(resultsFile)) {
-    sendEvt({ evt: 'summary_done', failures: [] });
-    return;
-  }
-
   // Build the failure list and the prompt up front so we can always emit
   // summary_done with structured failure data even if the AI call fails.
   let failures: Array<{ testTitle: string; suiteName: string; error: string; errorType: string }> =
@@ -1382,10 +1373,25 @@ async function streamSummary(res: import('express').Response, creds: SummaryCred
   let totals = { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 };
 
   try {
-    const rawResults = JSON.parse(await fs.readFile(resultsFile, 'utf-8')) as Record<
-      string,
-      unknown
-    >;
+    // Prefer the immutable per-run archive from SQLite so concurrent runs
+    // don't cause this summary to read the wrong results.
+    let rawResults: Record<string, unknown>;
+    if (creds.runId) {
+      const row = db.prepare('SELECT raw_json FROM runs WHERE id = ?').get(creds.runId) as
+        | { raw_json: string }
+        | undefined;
+      if (!row) {
+        sendEvt({ evt: 'summary_done', failures: [] });
+        return;
+      }
+      rawResults = JSON.parse(row.raw_json) as Record<string, unknown>;
+    } else {
+      if (!existsSync(RESULTS_PATH)) {
+        sendEvt({ evt: 'summary_done', failures: [] });
+        return;
+      }
+      rawResults = JSON.parse(await fs.readFile(RESULTS_PATH, 'utf-8')) as Record<string, unknown>;
+    }
     const normalized = normalizePwResults(rawResults);
     summaryPrompt = buildSummaryPrompt(normalized, creds.agentName);
     totals = {
