@@ -1025,18 +1025,16 @@ app.get('/api/playwright/results', async (_req, res) => {
   }
 });
 
-// GET /api/playwright/history — list all archived runs from SQLite (newest first, max 30)
-app.get('/api/playwright/history', (_req, res) => {
+// GET /api/playwright/history — list all archived runs from SQLite (newest first)
+// Optional query param: ?limit=N  (default: all rows)
+app.get('/api/playwright/history', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   try {
-    const rows = db
-      .prepare(
-        `SELECT id, run_at, spec, total, passed, failed, skipped, flaky, duration
-         FROM runs
-         ORDER BY run_at DESC
-         LIMIT 30`,
-      )
-      .all() as Array<{
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : null;
+    const sql = `SELECT id, run_at, spec, total, passed, failed, skipped, flaky, duration
+                 FROM runs
+                 ORDER BY run_at DESC${limit && limit > 0 ? ` LIMIT ${limit}` : ''}`;
+    const rows = db.prepare(sql).all() as Array<{
       id: string;
       run_at: string;
       spec: string | null;

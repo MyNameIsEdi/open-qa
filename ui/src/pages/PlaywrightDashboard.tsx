@@ -185,8 +185,14 @@ type SummaryEvent =
     };
 
 const STORAGE_KEY = 'pw_dashboard_config_v1';
-const RUN_HISTORY_KEY = 'pw_run_history_v1';
 const API_BASE = 'http://localhost:3001';
+
+// Clear any stale localStorage run-history cache left over from pre-SQLite builds
+try {
+  localStorage.removeItem('pw_run_history_v1');
+} catch {
+  /* ignore */
+}
 
 const PW_TEXT_EXTENSIONS = new Set([
   'ts',
@@ -5191,15 +5197,8 @@ export default function PlaywrightDashboard() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [specPickerOpen]);
-  // ── Multi-run history ────────────────────────────────────────────────────────
-  const [runHistory, setRunHistory] = useState<RunRecord[]>(() => {
-    try {
-      const raw = localStorage.getItem(RUN_HISTORY_KEY);
-      return raw ? (JSON.parse(raw) as RunRecord[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  // ── Multi-run history — always sourced from SQLite via /api/playwright/history ──
+  const [runHistory, setRunHistory] = useState<RunRecord[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [browsersOk, setBrowsersOk] = useState<boolean | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(
@@ -5283,15 +5282,6 @@ export default function PlaywrightDashboard() {
       // ignore corrupt storage
     }
   }, []);
-
-  // ── Persist runHistory to localStorage so it survives page refresh ──────────
-  useEffect(() => {
-    try {
-      localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(runHistory.slice(0, 30)));
-    } catch {
-      /* quota */
-    }
-  }, [runHistory]);
 
   // ── isSaved: true when current config matches what's persisted ──────────────
   const isSaved = useMemo(
