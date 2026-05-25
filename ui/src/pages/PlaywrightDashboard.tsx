@@ -245,6 +245,195 @@ function fmtRunLabel(runAt: string): string {
   }
 }
 
+// ─── Mini Sparkline ───────────────────────────────────────────────────────────
+
+function MiniSparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return <div style={{ width: 52, height: 22 }} />;
+  const W = 52, H = 22;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 1);
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return (
+    <svg width={W} height={H} style={{ overflow: 'visible', flexShrink: 0 }}>
+      <polyline
+        points={pts.join(' ')}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.8"
+      />
+    </svg>
+  );
+}
+
+// ─── Failure Reasons Donut Chart ──────────────────────────────────────────────
+
+const FAILURE_REASON_META: Record<ErrorType, { label: string; color: string }> = {
+  Assertion: { label: 'UI Text Change',    color: '#4F72D4' },
+  Locator:   { label: 'Element Not Found', color: '#34C759' },
+  Timeout:   { label: 'Timeout',           color: '#E8A728' },
+  Network:   { label: 'Network Error',     color: '#ef4444' },
+  Error:     { label: 'Other',             color: '#6b7280' },
+};
+
+function FailureReasonsChart({ tests }: { tests: TestCase[] }) {
+  const failed = tests.filter((t) => t.status === 'failed');
+  const counts = Object.fromEntries(
+    (Object.keys(FAILURE_REASON_META) as ErrorType[]).map((k) => [k, 0]),
+  ) as Record<ErrorType, number>;
+  for (const t of failed) counts[parseErrorType(t.error ?? '')]++;
+
+  const total = failed.length;
+  const entries = (Object.entries(counts) as [ErrorType, number][])
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (total === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-6 gap-2">
+        <CheckCircle2 size={24} style={{ color: '#34C759' }} />
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          No failures to analyse
+        </p>
+      </div>
+    );
+  }
+
+  const R = 40, cx = 48, cy = 48, strokeW = 16;
+  const circumference = 2 * Math.PI * R;
+  let dashOffset = 0;
+  const arcs = entries.map(([type, count]) => {
+    const dash = (count / total) * circumference;
+    const arc = { type, count, dash, off: dashOffset };
+    dashOffset += dash;
+    return arc;
+  });
+
+  return (
+    <div className="flex items-center gap-3">
+      <svg width={96} height={96} style={{ flexShrink: 0 }}>
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--border)" strokeWidth={strokeW} />
+        {arcs.map(({ type, dash, off }) => (
+          <circle
+            key={type}
+            cx={cx} cy={cy} r={R}
+            fill="none"
+            stroke={FAILURE_REASON_META[type].color}
+            strokeWidth={strokeW}
+            strokeDasharray={`${dash} ${circumference}`}
+            strokeDashoffset={-off}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        ))}
+        <text x={cx} y={cy - 3} textAnchor="middle" fontSize="15" fontWeight="800" fill="var(--text-main)">{total}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="7" fontWeight="600" fill="var(--text-muted)" letterSpacing="0.08em">FAILS</text>
+      </svg>
+      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+        {entries.map(([type, count]) => {
+          const { label, color } = FAILURE_REASON_META[type];
+          const pct = Math.round((count / total) * 100);
+          return (
+            <div key={type} className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-[11px] flex-1 truncate" style={{ color: 'var(--text-main)' }}>
+                {label}
+              </span>
+              <span className="text-[11px] font-bold shrink-0" style={{ color: 'var(--text-muted)' }}>
+                {pct}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Top Failed Tests Panel ───────────────────────────────────────────────────
+
+function TopFailedPanel({
+  suites,
+  onViewAll,
+}: {
+  suites: TestSuite[];
+  onViewAll: () => void;
+}) {
+  const failed = suites
+    .flatMap((s) =>
+      s.tests
+        .filter((t) => t.status === 'failed')
+        .map((t) => ({ ...t, suiteTitle: s.title })),
+    )
+    .sort((a, b) => (b.retries ?? 0) - (a.retries ?? 0))
+    .slice(0, 5);
+
+  if (failed.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-6 gap-2">
+        <CheckCircle2 size={24} style={{ color: '#34C759' }} />
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          No failed tests
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0">
+        {failed.map((test, i) => {
+          const errType = parseErrorType(test.error ?? '');
+          const { label, color } = FAILURE_REASON_META[errType];
+          const count = (test.retries ?? 0) + 1;
+          return (
+            <div
+              key={test.id}
+              className={`flex items-center gap-2 py-2 ${i > 0 ? 'border-t' : ''}`}
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--text-main)' }}>
+                  {test.title}
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  {test.suiteTitle}
+                </p>
+              </div>
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                style={{
+                  backgroundColor: `${color}20`,
+                  color,
+                  border: `1px solid ${color}40`,
+                }}
+              >
+                {label}
+              </span>
+              <span className="text-xs font-black shrink-0 w-4 text-right" style={{ color: '#EF4444' }}>
+                {count}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        onClick={onViewAll}
+        className="mt-3 text-[11px] font-semibold hover:opacity-70 transition-opacity text-start"
+        style={{ color: '#1a3a8f' }}
+      >
+        View all failures →
+      </button>
+    </div>
+  );
+}
+
 function HistoryChart({
   runs,
   selectedId,
@@ -4780,8 +4969,9 @@ export default function PlaywrightDashboard() {
   // ── Real-data states ────────────────────────────────────────────────────────
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [demoMode, setDemoMode] = useState(true);
+  const [hasResults, setHasResults] = useState(false);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const [runLog, setRunLog] = useState<string[]>([]);
   const [showLog, setShowLog] = useState(false);
   const [availableSpecs, setAvailableSpecs] = useState<string[]>([]);
@@ -4823,9 +5013,27 @@ export default function PlaywrightDashboard() {
       failed: allTests.filter((t) => t.status === 'failed').length,
       skipped: allTests.filter((t) => t.status === 'skipped').length,
       pending: allTests.filter((t) => t.status === 'pending').length,
+      flaky: allTests.filter((t) => (t.retries ?? 0) > 0 && t.status === 'passed').length,
     }),
     [allTests],
   );
+
+  // ── Live run counts — parsed from SSE stdout during an active run ──────────
+  // Playwright's list reporter emits "  ✓  1 › …" for pass and "  ✗  2 › …"
+  // for fail.  We count Unicode check/cross marks so the stat cards stay live
+  // during Phase 1 without needing per-test SSE events from the server.
+  const liveRunCounts = useMemo(() => {
+    if (!running || runLog.length === 0) return null;
+    let passed = 0, failed = 0;
+    for (const line of runLog) {
+      if (/^\s+[✓✔]\s/.test(line)) passed++;
+      else if (/^\s+[✗✘×]\s/.test(line)) failed++;
+    }
+    const totalLine = runLog.find((l) => /running \d+ test/i.test(l));
+    const parsed = totalLine ? parseInt(totalLine.match(/running (\d+)/i)?.[1] ?? '0', 10) : 0;
+    const total = Math.max(parsed, passed + failed);
+    return { passed, failed, total, running: Math.max(0, total - passed - failed) };
+  }, [running, runLog]);
   const totalDuration = useMemo(() => allTests.reduce((a, t) => a + t.duration, 0), [allTests]);
   const passRate = useMemo(() => {
     const denominator = counts.total - counts.skipped - counts.pending;
@@ -4913,7 +5121,7 @@ export default function PlaywrightDashboard() {
       const res = await fetch(url);
       if (res.status === 404) {
         setServerOnline(true);
-        if (!runId) setDemoMode(true);
+        setHasResults(false);
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -4923,17 +5131,14 @@ export default function PlaywrightDashboard() {
         runLog?: string[];
       };
       setSuites(data.suites);
-      setDemoMode(false);
+      setHasResults(true);
       setServerOnline(true);
       setLastRunAt(data.runAt ?? null);
       setSelectedRunId(runId ?? null);
       setExpandedSuites(Object.fromEntries(data.suites.map((s) => [s.id, true])));
-      // Restore the archived stdout when viewing an old run; clear when switching to latest.
-      // For archived runs restore the full log; only cap the live view to avoid unbounded state.
       setRunLog(runId && Array.isArray(data.runLog) ? data.runLog : []);
     } catch {
       setServerOnline(false);
-      setDemoMode(true);
     } finally {
       setIsLoading(false);
     }
@@ -4999,14 +5204,20 @@ export default function PlaywrightDashboard() {
     return () => clearInterval(id);
   }, [serverOnline, fetchResults, fetchSpecs, fetchHistory]);
 
+  // ── Tick "now" every 60 s for relative "last updated" display ───────────────
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   // ── Browser-binary check ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!serverOnline || demoMode) return;
+    if (!serverOnline) return;
     fetch(`${API_BASE}/api/playwright/browser-check`)
       .then((r) => r.json())
       .then((d: { ok: boolean }) => setBrowsersOk(d.ok))
       .catch(() => setBrowsersOk(null));
-  }, [serverOnline, demoMode]);
+  }, [serverOnline]);
 
   // ── Slowest tests (top 3) ───────────────────────────────────────────────────
   const slowestTests = useMemo(
@@ -5163,8 +5374,10 @@ export default function PlaywrightDashboard() {
               msg = raw;
             }
             if (msg.startsWith('[DONE]')) {
-              // [DONE] signals end of Phase 1. Keep reading for summary_start
-              // unless the user has no credentials AND is on Gemini — then bail.
+              // Archive is written server-side BEFORE [DONE] — refresh history
+              // immediately so the new run appears in the panel without waiting
+              // for Phase 2 AI summary to complete.
+              void fetchHistory();
               if (!settings.geminiApiKey && settings.provider === 'gemini') break outer;
               continue;
             }
@@ -5172,9 +5385,6 @@ export default function PlaywrightDashboard() {
           }
         }
         await fetchResults();
-        // Small delay to allow Windows NTFS to flush the archive file before readdir
-        await new Promise((r) => setTimeout(r, 120));
-        await fetchHistory();
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           setRunLog((prev) => [
@@ -5190,6 +5400,10 @@ export default function PlaywrightDashboard() {
       } finally {
         clearTimeout(timeoutId);
         setRunning(false);
+        // Always refresh history — runs even when fetchResults() throws or the
+        // AI summary is skipped.  A short delay lets Windows NTFS flush the file.
+        await new Promise((r) => setTimeout(r, 200));
+        void fetchHistory();
       }
     },
     [fetchResults, fetchHistory, settings, appendMessage, appendChunk, updateMessage, allAgents],
@@ -5380,16 +5594,6 @@ export default function PlaywrightDashboard() {
     await runWithSSE(body);
   }, [serverOnline, selectedSpecs, config, runWithSSE]);
 
-  const reset = () => {
-    setSuites([]);
-    setActiveTab('all');
-    setExpandedErrors({});
-    setSearchQuery('');
-    setDemoMode(true);
-    setLastRunAt(null);
-    setSelectedRunId(null);
-  };
-
   const exportReport = () => {
     const report = {
       generated: new Date().toISOString(),
@@ -5472,7 +5676,7 @@ export default function PlaywrightDashboard() {
                 >
                   Playwright Dashboard
                 </h1>
-                {serverOnline === true && !demoMode && (
+                {serverOnline === true && hasResults && (
                   <span
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{
@@ -5486,22 +5690,6 @@ export default function PlaywrightDashboard() {
                       style={{ backgroundColor: '#34C759' }}
                     />
                     Live
-                  </span>
-                )}
-                {demoMode && (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{
-                      background: 'rgba(232,167,40,0.10)',
-                      color: '#92400e',
-                      border: '1px solid rgba(232,167,40,0.30)',
-                    }}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full inline-block"
-                      style={{ backgroundColor: '#E8A728' }}
-                    />
-                    Demo
                   </span>
                 )}
                 {serverOnline === false && (
@@ -5556,18 +5744,30 @@ export default function PlaywrightDashboard() {
                 )}
                 {lastRunAt && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-semibold"
                     style={{
                       backgroundColor: 'var(--bg-card)',
                       color: 'var(--text-muted)',
                       border: '1px solid var(--border)',
                     }}
                   >
-                    <RotateCcw size={9} /> last run{' '}
-                    {new Date(lastRunAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: '#34C759' }} />
+                    Last updated:{' '}
+                    {(() => {
+                      const diffMin = Math.round((now - new Date(lastRunAt).getTime()) / 60_000);
+                      if (diffMin < 1) return 'just now';
+                      if (diffMin < 60) return `${diffMin} min ago`;
+                      const h = Math.round(diffMin / 60);
+                      return `${h}h ago`;
+                    })()}
+                    <button
+                      onClick={() => fetchResults()}
+                      className="hover:opacity-60 transition-opacity"
+                      title="Refresh"
+                      aria-label="Refresh results"
+                    >
+                      <RotateCcw size={9} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
                   </span>
                 )}
                 {isLoading && (
@@ -5803,26 +6003,6 @@ export default function PlaywrightDashboard() {
                     <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} /> Refresh
                   </button>
                   <button
-                    onClick={reset}
-                    disabled={running}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
-                    style={{
-                      color: 'var(--text-muted)',
-                      background: 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = 'var(--text-main)';
-                      e.currentTarget.style.background = 'var(--bg-card)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = 'var(--text-muted)';
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                    title="Reset to demo data"
-                  >
-                    Demo
-                  </button>
-                  <button
                     onClick={() => setSettingsOpen((v) => !v)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                     style={
@@ -5894,37 +6074,50 @@ export default function PlaywrightDashboard() {
           {/* ── Dashboard view ───────────────────────────────────────────────────── */}
           {activeView === 'dashboard' && (
             <>
-              {/* Demo-mode banner */}
-              {demoMode && (
+              {/* Server offline banner */}
+              {serverOnline === false && (
                 <div
                   className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
                   style={{
-                    background: '#fffbeb',
-                    borderColor: '#fde68a',
-                    color: '#92400e',
+                    background: '#fef2f2',
+                    borderColor: '#fecaca',
+                    color: '#991b1b',
                   }}
                 >
                   <AlertTriangle size={12} className="shrink-0" />
                   <span>
-                    <strong>Demo mode</strong> — showing sample data.
-                    {serverOnline === false
-                      ? ' Start the Express server (npm run dev) then click Refresh.'
-                      : serverOnline === true
-                        ? ' No results file found yet — click Run Tests to generate real data.'
-                        : ' Connecting to server…'}
+                    <strong>Server offline</strong> — start the Express server (
+                    <code className="font-mono">npm run dev</code>) then click Refresh.
                   </span>
                   <button
                     onClick={() => fetchResults()}
                     className="ml-auto shrink-0 font-semibold underline hover:no-underline"
-                    style={{ color: '#92400e' }}
+                    style={{ color: '#991b1b' }}
                   >
                     Retry
                   </button>
                 </div>
               )}
 
+              {/* No results yet banner */}
+              {serverOnline === true && !hasResults && !running && !isLoading && (
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
+                  style={{
+                    background: 'rgba(59,130,246,0.05)',
+                    borderColor: '#93c5fd',
+                    color: '#1a3a8f',
+                  }}
+                >
+                  <Clock size={12} className="shrink-0" />
+                  <span>
+                    No test results yet — click <strong>Run Tests</strong> to execute your Playwright suite.
+                  </span>
+                </div>
+              )}
+
               {/* Browser-not-installed banner */}
-              {browsersOk === false && !bannerDismissed && !demoMode && (
+              {browsersOk === false && !bannerDismissed && (
                 <div
                   className="flex items-start gap-3 px-4 py-3 mb-4 rounded-xl border text-xs"
                   style={{
@@ -5968,7 +6161,7 @@ export default function PlaywrightDashboard() {
               )}
 
               {/* Historical-run banner */}
-              {selectedRunId && !demoMode && (
+              {selectedRunId && (
                 <div
                   className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl border text-[11px]"
                   style={{
@@ -6251,246 +6444,246 @@ export default function PlaywrightDashboard() {
                 </div>
               )}
 
-              {/* ── KPI Hero: large Pass Rate card + 4 secondary tiles ──────────── */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                {/* Hero — Pass Rate (spans 2 columns on md+) */}
-                <div
-                  className="md:col-span-2 relative overflow-hidden rounded-2xl p-5 flex items-center gap-5"
-                  style={{
-                    backgroundColor: 'var(--bg-card)',
-                    boxShadow: '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
-                    border: `1px solid ${passRate >= 80 ? 'rgba(16,185,129,0.18)' : passRate >= 50 ? 'rgba(251,191,36,0.20)' : 'rgba(239,68,68,0.18)'}`,
-                  }}
-                >
-                  {/* Soft background glow */}
-                  <div
-                    aria-hidden
-                    className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none"
-                    style={{
-                      backgroundColor:
-                        passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444',
-                    }}
-                  />
-                  {/* Progress ring */}
-                  <svg width="92" height="92" viewBox="0 0 92 92" className="shrink-0">
-                    <circle
-                      cx="46"
-                      cy="46"
-                      r="38"
-                      stroke="var(--border)"
-                      strokeWidth="8"
-                      fill="none"
-                    />
-                    <circle
-                      cx="46"
-                      cy="46"
-                      r="38"
-                      fill="none"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      stroke={passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : '#ef4444'}
-                      strokeDasharray={`${(passRate / 100) * 238.76} 238.76`}
-                      transform="rotate(-90 46 46)"
+              {/* ── 5 KPI stat cards ─────────────────────────────────────────── */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                {((): { label: string; valueStr: string; sub: string; histValues: number[]; prevVal: number | null; accent: string; valueColor: string; lowerIsBetter: boolean; isLive?: boolean }[] => {
+                  const prevRun = runHistory[1] ?? null;
+                  const prevPassRate = prevRun
+                    ? (() => { const d = prevRun.total - prevRun.skipped; return d > 0 ? Math.round((prevRun.passed / d) * 100) : 0; })()
+                    : null;
+                  // Use live counts during an active run so numbers update as tests complete
+                  const liveTotal = liveRunCounts?.total ?? 0;
+                  const livePassed = liveRunCounts?.passed ?? 0;
+                  const liveFailed = liveRunCounts?.failed ?? 0;
+                  const liveRate = liveTotal > 0 ? Math.round((livePassed / liveTotal) * 100) : 0;
+                  return [
+                    {
+                      label: 'Total Executions',
+                      valueStr: running ? (liveTotal > 0 ? String(liveTotal) : '…') : counts.total > 0 ? String(counts.total) : '—',
+                      sub: running ? `${liveRunCounts?.running ?? 0} remaining` : `${suites.length} suite${suites.length === 1 ? '' : 's'}`,
+                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.total),
+                      prevVal: prevRun?.total ?? null,
+                      accent: '#6366f1',
+                      valueColor: '#6366f1',
+                      lowerIsBetter: false,
+                      isLive: running,
+                    },
+                    {
+                      label: 'Passed',
+                      valueStr: running ? String(livePassed) : counts.total > 0 ? String(counts.passed) : '—',
+                      sub: running
+                        ? liveTotal > 0 ? `${Math.round((livePassed / liveTotal) * 100)}%` : '0%'
+                        : counts.total > 0 ? `${Math.round((counts.passed / counts.total) * 100)}%` : '—',
+                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.passed),
+                      prevVal: prevRun?.passed ?? null,
+                      accent: '#34C759',
+                      valueColor: '#16A34A',
+                      lowerIsBetter: false,
+                      isLive: running,
+                    },
+                    {
+                      label: 'Failed',
+                      valueStr: running ? String(liveFailed) : counts.total > 0 ? String(counts.failed) : '—',
+                      sub: running
+                        ? liveTotal > 0 ? `${Math.round((liveFailed / liveTotal) * 100)}%` : '0%'
+                        : counts.total > 0 ? `${Math.round((counts.failed / counts.total) * 100)}%` : '—',
+                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.failed),
+                      prevVal: prevRun?.failed ?? null,
+                      accent: running ? (liveFailed > 0 ? '#EF4444' : '#94a3b8') : counts.failed > 0 ? '#EF4444' : '#94a3b8',
+                      valueColor: running ? (liveFailed > 0 ? '#DC2626' : 'var(--text-muted)') : counts.failed > 0 ? '#DC2626' : 'var(--text-muted)',
+                      lowerIsBetter: true,
+                      isLive: running,
+                    },
+                    {
+                      label: 'Flaky',
+                      valueStr: counts.total > 0 ? String(counts.flaky) : '—',
+                      sub: counts.total > 0 ? `${Math.round((counts.flaky / counts.total) * 100)}%` : '—',
+                      histValues: runHistory.slice(0, 8).reverse().map((r) => r.flaky),
+                      prevVal: prevRun?.flaky ?? null,
+                      accent: counts.flaky > 0 ? '#E8A728' : '#94a3b8',
+                      valueColor: counts.flaky > 0 ? '#D97706' : 'var(--text-muted)',
+                      lowerIsBetter: true,
+                    },
+                    {
+                      label: 'Success Rate',
+                      valueStr: running ? (liveTotal > 0 ? `${liveRate}%` : '…') : counts.total > 0 ? `${passRate}%` : '—',
+                      sub: running
+                        ? liveRate >= 80 ? 'Looking good' : liveRate > 0 ? 'Needs attention' : 'Running…'
+                        : passRate >= 95 ? 'All-green' : passRate >= 80 ? 'Mostly passing' : passRate >= 50 ? 'Needs attention' : counts.total > 0 ? 'Critical' : '—',
+                      histValues: runHistory.slice(0, 8).reverse().map((r) => { const d = r.total - r.skipped; return d > 0 ? Math.round((r.passed / d) * 100) : 0; }),
+                      prevVal: prevPassRate,
+                      accent: running ? (liveRate >= 80 ? '#34C759' : liveRate > 0 ? '#E8A728' : '#94a3b8') : passRate >= 80 ? '#34C759' : passRate >= 50 ? '#E8A728' : counts.total > 0 ? '#EF4444' : '#94a3b8',
+                      valueColor: running ? (liveRate >= 80 ? '#16A34A' : liveRate > 0 ? '#D97706' : 'var(--text-muted)') : passRate >= 80 ? '#16A34A' : passRate >= 50 ? '#D97706' : counts.total > 0 ? '#DC2626' : 'var(--text-muted)',
+                      lowerIsBetter: false,
+                      isLive: running,
+                    },
+                  ];
+                })().map(({ label, valueStr, sub, histValues, prevVal, accent, valueColor, lowerIsBetter, isLive }) => {
+                  const currentVal = histValues[histValues.length - 1] ?? null;
+                  let trendEl: React.ReactNode = null;
+                  if (!isLive && prevVal !== null && currentVal !== null && runHistory.length >= 2) {
+                    const delta = currentVal - prevVal;
+                    if (delta !== 0) {
+                      const isGood = lowerIsBetter ? delta < 0 : delta > 0;
+                      trendEl = (
+                        <span className="text-[9px] font-bold" style={{ color: isGood ? '#16A34A' : '#DC2626' }}>
+                          {delta > 0 ? '+' : ''}{delta} vs prev
+                        </span>
+                      );
+                    }
+                  }
+                  return (
+                    <div
+                      key={label}
+                      className="relative overflow-hidden rounded-2xl px-4 py-4 flex flex-col gap-2"
                       style={{
-                        transition: 'stroke-dasharray 700ms ease, stroke 300ms',
+                        backgroundColor: 'var(--bg-card)',
+                        border: `1px solid ${isLive ? `${accent}50` : 'var(--border)'}`,
+                        boxShadow: isLive ? `0 0 0 1px ${accent}30, 0 1px 4px rgba(0,0,0,0.05)` : '0 1px 4px rgba(0,0,0,0.05)',
+                        transition: 'border-color 0.3s, box-shadow 0.3s',
                       }}
-                    />
-                    <text
-                      x="46"
-                      y="50"
-                      textAnchor="middle"
-                      fontSize="20"
-                      fontWeight="800"
-                      fill={passRate >= 80 ? '#059669' : passRate >= 50 ? '#d97706' : '#dc2626'}
                     >
-                      {counts.total === 0 ? '—' : `${passRate}%`}
-                    </text>
-                    <text
-                      x="46"
-                      y="66"
-                      textAnchor="middle"
-                      fontSize="8"
-                      fontWeight="600"
-                      fill="var(--text-muted)"
-                      style={{ letterSpacing: '0.05em' }}
-                    >
-                      PASS
-                    </text>
-                  </svg>
-                  <div className="flex-1 min-w-0 relative">
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-wider mb-1"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      Run Health
-                    </p>
-                    <p
-                      className="text-lg font-black leading-tight mb-2.5"
-                      style={{ color: 'var(--text-main)' }}
-                    >
-                      {counts.total === 0
-                        ? 'No data yet'
-                        : passRate >= 95
-                          ? 'All-green'
-                          : passRate >= 80
-                            ? 'Mostly passing'
-                            : passRate >= 50
-                              ? 'Needs attention'
-                              : 'Critical failures'}
-                    </p>
-                    {/* Inline stack bar */}
-                    <div
-                      className="h-2 rounded-full overflow-hidden flex"
-                      style={{ backgroundColor: 'var(--bg-muted)' }}
-                    >
-                      {counts.passed > 0 && (
-                        <div
-                          className="h-full transition-all duration-700"
-                          style={{
-                            width: `${(counts.passed / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: '#34C759',
-                          }}
-                        />
-                      )}
-                      {counts.failed > 0 && (
-                        <div
-                          className="h-full transition-all duration-700"
-                          style={{
-                            width: `${(counts.failed / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: '#EF4444',
-                          }}
-                        />
-                      )}
-                      {counts.skipped > 0 && (
-                        <div
-                          className="h-full transition-all duration-700"
-                          style={{
-                            width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`,
-                            backgroundColor: '#E8A728',
-                          }}
-                        />
-                      )}
-                      {counts.pending > 0 && (
-                        <div
-                          className="h-full bg-neutral-300 transition-all duration-700"
-                          style={{
-                            width: `${(counts.pending / Math.max(counts.total, 1)) * 100}%`,
-                          }}
-                        />
-                      )}
+                      {/* Top accent bar — pulses when live */}
+                      <div
+                        className={`absolute top-0 inset-x-0 h-0.5 rounded-t-2xl${isLive ? ' animate-pulse' : ''}`}
+                        style={{ backgroundColor: accent }}
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                          {label}
+                        </p>
+                        {isLive && (
+                          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
+                        )}
+                      </div>
+                      <div className="flex items-end justify-between gap-2">
+                        <div>
+                          <p className="text-2xl font-black leading-none" style={{ color: valueColor }}>{valueStr}</p>
+                          <p className="text-[10px] mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+                        </div>
+                        <MiniSparkline values={histValues} color={accent} />
+                      </div>
+                      {trendEl && <div>{trendEl}</div>}
                     </div>
-                    <div
-                      className="flex items-center gap-3 mt-2 text-[10px]"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      <span className="flex items-center gap-1">
-                        <span
-                          className="w-1.5 h-1.5 rounded-sm inline-block"
-                          style={{ backgroundColor: '#34C759' }}
-                        />
-                        <span className="font-semibold" style={{ color: '#16A34A' }}>
-                          {counts.passed}
-                        </span>{' '}
-                        passed
-                      </span>
-                      {counts.failed > 0 && (
-                        <span className="flex items-center gap-1">
-                          <span
-                            className="w-1.5 h-1.5 rounded-sm inline-block"
-                            style={{ backgroundColor: '#EF4444' }}
-                          />
-                          <span className="font-semibold" style={{ color: '#EF4444' }}>
-                            {counts.failed}
-                          </span>{' '}
-                          failed
-                        </span>
-                      )}
-                      {counts.skipped > 0 && (
-                        <span className="flex items-center gap-1">
-                          <span
-                            className="w-1.5 h-1.5 rounded-sm inline-block"
-                            style={{ backgroundColor: '#E8A728' }}
-                          />
-                          <span className="font-semibold" style={{ color: '#D97706' }}>
-                            {counts.skipped}
-                          </span>{' '}
-                          skipped
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Secondary tiles (4 across, 1 column on mobile, 3 columns md+) */}
-                {[
-                  {
-                    label: 'Total',
-                    value: counts.total,
-                    sub: `${suites.length} suites`,
-                    color: '#6366f1',
-                    accent: '#6366f1',
-                    icon: <Hash size={13} />,
-                  },
-                  {
-                    label: 'Failed',
-                    value: counts.failed,
-                    sub: counts.failed > 0 ? 'needs triage' : 'all clear',
-                    color: counts.failed > 0 ? '#dc2626' : 'var(--text-muted)',
-                    accent: counts.failed > 0 ? '#ef4444' : '#94a3b8',
-                    icon: counts.failed > 0 ? <XCircle size={13} /> : <CheckCircle2 size={13} />,
-                  },
-                  {
-                    label: 'Duration',
-                    value: formatMs(totalDuration),
-                    sub:
-                      counts.total > 0
-                        ? `${Math.round(totalDuration / Math.max(counts.total, 1))}ms avg`
-                        : '—',
-                    color: '#8b5cf6',
-                    accent: '#8b5cf6',
-                    icon: <Clock size={13} />,
-                  },
-                ].map(({ label, value, sub, color, accent, icon }) => (
-                  <div
-                    key={label}
-                    className="relative overflow-hidden rounded-2xl px-4 py-4"
-                    style={{
-                      backgroundColor: 'var(--bg-card)',
-                      boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <div
-                      className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-                      style={{ backgroundColor: accent }}
-                    />
-                    <div className="flex items-center gap-2 mb-1">
-                      <span style={{ color: accent }}>{icon}</span>
-                      <p
-                        className="text-[10px] font-bold uppercase tracking-wider"
-                        style={{ color: 'var(--text-muted)' }}
-                      >
-                        {label}
-                      </p>
-                    </div>
-                    <p className="text-2xl font-black leading-none mt-2" style={{ color }}>
-                      {value}
-                    </p>
-                    <p
-                      className="text-[10px] mt-1.5 font-medium"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      {sub}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* History chart — real run records only */}
-              <HistoryChart
-                runs={runHistory}
-                selectedId={selectedRunId}
-                onSelect={(id) => fetchResults(id)}
-              />
+              {/* ── Run Health hero ───────────────────────────────────────────── */}
+              {(() => {
+                const heroTotal  = running && liveRunCounts ? liveRunCounts.total  : counts.total;
+                const heroPassed = running && liveRunCounts ? liveRunCounts.passed  : counts.passed;
+                const heroFailed = running && liveRunCounts ? liveRunCounts.failed  : counts.failed;
+                const heroRate   = running && liveRunCounts && liveRunCounts.total > 0
+                  ? Math.round((liveRunCounts.passed / liveRunCounts.total) * 100)
+                  : passRate;
+                const heroColor  = heroRate >= 80 ? '#34C759' : heroRate >= 50 ? '#E8A728' : heroTotal > 0 ? '#ef4444' : '#6366f1';
+                return (
+                  <div
+                    className="relative overflow-hidden rounded-2xl p-5 flex items-center gap-5 mb-6"
+                    style={{
+                      backgroundColor: 'var(--bg-card)',
+                      boxShadow: running ? `0 0 0 1px ${heroColor}40, 0 4px 16px -6px rgba(0,0,0,0.10)` : '0 4px 16px -6px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+                      border: `1px solid ${heroRate >= 80 ? 'rgba(16,185,129,0.18)' : heroRate >= 50 ? 'rgba(251,191,36,0.20)' : heroTotal > 0 ? 'rgba(239,68,68,0.18)' : 'var(--border)'}`,
+                      transition: 'box-shadow 0.3s, border-color 0.3s',
+                    }}
+                  >
+                    <div aria-hidden className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-20 blur-2xl pointer-events-none" style={{ backgroundColor: heroColor }} />
+                    <svg width="80" height="80" viewBox="0 0 80 80" className="shrink-0">
+                      <circle cx="40" cy="40" r="32" stroke="var(--border)" strokeWidth="7" fill="none" />
+                      <circle
+                        cx="40" cy="40" r="32" fill="none" strokeWidth="7" strokeLinecap="round"
+                        stroke={heroColor}
+                        strokeDasharray={`${(heroRate / 100) * 201.06} 201.06`}
+                        transform="rotate(-90 40 40)"
+                        style={{ transition: 'stroke-dasharray 500ms ease, stroke 300ms' }}
+                      />
+                      {running && (
+                        <circle cx="40" cy="40" r="32" fill="none" strokeWidth="7" stroke={heroColor} strokeDasharray="10 191" strokeDashoffset={`${-(heroRate / 100) * 201.06}`} transform="rotate(-90 40 40)" opacity="0.3" className="animate-spin" style={{ animationDuration: '3s' }} />
+                      )}
+                      <text x="40" y="44" textAnchor="middle" fontSize="17" fontWeight="800" fill={heroRate >= 80 ? '#059669' : heroRate >= 50 ? '#d97706' : heroTotal > 0 ? '#dc2626' : '#6366f1'}>
+                        {heroTotal === 0 && !running ? '—' : `${heroRate}%`}
+                      </text>
+                      <text x="40" y="56" textAnchor="middle" fontSize="7" fontWeight="600" fill="var(--text-muted)" letterSpacing="0.05em">{running ? 'LIVE' : 'PASS'}</text>
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Run Health</p>
+                        {running && <span className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse" style={{ backgroundColor: '#3b82f620', color: '#3b82f6' }}>● RUNNING</span>}
+                      </div>
+                      <p className="text-base font-black leading-tight mb-2" style={{ color: 'var(--text-main)' }}>
+                        {running
+                          ? liveRunCounts && liveRunCounts.total > 0
+                            ? `${heroPassed} passed · ${heroFailed} failed · ${liveRunCounts.running} remaining`
+                            : 'Executing tests…'
+                          : heroTotal === 0 ? 'No data yet' : heroRate >= 95 ? 'All-green' : heroRate >= 80 ? 'Mostly passing' : heroRate >= 50 ? 'Needs attention' : 'Critical failures'}
+                      </p>
+                      <div className="h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'var(--bg-muted)' }}>
+                        {heroPassed > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(heroPassed / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#34C759' }} />}
+                        {heroFailed > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(heroFailed / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#EF4444' }} />}
+                        {!running && counts.skipped > 0 && <div className="h-full transition-all duration-500" style={{ width: `${(counts.skipped / Math.max(counts.total, 1)) * 100}%`, backgroundColor: '#E8A728' }} />}
+                        {running && liveRunCounts && liveRunCounts.running > 0 && <div className="h-full animate-pulse" style={{ width: `${(liveRunCounts.running / Math.max(heroTotal, 1)) * 100}%`, backgroundColor: '#6366f1' }} />}
+                      </div>
+                      <div className="flex items-center gap-4 mt-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#34C759' }} /><span className="font-semibold" style={{ color: '#16A34A' }}>{heroPassed}</span> passed</span>
+                        {heroFailed > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#EF4444' }} /><span className="font-semibold" style={{ color: '#EF4444' }}>{heroFailed}</span> failed</span>}
+                        {!running && counts.skipped > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} /><span className="font-semibold" style={{ color: '#D97706' }}>{counts.skipped}</span> skipped</span>}
+                        {!running && counts.flaky > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block" style={{ backgroundColor: '#E8A728' }} /><span className="font-semibold" style={{ color: '#D97706' }}>{counts.flaky}</span> flaky</span>}
+                        {running && liveRunCounts && liveRunCounts.running > 0 && <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-sm inline-block animate-pulse" style={{ backgroundColor: '#6366f1' }} /><span className="font-semibold" style={{ color: '#6366f1' }}>{liveRunCounts.running}</span> running</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* ── Insights row: Executions Over Time · Top Failed · Failure Reasons ── */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 items-start">
+                {/* Executions Over Time — HistoryChart owns its card wrapper */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Executions Over Time
+                  </p>
+                  <HistoryChart
+                    runs={runHistory}
+                    selectedId={selectedRunId}
+                    onSelect={(id) => fetchResults(id)}
+                  />
+                </div>
+
+                {/* Top Failed Tests */}
+                <div
+                  className="rounded-2xl p-4 flex flex-col"
+                  style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                    Top Failed Tests
+                  </p>
+                  <TopFailedPanel
+                    suites={suites}
+                    onViewAll={() => setActiveTab('failed')}
+                  />
+                </div>
+
+                {/* Failure Reasons */}
+                <div
+                  className="rounded-2xl p-4 flex flex-col"
+                  style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                      Failure Reasons
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('failed')}
+                      className="text-[10px] font-semibold hover:opacity-70 transition-opacity"
+                      style={{ color: '#1a3a8f' }}
+                    >
+                      View full report →
+                    </button>
+                  </div>
+                  <FailureReasonsChart tests={allTests} />
+                </div>
+              </div>
 
               {/* Runs panel */}
               <RunsPanel
