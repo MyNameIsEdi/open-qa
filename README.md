@@ -13,7 +13,7 @@
 
 <br/>
 
-![QA Office](assets/screenshots/qa-office.png)
+![QA Office](assets/screenshots/playwrightdb.jpeg)
 
 </div>
 
