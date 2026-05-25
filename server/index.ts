@@ -1212,7 +1212,7 @@ app.post('/api/playwright/run', async (req, res) => {
   };
   env.PW_RUNTIME_CONFIG = JSON.stringify(runtimeConfig);
 
-  send(`[INFO] Running: npx playwright ${args.join(' ')}`);
+  send(`[INFO] Running: playwright ${args.join(' ')}`);
   if (runtimeConfig.baseUrl) send(`[INFO] baseUrl  → ${runtimeConfig.baseUrl}`);
   if (runtimeConfig.timeout) send(`[INFO] timeout  → ${runtimeConfig.timeout}ms`);
   if (runtimeConfig.workers) send(`[INFO] workers  → ${runtimeConfig.workers}`);
@@ -1223,35 +1223,40 @@ app.post('/api/playwright/run', async (req, res) => {
   // Archive key: bare filenames joined (clean display in Run History)
   const archiveSpec = bareNames.length > 0 ? bareNames.join(',') : spec;
 
-  // ── Remote server warmup ──────────────────────────────────────────────────────
-  // Render free-tier sleeps after ~15 min of inactivity.  A single HTTP GET
-  // before spawning Playwright wakes the dyno so tests don't cold-start timeout.
+  // ── Remote server warmup (non-blocking) ──────────────────────────────────────
+  // Render free-tier sleeps after ~15 min of inactivity. Fire the warmup ping
+  // concurrently with Playwright startup so it doesn't add to wall-clock time.
   const targetUrl = (runtimeConfig.baseUrl as string | undefined) ?? '';
   if (targetUrl && !/localhost|127\.0\.0\.1/.test(targetUrl)) {
     send(`[INFO] Warming up ${targetUrl} …`);
-    try {
-      const httpMod = await import(targetUrl.startsWith('https') ? 'https' : 'http');
-      await new Promise<void>((resolve, reject) => {
-        const req = httpMod.default.get(targetUrl, (r: { resume: () => void }) => {
-          r.resume();
-          resolve();
+    void (async () => {
+      try {
+        const httpMod = await import(targetUrl.startsWith('https') ? 'https' : 'http');
+        await new Promise<void>((resolve, reject) => {
+          const req = httpMod.default.get(targetUrl, (r: { resume: () => void }) => {
+            r.resume();
+            resolve();
+          });
+          req.setTimeout(30_000, () => {
+            req.destroy();
+            reject(new Error('warmup timeout'));
+          });
+          req.on('error', (e: Error) => reject(e));
         });
-        req.setTimeout(55_000, () => {
-          req.destroy();
-          reject(new Error('warmup timeout'));
-        });
-        req.on('error', (e: Error) => reject(e));
-      });
-      send(`[INFO] Server is awake ✓`);
-    } catch (err: unknown) {
-      send(`[WARN] Warmup failed: ${String(err)} — tests will proceed but may be slow`);
-    }
+        send(`[INFO] Server is awake ✓`);
+      } catch (err: unknown) {
+        send(`[WARN] Warmup failed: ${String(err)} — tests may be slow`);
+      }
+    })();
   }
 
-  const child = spawn('npx', ['playwright', ...args], {
+  // Use the local playwright CLI directly — avoids npx resolution overhead
+  // (saves 30-90s on Windows where npx+shell startup is expensive).
+  const pwCli = path.join(root, 'node_modules', '@playwright', 'test', 'cli.js');
+  const child = spawn(process.execPath, [pwCli, ...args], {
     cwd: root,
     env,
-    shell: process.platform === 'win32',
+    shell: false,
   });
 
   // Capture log lines so they're (a) persisted with the archived run and
@@ -1571,7 +1576,7 @@ app.post('/api/run-dynamic-test', async (req, res) => {
   try {
     await fs.writeFile(tmpFile, authorLine + code, 'utf-8');
     sendStr(`[INFO] Dynamic spec written by ${agentName ?? 'agent'}`);
-    sendStr('[INFO] Running: npx playwright test _dynamic_agent_test.spec.ts');
+    sendStr('[INFO] Running: playwright test _dynamic_agent_test.spec.ts');
   } catch (err: unknown) {
     sendStr(`[ERROR] Failed to write test file: ${String(err)}`);
     sendStr('[DONE] Finished with exit code 1');
@@ -1585,10 +1590,11 @@ app.post('/api/run-dynamic-test', async (req, res) => {
     PW_RUNTIME_CONFIG: JSON.stringify({ testMatch: ['**/_dynamic_agent_test.spec.ts'] }),
   };
 
-  const child = spawn('npx', ['playwright', 'test'], {
+  const pwCli = path.join(root, 'node_modules', '@playwright', 'test', 'cli.js');
+  const child = spawn(process.execPath, [pwCli, 'test'], {
     cwd: root,
     env,
-    shell: process.platform === 'win32',
+    shell: false,
   });
 
   // Capture every log line so we can persist them with the archived run.
