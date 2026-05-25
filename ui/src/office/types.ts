@@ -163,7 +163,7 @@ export interface Character {
   /** Assigned seat uid, or null if no seat */
   seatId: string | null;
   /** Active speech bubble type, or null if none showing */
-  bubbleType: 'permission' | 'waiting' | null;
+  bubbleType: 'permission' | 'waiting' | 'react_pass' | 'react_fail' | null;
   /** Countdown timer for bubble (waiting: 2→0, permission: unused) */
   bubbleTimer: number;
   /** Timer to stay seated while inactive after seat reassignment (counts down to 0) */

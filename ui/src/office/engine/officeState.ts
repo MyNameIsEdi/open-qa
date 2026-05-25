@@ -672,6 +672,23 @@ export class OfficeState {
     }
   }
 
+  /** Show a timed reaction bubble (pass ✓ or fail ✗) above an agent. Auto-dismisses. */
+  showReactBubble(id: number, type: 'react_pass' | 'react_fail'): void {
+    const ch = this.characters.get(id);
+    if (ch) {
+      ch.bubbleType = type;
+      ch.bubbleTimer = WAITING_BUBBLE_DURATION_SEC;
+    }
+  }
+
+  /** Show a reaction bubble on every character in the office. */
+  triggerReactBubblesAll(type: 'react_pass' | 'react_fail'): void {
+    for (const ch of this.characters.values()) {
+      ch.bubbleType = type;
+      ch.bubbleTimer = WAITING_BUBBLE_DURATION_SEC;
+    }
+  }
+
   /** Dismiss bubble on click — permission: instant, waiting: quick fade */
   dismissBubble(id: number): void {
     const ch = this.characters.get(id);
@@ -744,8 +761,12 @@ export class OfficeState {
         updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles),
       );
 
-      // Tick bubble timer for waiting bubbles
-      if (ch.bubbleType === 'waiting') {
+      // Tick bubble timer for timed bubbles (waiting, react_pass, react_fail)
+      if (
+        ch.bubbleType === 'waiting' ||
+        ch.bubbleType === 'react_pass' ||
+        ch.bubbleType === 'react_fail'
+      ) {
         ch.bubbleTimer -= dt;
         if (ch.bubbleTimer <= 0) {
           ch.bubbleType = null;
