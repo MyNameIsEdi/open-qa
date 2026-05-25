@@ -21,6 +21,7 @@ type RC = {
 };
 
 const rc: RC = process.env.PW_RUNTIME_CONFIG ? JSON.parse(process.env.PW_RUNTIME_CONFIG) : {};
+const localWebServerUrl = 'http://localhost:5173';
 
 function buildProjects(b?: RC['browsers']) {
   const projects: { name: string; use: object }[] = [];
@@ -43,6 +44,17 @@ export default defineConfig({
   retries: rc.retries ?? (process.env.CI ? 1 : 0),
   workers: rc.workers ?? (process.env.CI ? 1 : undefined),
   timeout: rc.timeout ?? 30_000,
+
+  ...(rc.baseUrl
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: localWebServerUrl,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
 
   reporter: [
     ['list'],
