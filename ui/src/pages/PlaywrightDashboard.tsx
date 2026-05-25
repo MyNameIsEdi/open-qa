@@ -5160,6 +5160,8 @@ export default function PlaywrightDashboard() {
 
   const [suites, setSuites] = useState<TestSuite[]>([]);
   const [running, setRunning] = useState(false);
+  // Ref to the active AbortController so the Stop button can cancel the SSE stream
+  const runAbortRef = useRef<AbortController | null>(null);
   const [activeTab, setActiveTab] = useState<FilterKey>('active');
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [config, setConfig] = useState<PlaywrightConfig>(DEFAULT_CONFIG);
@@ -5452,6 +5454,7 @@ export default function PlaywrightDashboard() {
   const runWithSSE = useCallback(
     async (body: RunRequest) => {
       const controller = new AbortController();
+      runAbortRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000); // 10-minute hard limit
       setRunning(true);
       setShowLog(true);
@@ -5592,6 +5595,7 @@ export default function PlaywrightDashboard() {
         }
       } finally {
         clearTimeout(timeoutId);
+        runAbortRef.current = null;
         setRunning(false);
         // Always refresh history — runs even when fetchResults() throws or the
         // AI summary is skipped.  A short delay lets Windows NTFS flush the file.
@@ -5621,6 +5625,7 @@ export default function PlaywrightDashboard() {
         return;
       }
       const controller = new AbortController();
+      runAbortRef.current = controller;
       const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
       setRunning(true);
       setShowLog(true);
@@ -5753,6 +5758,7 @@ export default function PlaywrightDashboard() {
         }
       } finally {
         clearTimeout(timeoutId);
+        runAbortRef.current = null;
         setRunning(false);
       }
     },
@@ -6236,7 +6242,14 @@ export default function PlaywrightDashboard() {
                     {settingsOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                   </button>
                   <button
-                    onClick={running ? () => setRunning(false) : runTests}
+                    onClick={
+                      running
+                        ? () => {
+                            runAbortRef.current?.abort();
+                            runAbortRef.current = null;
+                          }
+                        : runTests
+                    }
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 ${running ? 'text-white' : 'text-white'}`}
                     style={
                       running
