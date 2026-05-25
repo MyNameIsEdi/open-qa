@@ -7,10 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **Smarter pixel agents** — office canvas agents now react to four live signals instead of just test-run state:
-  1. *Chat-reactive*: `agentStatuses` ('working'/'waiting') is wired to `setAgentActive` so pixel agents walk to their desk and type whenever they are responding to a chat message, and wander again when idle (`PlaywrightDashboard.tsx`).
-  2. *Emotional reactions*: when a test run completes, all agents briefly show a green checkmark bubble (pass) or red ✗ bubble (fail) and celebrate by staying at their desks for 2.5 s (`officeState.ts`, `PlaywrightDashboard.tsx`).
-  3. *Handoff bubbles*: in multi-agent chat, the finishing agent gets a waiting bubble on `turn_done` — a visual "passing the baton" moment before the next agent activates (`PlaywrightDashboard.tsx`).
-  4. *New bubble types* — `react_pass` (light-green bg, bright checkmark) and `react_fail` (pink bg, red ×) pixel-art speech bubbles with auto-fade timer, matching the existing sprite pipeline (`types.ts`, `spriteData.ts`, `renderer.ts`).
+  1. _Chat-reactive_: `agentStatuses` ('working'/'waiting') is wired to `setAgentActive` so pixel agents walk to their desk and type whenever they are responding to a chat message, and wander again when idle (`PlaywrightDashboard.tsx`).
+  2. _Emotional reactions_: when a test run completes, all agents briefly show a green checkmark bubble (pass) or red ✗ bubble (fail) and celebrate by staying at their desks for 2.5 s (`officeState.ts`, `PlaywrightDashboard.tsx`).
+  3. _Handoff bubbles_: in multi-agent chat, the finishing agent gets a waiting bubble on `turn_done` — a visual "passing the baton" moment before the next agent activates (`PlaywrightDashboard.tsx`).
+  4. _New bubble types_ — `react_pass` (light-green bg, bright checkmark) and `react_fail` (pink bg, red ×) pixel-art speech bubbles with auto-fade timer, matching the existing sprite pipeline (`types.ts`, `spriteData.ts`, `renderer.ts`).
 - **SQLite run history** — replaces per-run JSON files in `test-results/runs/` with a
   single `better-sqlite3` database (`test-results/runs.db`). `archiveRun()` INSERTs into
   the DB; `/api/playwright/history`, `/api/playwright/results/:runId`, and
