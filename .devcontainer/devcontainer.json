@@ -1,0 +1,25 @@
+{
+  "name": "open-qa",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "postCreateCommand": "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci && npx playwright install --with-deps chromium",
+  "forwardPorts": [5173, 3001],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite UI",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Express API",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "ms-playwright.playwright",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}
