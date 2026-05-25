@@ -4,6 +4,8 @@ import { adjustSprite } from '../colorize.js';
 import type { Direction, SpriteData } from '../types.js';
 import { Direction as Dir } from '../types.js';
 import bubblePermissionData from './bubble-permission.json';
+import bubbleReactFailData from './bubble-react-fail.json';
+import bubbleReactPassData from './bubble-react-pass.json';
 import bubbleWaitingData from './bubble-waiting.json';
 
 // ── Speech Bubble Sprites ───────────────────────────────────────
@@ -22,6 +24,12 @@ export const BUBBLE_PERMISSION_SPRITE: SpriteData = resolveBubbleSprite(bubblePe
 
 /** Waiting bubble: white square with green checkmark, and a tail pointer (11x13) */
 export const BUBBLE_WAITING_SPRITE: SpriteData = resolveBubbleSprite(bubbleWaitingData);
+
+/** React-pass bubble: light-green bg with bright checkmark (11x13) */
+export const BUBBLE_REACT_PASS_SPRITE: SpriteData = resolveBubbleSprite(bubbleReactPassData);
+
+/** React-fail bubble: light-pink bg with red X mark (11x13) */
+export const BUBBLE_REACT_FAIL_SPRITE: SpriteData = resolveBubbleSprite(bubbleReactFailData);
 
 // ════════════════════════════════════════════════════════════════
 // Loaded character sprites (from PNG assets)

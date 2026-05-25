@@ -4259,6 +4259,7 @@ interface PwOfficePanelProps {
 function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelProps) {
   const {
     agents,
+    agentStatuses,
     settings,
     updateSettings,
     messages,
@@ -4277,6 +4278,10 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /** Tracks the previous `running` value to detect run completion */
+  const prevRunningRef = useRef(false);
+  /** Epoch ms until which all agents stay briefly active (celebration) */
+  const celebrationEndRef = useRef(0);
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -4322,21 +4327,47 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
   // ── Derive failure flag ───────────────────────────────────────────────────
   const hasFailures = suites.some((s) => s.tests.some((t) => t.status === 'failed'));
 
-  // ── Sync: drive animations from test state ────────────────────────────────
+  // ── Sync: drive animations from test state + chat status ─────────────────
   useEffect(() => {
     if (!_pwOfficeState) return;
+    const isCelebrating = Date.now() < celebrationEndRef.current;
     agents.forEach((agent, idx) => {
       const numId = pwAgentNumId(idx);
+      const chatActive =
+        agentStatuses[agent.id] === 'working' || agentStatuses[agent.id] === 'waiting';
       const active =
-        running || (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'));
+        running ||
+        chatActive ||
+        isCelebrating ||
+        (hasFailures && (agent.id === 'agent-triage' || agent.id === 'agent-healer'));
       _pwOfficeState!.setAgentActive(numId, active);
     });
-  }, [agents, running, hasFailures]);
+  }, [agents, running, hasFailures, agentStatuses]);
+
+  // ── React bubbles on run completion ──────────────────────────────────────
+  useEffect(() => {
+    if (!_pwOfficeState) return;
+    const wasRunning = prevRunningRef.current;
+    prevRunningRef.current = running;
+    if (!wasRunning || running) return; // only fires on true→false transition
+    if (hasFailures) {
+      _pwOfficeState.triggerReactBubblesAll('react_fail');
+    } else {
+      _pwOfficeState.triggerReactBubblesAll('react_pass');
+      celebrationEndRef.current = Date.now() + 2500;
+    }
+  }, [running, hasFailures]);
 
   const handleAgentClick = (charId: number) => {
     const agent = agents[charId - 1];
     if (!agent) return;
     setSelectedAgentId(agent.id);
+  };
+
+  /** Map an agent's string id (e.g. "agent-triage") to its canvas numId */
+  const agentStringToNumId = (agentId: string): number | null => {
+    const idx = agents.findIndex((a) => a.id === agentId);
+    return idx === -1 ? null : pwAgentNumId(idx);
   };
 
   // ── @-mention autocomplete ────────────────────────────────────────────────
@@ -4664,7 +4695,14 @@ function PwOfficePanel({ running, suites, onRunCode, onRunAll }: PwOfficePanelPr
               continue;
             }
             if (payload.evt === 'turn_done') {
-              if (payload.agentId) setAgentStatus(payload.agentId, 'idle');
+              if (payload.agentId) {
+                setAgentStatus(payload.agentId, 'idle');
+                // Handoff bubble: brief waiting indicator on the finishing agent
+                const numId = agentStringToNumId(payload.agentId);
+                if (numId !== null && _pwOfficeState) {
+                  _pwOfficeState.showWaitingBubble(numId);
+                }
+              }
               continue;
             }
             if (payload.evt === 'turn_verdict') {

@@ -37,6 +37,8 @@ import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from '../floorTi
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import {
   BUBBLE_PERMISSION_SPRITE,
+  BUBBLE_REACT_FAIL_SPRITE,
+  BUBBLE_REACT_PASS_SPRITE,
   BUBBLE_WAITING_SPRITE,
   getCharacterSprites,
 } from '../sprites/spriteData.js';
@@ -497,11 +499,22 @@ function renderBubbles(
     if (!ch.bubbleType) continue;
 
     const sprite =
-      ch.bubbleType === 'permission' ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE;
+      ch.bubbleType === 'permission'
+        ? BUBBLE_PERMISSION_SPRITE
+        : ch.bubbleType === 'react_pass'
+          ? BUBBLE_REACT_PASS_SPRITE
+          : ch.bubbleType === 'react_fail'
+            ? BUBBLE_REACT_FAIL_SPRITE
+            : BUBBLE_WAITING_SPRITE;
 
-    // Compute opacity: permission = full, waiting = fade in last 0.5s
+    // Compute opacity: permission = full, timed bubbles fade out in last 0.5s
     let alpha = 1.0;
-    if (ch.bubbleType === 'waiting' && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC) {
+    if (
+      (ch.bubbleType === 'waiting' ||
+        ch.bubbleType === 'react_pass' ||
+        ch.bubbleType === 'react_fail') &&
+      ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC
+    ) {
       alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC;
     }
 
