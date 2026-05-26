@@ -240,6 +240,7 @@ Key guidelines:
 - All PRs must pass `npm run typecheck` and `npm run lint`
 - Follow the existing TypeScript strict-mode patterns
 - Agent additions go in `src/agents/<name>/index.ts`
+- Use [AGENTS_TEMPLATE.md](AGENTS_TEMPLATE.md) to document a new agent's inputs, outputs, command, and Claude payload
 - UI changes live in `ui/src/`
 
 See [docs/INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md) for patterns on combining multiple agents into workflows.
