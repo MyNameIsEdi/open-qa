@@ -7,7 +7,7 @@ Copy this file when proposing a new Open-QA agent. Keep one file per agent so re
 **Status:** Planned / Active
 **Category:** Testing / Security / Performance / Accessibility / Data / CI
 **Location:** `src/agents/<agent-name>/index.ts`
-**Command:** `npm run run:<agent-name>`
+**Command:** `npm run <agent-name>` or `npm run run:<agent-name>` (check `package.json`)
 
 **What it does:** One sentence that explains the agent's job.
 
@@ -52,12 +52,30 @@ Copy this payload and update the fields for your agent:
 {
   "name": "open-qa-agent-name",
   "description": "One-line description of what the agent does.",
-  "command": "npm run run:<agent-name>",
-  "inputs": {
-    "targetUrl": "URL to inspect",
-    "goal": "Requested result",
-    "context": "Optional supporting notes"
-  }
+  "system_prompt": "You are an expert Open-QA agent that inspects the target and returns concise findings.",
+  "tool_schema": {
+    "name": "open_qa_agent_name",
+    "description": "One-line description of what the agent does.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "targetUrl": {
+          "type": "string",
+          "description": "URL or route the agent should inspect."
+        },
+        "goal": {
+          "type": "string",
+          "description": "What the user wants the agent to produce."
+        },
+        "context": {
+          "type": "string",
+          "description": "Extra logs, selectors, errors, or notes."
+        }
+      },
+      "required": ["targetUrl", "goal"]
+    }
+  },
+  "run_command": "npm run run:<agent-name>"
 }
 ```
 
