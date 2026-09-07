@@ -254,6 +254,7 @@ export default function HomePage() {
         {featureKeys.map(({ Icon, titleKey, descKey, color }) => (
           <div
             key={titleKey}
+            data-testid={t(titleKey)}
             className="p-4 rounded-2xl border transition-all duration-200 hover:shadow-medium hover:-translate-y-0.5"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
