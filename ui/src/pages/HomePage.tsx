@@ -254,11 +254,13 @@ export default function HomePage() {
         {featureKeys.map(({ Icon, titleKey, descKey, color }) => (
           <div
             key={titleKey}
-            data-testid={t(titleKey)}
+            data-testid={titleKey}
             className="p-4 rounded-2xl border transition-all duration-200 hover:shadow-medium hover:-translate-y-0.5"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
-            <Icon className={`${color} mb-2`} sx={{ fontSize: 26 }} />
+            <span data-testid={`${titleKey}_icon`} aria-hidden="true">
+              <Icon className={`${color} mb-2`} sx={{ fontSize: 26 }} />
+            </span>
             <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--text-main)' }}>
               {t(titleKey)}
             </h3>
