@@ -12,7 +12,7 @@ export const test = base.extend<{
   },
   navbar: async ({ page }, use) => {
     await use(new NavbarPage(page));
-  }
+  },
 });
 
 export { expect } from '@playwright/test';

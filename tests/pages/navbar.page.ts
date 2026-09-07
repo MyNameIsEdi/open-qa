@@ -1,8 +1,7 @@
-import { BasePage } from "./base.page";
+import { BasePage } from './base.page';
 import { type Locator, type Page } from '@playwright/test';
 
 export class NavbarPage extends BasePage {
-
   readonly githubLink: Locator;
 
   constructor(page: Page) {
@@ -13,5 +12,4 @@ export class NavbarPage extends BasePage {
   async clickGithubLink() {
     await this.githubLink.click();
   }
-
 }

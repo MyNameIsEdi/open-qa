@@ -1,7 +1,6 @@
 import { type Page } from '@playwright/test';
 
 export class BasePage {
-
   readonly page: Page;
   readonly url: string;
 
@@ -13,5 +12,4 @@ export class BasePage {
   async goto() {
     await this.page.goto(this.url);
   }
-
 }
