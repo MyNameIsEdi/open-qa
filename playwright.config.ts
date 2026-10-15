@@ -64,7 +64,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: rc.baseUrl || undefined,
+    baseURL: rc.baseUrl || localWebServerUrl,
     headless: rc.headed ? false : true,
     trace: rc.trace ?? 'on-first-retry',
     screenshot: rc.screenshot ?? 'only-on-failure',
